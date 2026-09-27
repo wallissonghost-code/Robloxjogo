@@ -1,9 +1,9 @@
-local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 
-local BLOCK_TAG = "CollectibleBlock"
+local island = Workspace:WaitForChild("StarterIsland")
 
 local function setupBlock(block)
-	if not block:IsA("BasePart") then
+	if not block:IsA("BasePart") or not string.match(block.Name, "^Block_%d+$") then
 		return
 	end
 
@@ -18,7 +18,7 @@ local function setupBlock(block)
 	prompt.ObjectText = block.Name
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 8
-	prompt.RequiresLineOfSight = true
+	prompt.RequiresLineOfSight = false
 	prompt.Parent = block
 
 	local broken = false
@@ -33,8 +33,8 @@ local function setupBlock(block)
 	end)
 end
 
-for _, block in CollectionService:GetTagged(BLOCK_TAG) do
+for _, block in island:GetChildren() do
 	setupBlock(block)
 end
 
-CollectionService:GetInstanceAddedSignal(BLOCK_TAG):Connect(setupBlock)
+island.ChildAdded:Connect(setupBlock)
