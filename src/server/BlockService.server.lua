@@ -1,10 +1,14 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local island = Workspace:WaitForChild("StarterIsland")
 local spawn = Workspace:WaitForChild("SpawnLocation")
+local breakBlock = ReplicatedStorage:WaitForChild("BreakBlock")
 
 local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
 local CELL_SPACING = 3.84
+local MAX_BREAK_DISTANCE = 14
 local GRID = {
 	Vector3.new(-CELL_SPACING, 0, -CELL_SPACING),
 	Vector3.new(0, 0, -CELL_SPACING),
@@ -17,11 +21,17 @@ local GRID = {
 	Vector3.new(CELL_SPACING, 0, CELL_SPACING),
 }
 
-local function setupBlock(block, index)
-	if not block:IsA("BasePart") then
-		return
-	end
+local lastBreak = {}
 
+local function isIslandBlock(block)
+	return block
+		and block:IsA("BasePart")
+		and block.Parent == island
+		and string.match(block.Name, "^Block_%d+$") ~= nil
+end
+
+for index = 1, 9 do
+	local block = island:WaitForChild("Block_" .. index)
 	block.Anchored = true
 	block.Size = BLOCK_SIZE
 	block.CFrame = CFrame.new(GRID[index])
@@ -30,31 +40,30 @@ local function setupBlock(block, index)
 	if oldPrompt then
 		oldPrompt:Destroy()
 	end
-
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "BreakPrompt"
-	prompt.ActionText = "Quebrar"
-	prompt.ObjectText = "Bloco " .. index
-	prompt.HoldDuration = 0.35
-	prompt.MaxActivationDistance = 8
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = block
-
-	local broken = false
-	prompt.Triggered:Connect(function()
-		if broken or not block.Parent then
-			return
-		end
-
-		broken = true
-		prompt.Enabled = false
-		block:Destroy()
-	end)
-end
-
-for index = 1, 9 do
-	local block = island:WaitForChild("Block_" .. index)
-	setupBlock(block, index)
 end
 
 spawn.CFrame = CFrame.new(0, BLOCK_SIZE.Y / 2 + 0.5, 0)
+
+breakBlock.OnServerEvent:Connect(function(player, block)
+	if not isIslandBlock(block) then
+		return
+	end
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - block.Position).Magnitude > MAX_BREAK_DISTANCE then
+		return
+	end
+
+	local now = os.clock()
+	if lastBreak[player] and now - lastBreak[player] < 0.2 then
+		return
+	end
+	lastBreak[player] = now
+
+	block:Destroy()
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	lastBreak[player] = nil
+end)
