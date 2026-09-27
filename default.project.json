@@ -11,9 +11,9 @@
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               -4,
@@ -27,20 +27,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_2": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               0,
@@ -54,20 +54,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_3": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               4,
@@ -81,20 +81,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_4": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               -4,
@@ -108,20 +108,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_5": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               0,
@@ -135,20 +135,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_6": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               4,
@@ -162,20 +162,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_7": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               -4,
@@ -189,20 +189,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_8": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               0,
@@ -216,20 +216,20 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         },
         "Block_9": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
             "Size": [
-              4,
-              4,
-              4
+              3.8,
+              3.8,
+              3.8
             ],
             "Position": [
               4,
@@ -243,11 +243,11 @@
             ],
             "Material": "Grass",
             "TopSurface": "Smooth",
-            "BottomSurface": "Smooth",
-            "Tags": [
-              "CollectibleBlock"
-            ]
-          }
+            "BottomSurface": "Smooth"
+          },
+          "$tags": [
+            "CollectibleBlock"
+          ]
         }
       },
       "SpawnLocation": {
@@ -262,7 +262,7 @@
           ],
           "Position": [
             0,
-            2.5,
+            2.4,
             0
           ],
           "Transparency": 1,
