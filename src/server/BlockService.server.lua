@@ -6,6 +6,7 @@ local island = Workspace:WaitForChild("StarterIsland")
 local spawn = Workspace:WaitForChild("SpawnLocation")
 local breakBlock = ReplicatedStorage:WaitForChild("BreakBlock")
 local inventoryUpdate = ReplicatedStorage:WaitForChild("InventoryUpdate")
+local placeBlock = ReplicatedStorage:WaitForChild("PlaceBlock")
 
 local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
 local CELL_SPACING = 3.84
@@ -31,6 +32,7 @@ end
 
 local lastBreak = {}
 local inventories = {}
+local placedBlockId = 0
 
 local function getInventory(player)
 	local inventory = inventories[player]
@@ -55,7 +57,7 @@ local function isIslandBlock(block)
 	return block
 		and block:IsA("BasePart")
 		and block.Parent == island
-		and string.match(block.Name, "^Block_%d+$") ~= nil
+		and (string.match(block.Name, "^Block_%d+$") ~= nil or block:GetAttribute("MineableBlock") == true)
 end
 
 for index, position in ipairs(positions) do
@@ -75,6 +77,56 @@ end
 
 spawn.CFrame = CFrame.new(0, BLOCK_SIZE.Y / 2 + 0.5, 0)
 
+
+local function blockItem(block)
+	return block.Material == Enum.Material.Grass and "Grass" or "Dirt"
+end
+
+local function snap(value)
+	return math.round(value / CELL_SPACING) * CELL_SPACING
+end
+
+placeBlock.OnServerEvent:Connect(function(player, itemName, worldPosition)
+	if (itemName ~= "Grass" and itemName ~= "Dirt") or typeof(worldPosition) ~= "Vector3" then
+		return
+	end
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - worldPosition).Magnitude > MAX_BREAK_DISTANCE then
+		return
+	end
+
+	local inventory = getInventory(player)
+	if (inventory[itemName] or 0) <= 0 then
+		return
+	end
+
+	local position = Vector3.new(snap(worldPosition.X), snap(worldPosition.Y), snap(worldPosition.Z))
+	local overlap = Workspace:GetPartBoundsInBox(CFrame.new(position), BLOCK_SIZE * 0.9)
+	for _, part in ipairs(overlap) do
+		if part:IsDescendantOf(island) then
+			return
+		end
+	end
+
+	placedBlockId += 1
+	local block = Instance.new("Part")
+	block.Name = "Block_Placed_" .. placedBlockId
+	block.Anchored = true
+	block.Size = BLOCK_SIZE
+	block.CFrame = CFrame.new(position)
+	block.TopSurface = Enum.SurfaceType.Smooth
+	block.BottomSurface = Enum.SurfaceType.Smooth
+	block.Material = itemName == "Grass" and Enum.Material.Grass or Enum.Material.Ground
+	block.Color = itemName == "Grass" and Color3.fromRGB(75, 136, 55) or Color3.fromRGB(101, 67, 33)
+	block:SetAttribute("MineableBlock", true)
+	block.Parent = island
+
+	inventory[itemName] -= 1
+	sendInventory(player)
+end)
+
 breakBlock.OnServerEvent:Connect(function(player, block)
 	if not isIslandBlock(block) then
 		return
@@ -93,11 +145,8 @@ breakBlock.OnServerEvent:Connect(function(player, block)
 	lastBreak[player] = now
 
 	local inventory = getInventory(player)
-	if block.Material == Enum.Material.Grass then
-		inventory.Grass += 1
-	else
-		inventory.Dirt += 1
-	end
+	local itemName = blockItem(block)
+	inventory[itemName] += 1
 
 	block:Destroy()
 	sendInventory(player)
