@@ -4,7 +4,7 @@ local island = Workspace:WaitForChild("StarterIsland")
 local spawn = Workspace:WaitForChild("SpawnLocation")
 
 local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
-local CELL_SPACING = 4.2
+local CELL_SPACING = 3.84
 local GRID = {
 	Vector3.new(-CELL_SPACING, 0, -CELL_SPACING),
 	Vector3.new(0, 0, -CELL_SPACING),
