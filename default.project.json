@@ -721,12 +721,18 @@
         "$className": "StarterPlayerScripts",
         "BlockTarget": {
           "$path": "src/client/BlockTarget.client.lua"
+        },
+        "InventoryUI": {
+          "$path": "src/client/InventoryUI.client.lua"
         }
       }
     },
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "BreakBlock": {
+        "$className": "RemoteEvent"
+      },
+      "InventoryUpdate": {
         "$className": "RemoteEvent"
       }
     }
