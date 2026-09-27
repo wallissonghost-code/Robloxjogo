@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local island = Workspace:WaitForChild("StarterIsland")
 local spawn = Workspace:WaitForChild("SpawnLocation")
 local breakBlock = ReplicatedStorage:WaitForChild("BreakBlock")
+local inventoryUpdate = ReplicatedStorage:WaitForChild("InventoryUpdate")
 
 local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
 local CELL_SPACING = 3.84
@@ -29,6 +30,26 @@ for layer = 1, 3 do
 end
 
 local lastBreak = {}
+local inventories = {}
+
+local function getInventory(player)
+	local inventory = inventories[player]
+	if not inventory then
+		inventory = { Grass = 0, Dirt = 0 }
+		inventories[player] = inventory
+	end
+	return inventory
+end
+
+local function sendInventory(player)
+	local inventory = getInventory(player)
+	inventoryUpdate:FireClient(player, { Grass = inventory.Grass, Dirt = inventory.Dirt })
+end
+
+Players.PlayerAdded:Connect(function(player)
+	getInventory(player)
+	task.defer(sendInventory, player)
+end)
 
 local function isIslandBlock(block)
 	return block
@@ -71,9 +92,18 @@ breakBlock.OnServerEvent:Connect(function(player, block)
 	end
 	lastBreak[player] = now
 
+	local inventory = getInventory(player)
+	if block.Material == Enum.Material.Grass then
+		inventory.Grass += 1
+	else
+		inventory.Dirt += 1
+	end
+
 	block:Destroy()
+	sendInventory(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
 	lastBreak[player] = nil
+	inventories[player] = nil
 end)
