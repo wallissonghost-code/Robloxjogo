@@ -25,13 +25,14 @@ local hs=Instance.new("UIStroke");hs.Color=Color3.fromRGB(210,215,220);hs.Transp
 local layout=Instance.new("UIListLayout");layout.FillDirection=Enum.FillDirection.Horizontal;layout.HorizontalAlignment=Enum.HorizontalAlignment.Center;layout.VerticalAlignment=Enum.VerticalAlignment.Center;layout.Padding=UDim.new(0,6);layout.Parent=hotbar
 
 local function makeSlot(index)
- local b=Instance.new("TextButton");b.Name="Slot"..index;b.Text="";b.AutoButtonColor=false;b.BackgroundColor3=Color3.fromRGB(30,33,36);b.Parent=hotbar
- local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,10);c.Parent=b
- local s=Instance.new("UIStroke");s.Name="Selection";s.Color=Color3.fromRGB(245,245,245);s.Transparency=.88;s.Thickness=1.2;s.Parent=b
- local sw=Instance.new("Frame");sw.Name="Swatch";sw.AnchorPoint=Vector2.new(.5,.5);sw.Position=UDim2.fromScale(.5,.46);sw.Size=UDim2.fromScale(.48,.48);sw.BorderSizePixel=0;sw.BackgroundTransparency=1;sw.Parent=b
- local sc=Instance.new("UICorner");sc.CornerRadius=UDim.new(0,5);sc.Parent=sw
- local n=Instance.new("TextLabel");n.Name="Count";n.AnchorPoint=Vector2.new(1,1);n.Position=UDim2.new(1,-4,1,-3);n.Size=UDim2.fromOffset(26,15);n.BackgroundTransparency=1;n.Text="";n.TextColor3=Color3.new(1,1,1);n.TextStrokeTransparency=.3;n.Font=Enum.Font.GothamBold;n.TextSize=12;n.Parent=b
- slots[index]={button=b,swatch=sw,count=n,stroke=s}
+ local b=Instance.new("TextButton");b.Name="Slot"..index;b.Text="";b.AutoButtonColor=false;b.BackgroundColor3=Color3.fromRGB(27,30,33);b.Parent=hotbar
+ local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,9);c.Parent=b
+ local s=Instance.new("UIStroke");s.Name="Selection";s.Color=Color3.fromRGB(255,255,255);s.Transparency=.88;s.Thickness=1.2;s.Parent=b
+ local cube=Instance.new("Frame");cube.Name="Cube";cube.AnchorPoint=Vector2.new(.5,.5);cube.Position=UDim2.fromScale(.5,.45);cube.Size=UDim2.fromScale(.48,.48);cube.BorderSizePixel=0;cube.BackgroundTransparency=1;cube.Rotation=45;cube.Parent=b
+ local cc=Instance.new("UICorner");cc.CornerRadius=UDim.new(0,3);cc.Parent=cube
+ local shine=Instance.new("Frame");shine.Name="Top";shine.Size=UDim2.new(1,0,.24,0);shine.BorderSizePixel=0;shine.BackgroundTransparency=1;shine.Parent=cube
+ local n=Instance.new("TextLabel");n.Name="Count";n.AnchorPoint=Vector2.new(1,1);n.Position=UDim2.new(1,-4,1,-3);n.Size=UDim2.fromOffset(28,16);n.BackgroundTransparency=1;n.Text="";n.TextColor3=Color3.new(1,1,1);n.TextStrokeTransparency=.28;n.Font=Enum.Font.GothamBold;n.TextSize=12;n.Parent=b
+ slots[index]={button=b,cube=cube,top=shine,count=n,stroke=s}
  return b
 end
 for i=1,SLOT_COUNT do makeSlot(i) end
@@ -67,7 +68,13 @@ local dirtCard=inventoryCard("Dirt","Terra",Color3.fromRGB(101,67,33))
 
 local function select(item)
  selectedItem=item
- for i,v in ipairs(slots) do v.stroke.Transparency=((i==1 and item=="Grass") or (i==2 and item=="Dirt")) and .15 or .88 end
+ player:SetAttribute("SelectedBuildItem",item)
+ for i,v in ipairs(slots) do
+  local active=(i==1 and item=="Grass") or (i==2 and item=="Dirt")
+  v.stroke.Transparency=active and 0 or .88
+  v.stroke.Thickness=active and 2.4 or 1.2
+  v.button.BackgroundColor3=active and Color3.fromRGB(50,54,58) or Color3.fromRGB(27,30,33)
+ end
 end
 slots[1].button.MouseButton1Click:Connect(function() if counts.Grass>0 then select("Grass") end end)
 slots[2].button.MouseButton1Click:Connect(function() if counts.Dirt>0 then select("Dirt") end end)
@@ -86,25 +93,13 @@ if Workspace.CurrentCamera then Workspace.CurrentCamera:GetPropertyChangedSignal
 
 local function render(data)
  counts.Grass=data.Grass or 0;counts.Dirt=data.Dirt or 0
- slots[1].swatch.BackgroundTransparency=0;slots[1].swatch.BackgroundColor3=Color3.fromRGB(75,136,55);slots[1].count.Text=tostring(counts.Grass)
- slots[2].swatch.BackgroundTransparency=0;slots[2].swatch.BackgroundColor3=Color3.fromRGB(101,67,33);slots[2].count.Text=tostring(counts.Dirt)
- for i=3,SLOT_COUNT do slots[i].swatch.BackgroundTransparency=1;slots[i].count.Text="" end
+ slots[1].cube.BackgroundTransparency=0;slots[1].cube.BackgroundColor3=Color3.fromRGB(83,119,55);slots[1].top.BackgroundTransparency=0;slots[1].top.BackgroundColor3=Color3.fromRGB(103,166,69);slots[1].count.Text=tostring(counts.Grass)
+ slots[2].cube.BackgroundTransparency=0;slots[2].cube.BackgroundColor3=Color3.fromRGB(104,70,42);slots[2].top.BackgroundTransparency=0;slots[2].top.BackgroundColor3=Color3.fromRGB(130,91,54);slots[2].count.Text=tostring(counts.Dirt)
+ for i=3,SLOT_COUNT do slots[i].cube.BackgroundTransparency=1;slots[i].top.BackgroundTransparency=1;slots[i].count.Text="" end
  grassCard.Text=tostring(counts.Grass);dirtCard.Text=tostring(counts.Dirt)
  if selectedItem and (counts[selectedItem] or 0)<=0 then select(nil) end
 end
 inventoryUpdate.OnClientEvent:Connect(render);render(counts)
+select(nil)
 
-UserInputService.InputBegan:Connect(function(input,processed)
- if processed or not selectedItem or (counts[selectedItem] or 0)<=0 then return end
- if input.UserInputType~=Enum.UserInputType.Touch and input.UserInputType~=Enum.UserInputType.MouseButton1 then return end
- local camera=Workspace.CurrentCamera;if not camera then return end
- local pos=input.Position
- local ray=camera:ViewportPointToRay(pos.X,pos.Y)
- local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.FilterDescendantsInstances=player.Character and {player.Character} or {}
- local hit=Workspace:Raycast(ray.Origin,ray.Direction*18,params)
- if hit and hit.Instance and hit.Instance.Parent==Workspace:FindFirstChild("StarterIsland") then
-  local normal=hit.Normal
-  local target=hit.Instance.Position+Vector3.new(math.round(normal.X),math.round(normal.Y),math.round(normal.Z))*3.84
-  placeBlock:FireServer(selectedItem,target)
- end
-end)
+
