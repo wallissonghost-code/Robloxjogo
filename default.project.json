@@ -28,10 +28,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_2": {
           "$className": "Part",
@@ -55,10 +52,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_3": {
           "$className": "Part",
@@ -82,10 +76,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_4": {
           "$className": "Part",
@@ -109,10 +100,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_5": {
           "$className": "Part",
@@ -136,10 +124,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_6": {
           "$className": "Part",
@@ -163,10 +148,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_7": {
           "$className": "Part",
@@ -190,10 +172,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_8": {
           "$className": "Part",
@@ -217,10 +196,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         },
         "Block_9": {
           "$className": "Part",
@@ -244,10 +220,7 @@
             "Material": "Grass",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
-          },
-          "$tags": [
-            "CollectibleBlock"
-          ]
+          }
         }
       },
       "SpawnLocation": {
