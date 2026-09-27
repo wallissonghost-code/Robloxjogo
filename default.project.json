@@ -734,6 +734,9 @@
       },
       "InventoryUpdate": {
         "$className": "RemoteEvent"
+      },
+      "PlaceBlock": {
+        "$className": "RemoteEvent"
       }
     }
   }
