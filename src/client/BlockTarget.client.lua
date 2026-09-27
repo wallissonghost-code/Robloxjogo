@@ -72,7 +72,7 @@ local function isIslandBlock(instance)
 	return instance
 		and instance:IsA("BasePart")
 		and instance.Parent == island
-		and string.match(instance.Name, "^Block_%d+$") ~= nil
+		and (string.match(instance.Name, "^Block_%d+$") ~= nil or instance:GetAttribute("MineableBlock") == true)
 end
 
 local function cancelMining()
