@@ -1,11 +1,30 @@
 local Workspace = game:GetService("Workspace")
 
 local island = Workspace:WaitForChild("StarterIsland")
+local spawn = Workspace:WaitForChild("SpawnLocation")
 
-local function setupBlock(block)
-	if not block:IsA("BasePart") or not string.match(block.Name, "^Block_%d+$") then
+local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
+local CELL_SPACING = 4.2
+local GRID = {
+	Vector3.new(-CELL_SPACING, 0, -CELL_SPACING),
+	Vector3.new(0, 0, -CELL_SPACING),
+	Vector3.new(CELL_SPACING, 0, -CELL_SPACING),
+	Vector3.new(-CELL_SPACING, 0, 0),
+	Vector3.new(0, 0, 0),
+	Vector3.new(CELL_SPACING, 0, 0),
+	Vector3.new(-CELL_SPACING, 0, CELL_SPACING),
+	Vector3.new(0, 0, CELL_SPACING),
+	Vector3.new(CELL_SPACING, 0, CELL_SPACING),
+}
+
+local function setupBlock(block, index)
+	if not block:IsA("BasePart") then
 		return
 	end
+
+	block.Anchored = true
+	block.Size = BLOCK_SIZE
+	block.CFrame = CFrame.new(GRID[index])
 
 	local oldPrompt = block:FindFirstChild("BreakPrompt")
 	if oldPrompt then
@@ -15,7 +34,7 @@ local function setupBlock(block)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "BreakPrompt"
 	prompt.ActionText = "Quebrar"
-	prompt.ObjectText = block.Name
+	prompt.ObjectText = "Bloco " .. index
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 8
 	prompt.RequiresLineOfSight = false
@@ -33,8 +52,9 @@ local function setupBlock(block)
 	end)
 end
 
-for _, block in island:GetChildren() do
-	setupBlock(block)
+for index = 1, 9 do
+	local block = island:WaitForChild("Block_" .. index)
+	setupBlock(block, index)
 end
 
-island.ChildAdded:Connect(setupBlock)
+spawn.CFrame = CFrame.new(0, BLOCK_SIZE.Y / 2 + 0.5, 0)
