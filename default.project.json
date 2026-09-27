@@ -176,6 +176,310 @@
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
+        },
+        "Block_10": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_11": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_12": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_13": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_14": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_15": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_16": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_17": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_18": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_19": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_20": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_21": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_22": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_23": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_24": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_25": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.294118,
+              0.533333,
+              0.215686
+            ],
+            "Material": "Grass",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
         }
       },
       "SpawnLocation": {
