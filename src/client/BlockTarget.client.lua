@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local island = Workspace:WaitForChild("StarterIsland")
 local breakBlock = ReplicatedStorage:WaitForChild("BreakBlock")
+local placeBlock = ReplicatedStorage:WaitForChild("PlaceBlock")
 
 local MAX_DISTANCE = 14
 local HOLD_TIME = 0.7
@@ -16,6 +17,7 @@ local mining = false
 local miningTarget = nil
 local miningStartedAt = 0
 local activeInput = nil
+local PRESS_TO_MINE_DELAY = 0.16
 
 local highlight = Instance.new("Highlight")
 highlight.Name = "BlockTargetHighlight"
@@ -84,7 +86,7 @@ local function cancelMining()
 end
 
 local function beginMining(input)
-	if mining or not selectedBlock then
+	if mining or not selectedBlock or player:GetAttribute("SelectedBuildItem") then
 		return
 	end
 
@@ -97,14 +99,27 @@ local function beginMining(input)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
+	if gameProcessed then return end
+	if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+
+	local buildItem = player:GetAttribute("SelectedBuildItem")
+	if buildItem and selectedBlock then
+		local camera = Workspace.CurrentCamera
+		if not camera then return end
+		local viewport = camera.ViewportSize
+		local ray = camera:ViewportPointToRay(viewport.X * 0.5, viewport.Y * 0.5)
+		local result = Workspace:Raycast(ray.Origin, ray.Direction * MAX_DISTANCE, raycastParams)
+		if result and result.Instance == selectedBlock then
+			local normal = result.Normal
+			local target = selectedBlock.Position + Vector3.new(math.round(normal.X), math.round(normal.Y), math.round(normal.Z)) * 3.84
+			placeBlock:FireServer(buildItem, target)
+		end
 		return
 	end
 
-	if input.UserInputType == Enum.UserInputType.Touch
-		or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		beginMining(input)
-	end
+	task.delay(PRESS_TO_MINE_DELAY, function()
+		if input.UserInputState ~= Enum.UserInputState.End then beginMining(input) end
+	end)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
