@@ -9,33 +9,25 @@ local breakBlock = ReplicatedStorage:WaitForChild("BreakBlock")
 local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
 local CELL_SPACING = 3.84
 local MAX_BREAK_DISTANCE = 14
-local GRID = {
-	Vector3.new(-2 * CELL_SPACING, 0, -2 * CELL_SPACING),
-	Vector3.new(-1 * CELL_SPACING, 0, -2 * CELL_SPACING),
-	Vector3.new(0 * CELL_SPACING, 0, -2 * CELL_SPACING),
-	Vector3.new(1 * CELL_SPACING, 0, -2 * CELL_SPACING),
-	Vector3.new(2 * CELL_SPACING, 0, -2 * CELL_SPACING),
-	Vector3.new(-2 * CELL_SPACING, 0, -1 * CELL_SPACING),
-	Vector3.new(-1 * CELL_SPACING, 0, -1 * CELL_SPACING),
-	Vector3.new(0 * CELL_SPACING, 0, -1 * CELL_SPACING),
-	Vector3.new(1 * CELL_SPACING, 0, -1 * CELL_SPACING),
-	Vector3.new(2 * CELL_SPACING, 0, -1 * CELL_SPACING),
-	Vector3.new(-2 * CELL_SPACING, 0, 0 * CELL_SPACING),
-	Vector3.new(-1 * CELL_SPACING, 0, 0 * CELL_SPACING),
-	Vector3.new(0 * CELL_SPACING, 0, 0 * CELL_SPACING),
-	Vector3.new(1 * CELL_SPACING, 0, 0 * CELL_SPACING),
-	Vector3.new(2 * CELL_SPACING, 0, 0 * CELL_SPACING),
-	Vector3.new(-2 * CELL_SPACING, 0, 1 * CELL_SPACING),
-	Vector3.new(-1 * CELL_SPACING, 0, 1 * CELL_SPACING),
-	Vector3.new(0 * CELL_SPACING, 0, 1 * CELL_SPACING),
-	Vector3.new(1 * CELL_SPACING, 0, 1 * CELL_SPACING),
-	Vector3.new(2 * CELL_SPACING, 0, 1 * CELL_SPACING),
-	Vector3.new(-2 * CELL_SPACING, 0, 2 * CELL_SPACING),
-	Vector3.new(-1 * CELL_SPACING, 0, 2 * CELL_SPACING),
-	Vector3.new(0 * CELL_SPACING, 0, 2 * CELL_SPACING),
-	Vector3.new(1 * CELL_SPACING, 0, 2 * CELL_SPACING),
-	Vector3.new(2 * CELL_SPACING, 0, 2 * CELL_SPACING),
-}
+
+local positions = {}
+
+-- 3x3 grass surface.
+for z = -1, 1 do
+	for x = -1, 1 do
+		table.insert(positions, Vector3.new(x * CELL_SPACING, 0, z * CELL_SPACING))
+	end
+end
+
+-- Three full dirt layers below the grass, creating a real Skyblock body.
+for layer = 1, 3 do
+	for z = -1, 1 do
+		for x = -1, 1 do
+			table.insert(positions, Vector3.new(x * CELL_SPACING, -layer * CELL_SPACING, z * CELL_SPACING))
+		end
+	end
+end
+
 local lastBreak = {}
 
 local function isIslandBlock(block)
@@ -45,15 +37,18 @@ local function isIslandBlock(block)
 		and string.match(block.Name, "^Block_%d+$") ~= nil
 end
 
-for index = 1, 25 do
+for index, position in ipairs(positions) do
 	local block = island:WaitForChild("Block_" .. index)
 	block.Anchored = true
 	block.Size = BLOCK_SIZE
-	block.CFrame = CFrame.new(GRID[index])
+	block.CFrame = CFrame.new(position)
 
-	local oldPrompt = block:FindFirstChild("BreakPrompt")
-	if oldPrompt then
-		oldPrompt:Destroy()
+	if index <= 9 then
+		block.Material = Enum.Material.Grass
+		block.Color = Color3.fromRGB(75, 136, 55)
+	else
+		block.Material = Enum.Material.Ground
+		block.Color = Color3.fromRGB(101, 67, 33)
 	end
 end
 
