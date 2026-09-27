@@ -201,6 +201,15 @@
       "BlockService": {
         "$path": "src/server/BlockService.server.lua"
       }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "BlockTarget": {
+          "$path": "src/client/BlockTarget.client.lua"
+        }
+      }
     }
   }
 }
