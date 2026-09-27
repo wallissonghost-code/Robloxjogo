@@ -10,17 +10,32 @@ local BLOCK_SIZE = Vector3.new(3.8, 3.8, 3.8)
 local CELL_SPACING = 3.84
 local MAX_BREAK_DISTANCE = 14
 local GRID = {
-	Vector3.new(-CELL_SPACING, 0, -CELL_SPACING),
-	Vector3.new(0, 0, -CELL_SPACING),
-	Vector3.new(CELL_SPACING, 0, -CELL_SPACING),
-	Vector3.new(-CELL_SPACING, 0, 0),
-	Vector3.new(0, 0, 0),
-	Vector3.new(CELL_SPACING, 0, 0),
-	Vector3.new(-CELL_SPACING, 0, CELL_SPACING),
-	Vector3.new(0, 0, CELL_SPACING),
-	Vector3.new(CELL_SPACING, 0, CELL_SPACING),
+	Vector3.new(-2 * CELL_SPACING, 0, -2 * CELL_SPACING),
+	Vector3.new(-1 * CELL_SPACING, 0, -2 * CELL_SPACING),
+	Vector3.new(0 * CELL_SPACING, 0, -2 * CELL_SPACING),
+	Vector3.new(1 * CELL_SPACING, 0, -2 * CELL_SPACING),
+	Vector3.new(2 * CELL_SPACING, 0, -2 * CELL_SPACING),
+	Vector3.new(-2 * CELL_SPACING, 0, -1 * CELL_SPACING),
+	Vector3.new(-1 * CELL_SPACING, 0, -1 * CELL_SPACING),
+	Vector3.new(0 * CELL_SPACING, 0, -1 * CELL_SPACING),
+	Vector3.new(1 * CELL_SPACING, 0, -1 * CELL_SPACING),
+	Vector3.new(2 * CELL_SPACING, 0, -1 * CELL_SPACING),
+	Vector3.new(-2 * CELL_SPACING, 0, 0 * CELL_SPACING),
+	Vector3.new(-1 * CELL_SPACING, 0, 0 * CELL_SPACING),
+	Vector3.new(0 * CELL_SPACING, 0, 0 * CELL_SPACING),
+	Vector3.new(1 * CELL_SPACING, 0, 0 * CELL_SPACING),
+	Vector3.new(2 * CELL_SPACING, 0, 0 * CELL_SPACING),
+	Vector3.new(-2 * CELL_SPACING, 0, 1 * CELL_SPACING),
+	Vector3.new(-1 * CELL_SPACING, 0, 1 * CELL_SPACING),
+	Vector3.new(0 * CELL_SPACING, 0, 1 * CELL_SPACING),
+	Vector3.new(1 * CELL_SPACING, 0, 1 * CELL_SPACING),
+	Vector3.new(2 * CELL_SPACING, 0, 1 * CELL_SPACING),
+	Vector3.new(-2 * CELL_SPACING, 0, 2 * CELL_SPACING),
+	Vector3.new(-1 * CELL_SPACING, 0, 2 * CELL_SPACING),
+	Vector3.new(0 * CELL_SPACING, 0, 2 * CELL_SPACING),
+	Vector3.new(1 * CELL_SPACING, 0, 2 * CELL_SPACING),
+	Vector3.new(2 * CELL_SPACING, 0, 2 * CELL_SPACING),
 }
-
 local lastBreak = {}
 
 local function isIslandBlock(block)
@@ -30,7 +45,7 @@ local function isIslandBlock(block)
 		and string.match(block.Name, "^Block_%d+$") ~= nil
 end
 
-for index = 1, 9 do
+for index = 1, 25 do
 	local block = island:WaitForChild("Block_" .. index)
 	block.Anchored = true
 	block.Size = BLOCK_SIZE
