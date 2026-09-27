@@ -187,11 +187,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -206,11 +206,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -225,11 +225,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -244,11 +244,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -263,11 +263,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -282,11 +282,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -301,11 +301,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -320,11 +320,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -339,11 +339,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -358,11 +358,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -377,11 +377,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -396,11 +396,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -415,11 +415,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -434,11 +434,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -453,11 +453,11 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
@@ -472,11 +472,220 @@
               3.8
             ],
             "Color": [
-              0.294118,
-              0.533333,
-              0.215686
+              0.396078,
+              0.262745,
+              0.129412
             ],
-            "Material": "Grass",
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_26": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_27": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_28": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_29": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_30": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_31": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_32": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_33": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_34": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_35": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
+            "TopSurface": "Smooth",
+            "BottomSurface": "Smooth"
+          }
+        },
+        "Block_36": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [
+              3.8,
+              3.8,
+              3.8
+            ],
+            "Color": [
+              0.396078,
+              0.262745,
+              0.129412
+            ],
+            "Material": "Ground",
             "TopSurface": "Smooth",
             "BottomSurface": "Smooth"
           }
