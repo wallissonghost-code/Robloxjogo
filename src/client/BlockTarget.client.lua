@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
@@ -80,6 +81,26 @@ progress.Parent = button
 local progressCorner = Instance.new("UICorner")
 progressCorner.CornerRadius = UDim.new(1, 0)
 progressCorner.Parent = progress
+
+local function updateButtonLayout()
+	local viewport = Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
+	local isTouch = UserInputService.TouchEnabled
+	local isTablet = isTouch and math.min(viewport.X, viewport.Y) >= 600
+
+	if isTablet then
+		button.Size = UDim2.fromOffset(72, 72)
+		button.Position = UDim2.new(1, -150, 1, -118)
+	elseif isTouch then
+		button.Size = UDim2.fromOffset(68, 68)
+		button.Position = UDim2.new(1, -122, 1, -96)
+	else
+		button.Size = UDim2.fromOffset(70, 70)
+		button.Position = UDim2.new(1, -28, 1, -110)
+	end
+end
+
+updateButtonLayout()
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(updateButtonLayout)
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
