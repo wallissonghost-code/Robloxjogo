@@ -8,21 +8,9 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [
-            512,
-            1,
-            512
-          ],
-          "Position": [
-            0,
-            0,
-            0
-          ],
-          "Color": [
-            0.388235,
-            0.372549,
-            0.384314
-          ],
+          "Size": [512, 1, 512],
+          "Position": [0, 0, 0],
+          "Color": [0.388235, 0.372549, 0.384314],
           "Material": "SmoothPlastic",
           "TopSurface": "Smooth",
           "BottomSurface": "Smooth"
@@ -33,36 +21,13 @@
         "$properties": {
           "Anchored": true,
           "Neutral": true,
-          "Size": [
-            6,
-            1,
-            6
-          ],
-          "Position": [
-            0,
-            1,
-            0
-          ],
+          "Size": [6, 1, 6],
+          "Position": [0, 1, 0],
           "Transparency": 1,
           "CanCollide": false,
           "CanTouch": false,
           "CanQuery": false,
           "Duration": 0
-        }
-      }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "AuraService": {
-        "$path": "src/server/AuraService.server.lua"
-      }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "AuraMenu": {
-          "$path": "src/client/AuraMenu.client.lua"
         }
       }
     }
