@@ -210,6 +210,12 @@
           "$path": "src/client/BlockTarget.client.lua"
         }
       }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "BreakBlock": {
+        "$className": "RemoteEvent"
+      }
     }
   }
 }
