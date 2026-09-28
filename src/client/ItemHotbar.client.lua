@@ -13,6 +13,7 @@ local function styleRoot(name)
 end
 local normalRoot=styleRoot("NormalBar")
 local buildRoot=styleRoot("BuildBar");buildRoot.Visible=false
+local variantRoot=styleRoot("FoundationVariants");variantRoot.Position=UDim2.new(.5,0,1,-66);variantRoot.Visible=false
 
 local function line(parent,pos,size,color)
 	local f=Instance.new("Frame");f.Position=pos;f.Size=size;f.BackgroundColor3=color or Color3.fromRGB(220,230,223);f.BorderSizePixel=0;f.Parent=parent;return f
@@ -49,6 +50,17 @@ local normalSlots={}
 normalSlots[1]=makeSlot(normalRoot,1,"bag")
 for i=2,8 do normalSlots[i]=makeSlot(normalRoot,i,nil) end
 
+local foundationLevels={"Low","Medium","High"}
+local variantSlots={}
+for i,level in ipairs(foundationLevels) do
+	local b=makeSlot(variantRoot,i,"foundation")
+	local icon=b.Icon
+	local scale=({Low=.45,Medium=.65,High=.85})[level]
+	icon.Size=UDim2.fromScale(.68,scale)
+	icon.Position=UDim2.fromScale(.5,1-scale/2-.08)
+	variantSlots[i]=b
+end
+
 local buildKinds={"foundation","door","wall","roof"}
 local buildPieces={"Foundation","Door","Wall","Roof"}
 local buildSlots={}
@@ -67,6 +79,8 @@ local function setMode(nextMode)
 	selectedBuild=0
 	gui:SetAttribute("Mode",mode)
 	gui:SetAttribute("BuildPiece","")
+	gui:SetAttribute("FoundationLevel","Medium")
+	variantRoot.Visible=false
 	for _,b in ipairs(buildSlots) do b.SelectedBorder.Visible=false end
 	toggleStroke.Color=mode=="build" and Color3.fromRGB(95,255,140) or Color3.fromRGB(67,82,72)
 	toggleStroke.Thickness=mode=="build" and 2 or 1
@@ -83,7 +97,20 @@ for i,b in ipairs(buildSlots) do
 	b.Activated:Connect(function()
 		selectedBuild=i
 		for j,s in ipairs(buildSlots) do s.SelectedBorder.Visible=(j==i) end
-		gui:SetAttribute("BuildPiece",buildPieces[i])
+		if buildPieces[i]=="Foundation" then
+			variantRoot.Visible=true
+			gui:SetAttribute("BuildPiece","")
+		else
+			variantRoot.Visible=false
+			gui:SetAttribute("BuildPiece",buildPieces[i])
+		end
+	end)
+end
+for i,b in ipairs(variantSlots) do
+	b.Activated:Connect(function()
+		for j,s in ipairs(variantSlots) do s.SelectedBorder.Visible=(j==i) end
+		gui:SetAttribute("FoundationLevel",foundationLevels[i])
+		gui:SetAttribute("BuildPiece","Foundation")
 	end)
 end
 buildToggle.Activated:Connect(function() setMode(mode=="normal" and "build" or "normal") end)
@@ -109,6 +136,8 @@ local function resize()
 	for _,b in ipairs(normalSlots) do b.Size=UDim2.fromOffset(normalSize,normalSize) end
 	buildRoot.Size=UDim2.fromOffset(buildSize*4,buildSize)
 	for _,b in ipairs(buildSlots) do b.Size=UDim2.fromOffset(buildSize,buildSize) end
+	variantRoot.Size=UDim2.fromOffset(buildSize*3,buildSize)
+	for _,b in ipairs(variantSlots) do b.Size=UDim2.fromOffset(buildSize,buildSize) end
 	local toggleSize=math.clamp(normalSize,38,48);buildToggle.Size=UDim2.fromOffset(toggleSize,toggleSize)
 end
 local function watch()

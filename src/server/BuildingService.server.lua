@@ -39,10 +39,10 @@ for _,base in ipairs(state.bases or {}) do
 	for _,piece in ipairs(base.pieces or {}) do local d=Catalog[piece.type];if d then Factory.create(piece,d,builds) end end
 end
 
-resolve.OnServerInvoke=function(player,pieceType,rawPosition)
+resolve.OnServerInvoke=function(player,pieceType,rawPosition,options)
 	if not Catalog[pieceType] or typeof(rawPosition)~="Vector3" then return {ok=false} end
 	local base=baseFor(state,player.UserId,false) or {pieces={}}
-	local r,msg=Resolver.resolve(base,pieceType,rawPosition)
+	local r,msg=Resolver.resolve(base,pieceType,rawPosition,options)
 	if not r then return {ok=false,message=msg} end
 	local ok,reason=Validator.validate(player,Catalog[pieceType],r)
 	if not ok then return {ok=false,message=reason} end
@@ -50,7 +50,7 @@ resolve.OnServerInvoke=function(player,pieceType,rawPosition)
 end
 
 local lastRequest={}
-place.OnServerInvoke=function(player,pieceType,rawPosition)
+place.OnServerInvoke=function(player,pieceType,rawPosition,options)
 	local now=os.clock();if now-(lastRequest[player] or 0)<.12 then return {ok=false,message="Muito rápido."} end
 	lastRequest[player]=now
 	local definition=Catalog[pieceType]
@@ -59,7 +59,7 @@ place.OnServerInvoke=function(player,pieceType,rawPosition)
 	local live,err=WorldState.load(worldId)
 	if not live then return {ok=false,message="Estado do mundo indisponível."} end
 	local base=baseFor(live,player.UserId,false) or {pieces={}}
-	local resolved,msg=Resolver.resolve(base,pieceType,rawPosition)
+	local resolved,msg=Resolver.resolve(base,pieceType,rawPosition,options)
 	if not resolved then return {ok=false,message=msg} end
 	local valid,reason=Validator.validate(player,definition,resolved)
 	if not valid then return {ok=false,message=reason} end
@@ -67,15 +67,16 @@ place.OnServerInvoke=function(player,pieceType,rawPosition)
 	local record={
 		id=HttpService:GenerateGUID(false),baseId="base:"..tostring(player.UserId),ownerUserId=player.UserId,
 		type=pieceType,x=resolved.position.X,y=resolved.position.Y,z=resolved.position.Z,
-		rotation=resolved.rotation,socketKey=resolved.socketKey,foundationHeight=resolved.foundationHeight,schemaVersion=resolved.schemaVersion,createdAt=os.time()
+		rotation=resolved.rotation,socketKey=resolved.socketKey,foundationHeight=resolved.foundationHeight,foundationLevel=resolved.foundationLevel,schemaVersion=resolved.schemaVersion,createdAt=os.time()
 	}
 	local saved,saveErr=WorldState.update(worldId,function(current)
 		local b=baseFor(current,player.UserId,true)
-		local check,why=Resolver.resolve(b,pieceType,rawPosition)
+		local check,why=Resolver.resolve(b,pieceType,rawPosition,options)
 		if not check or check.socketKey~=record.socketKey then return current end
 		record.x,record.y,record.z=check.position.X,check.position.Y,check.position.Z
 		record.rotation=check.rotation
 		record.foundationHeight=check.foundationHeight
+		record.foundationLevel=check.foundationLevel
 		record.schemaVersion=check.schemaVersion
 		b.lastActive=os.time();table.insert(b.pieces,record);return current
 	end)
