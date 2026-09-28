@@ -63,7 +63,7 @@ local os = Instance.new("UIStroke"); os.Color = Color3.fromRGB(255,255,255); os.
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(1, 0)
 panel.Position = UDim2.new(1, -18, 0, 120)
-panel.Size = UDim2.fromOffset(230, 164)
+panel.Size = UDim2.fromOffset(260, 250)
 panel.BackgroundColor3 = Color3.fromRGB(16, 18, 21)
 panel.BackgroundTransparency = .04
 panel.Visible = false
@@ -112,6 +112,44 @@ minus.TextColor3 = Color3.new(1,1,1); minus.BackgroundColor3 = Color3.fromRGB(36
 local mc=Instance.new("UICorner");mc.CornerRadius=UDim.new(0,8);mc.Parent=minus
 local plus = minus:Clone(); plus.Text = "+"; plus.Position = UDim2.fromOffset(184,98); plus.Parent = panel
 
+local coords = Instance.new("TextLabel")
+coords.Position = UDim2.fromOffset(16, 136)
+coords.Size = UDim2.new(1, -32, 0, 34)
+coords.BackgroundColor3 = Color3.fromRGB(25, 28, 32)
+coords.Text = "X: --  Y: --  Z: --"
+coords.TextColor3 = Color3.fromRGB(225, 229, 233)
+coords.Font = Enum.Font.Code
+coords.TextSize = 12
+coords.Parent = panel
+local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(0, 9); cc.Parent = coords
+
+local mark = Instance.new("TextButton")
+mark.Position = UDim2.fromOffset(16, 180)
+mark.Size = UDim2.new(1, -32, 0, 38)
+mark.BackgroundColor3 = Color3.fromRGB(55, 59, 65)
+mark.Text = "MARCAR POSIÇÃO"
+mark.TextColor3 = Color3.fromRGB(245, 247, 249)
+mark.Font = Enum.Font.GothamBold
+mark.TextSize = 12
+mark.AutoButtonColor = false
+mark.Parent = panel
+local mkc = Instance.new("UICorner"); mkc.CornerRadius = UDim.new(0, 10); mkc.Parent = mark
+
+local markCount = 0
+local lastPosition = nil
+local function currentRoot()
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+mark.MouseButton1Click:Connect(function()
+	local root = currentRoot()
+	if not root then return end
+	markCount += 1
+	lastPosition = root.Position
+	mark.Text = string.format("#%d  X %.1f  Y %.1f  Z %.1f", markCount, lastPosition.X, lastPosition.Y, lastPosition.Z)
+end)
+
 local flying = false
 local speed = 70
 local attachment, velocity, orientation
@@ -157,6 +195,13 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 RunService.RenderStepped:Connect(function()
+	local liveRoot = currentRoot()
+	if liveRoot then
+		local p = liveRoot.Position
+		coords.Text = string.format("X: %.1f   Y: %.1f   Z: %.1f", p.X, p.Y, p.Z)
+	else
+		coords.Text = "X: --  Y: --  Z: --"
+	end
 	if not flying or not velocity or not orientation then return end
 	local character=player.Character
 	local humanoid=character and character:FindFirstChildOfClass("Humanoid")
