@@ -57,6 +57,9 @@
         },
         "WorldDirectory": {
           "$path": "src/server/world/WorldDirectory.lua"
+        },
+        "SafeSpawn": {
+          "$path": "src/server/world/SafeSpawn.lua"
         }
       },
       "WorldService": {
