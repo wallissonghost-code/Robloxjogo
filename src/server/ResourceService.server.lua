@@ -89,10 +89,26 @@ local function counts()
 	for _,m in ipairs(root:GetChildren()) do local k=m:GetAttribute("ResourceType");if c[k]~=nil then c[k]+=1 end end
 	return c
 end
-local function maintenance(initial)
-	local c=counts();local budget=initial and math.huge or resourceConfig.MAX_SPAWNS_PER_CYCLE
+local RESOURCE_ORDER={"Tree","Rock","Stick","SmallStone"}
+local function populateInitial()
+	local c=counts()
+	for _,kind in ipairs(RESOURCE_ORDER) do
+		local def=resourceConfig.TYPES[kind]
+		local missing=math.max(0,def.target-c[kind])
+		local attempts=0
+		local maxAttempts=math.max(resourceConfig.MAX_ATTEMPTS_PER_CYCLE,missing*4)
+		while missing>0 and attempts<maxAttempts do
+			attempts+=1
+			local pos=candidate(kind,def)
+			if pos then spawnResource(kind,pos);missing-=1 end
+		end
+	end
+end
+local function maintenance()
+	local c=counts();local budget=resourceConfig.MAX_SPAWNS_PER_CYCLE
 	local attempts=0
-	for kind,def in pairs(resourceConfig.TYPES) do
+	for _,kind in ipairs(RESOURCE_ORDER) do
+		local def=resourceConfig.TYPES[kind]
 		local missing=math.max(0,def.target-c[kind])
 		while missing>0 and budget>0 and attempts<resourceConfig.MAX_ATTEMPTS_PER_CYCLE do
 			attempts+=1
@@ -103,5 +119,5 @@ local function maintenance(initial)
 	end
 end
 
-maintenance(true)
-while true do task.wait(resourceConfig.MAINTENANCE_SECONDS);maintenance(false) end
+populateInitial()
+while true do task.wait(resourceConfig.MAINTENANCE_SECONDS);maintenance() end
