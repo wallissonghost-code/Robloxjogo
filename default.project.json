@@ -74,6 +74,15 @@
       "BuildingService": {
         "$path": "src/server/BuildingService.server.lua"
       },
+      "CombatService": {
+        "$path": "src/server/CombatService.server.lua"
+      },
+      "Combat": {
+        "$className": "Folder",
+        "WeaponConfig": {
+          "$path": "src/shared/combat/WeaponConfig.lua"
+        }
+      },
       "Building": {
         "$className": "Folder",
         "PlacementValidator": {
@@ -117,6 +126,9 @@
         },
         "ItemHotbar": {
           "$path": "src/client/ItemHotbar.client.lua"
+        },
+        "CombatController": {
+          "$path": "src/client/CombatController.client.lua"
         }
       }
     },
