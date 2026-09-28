@@ -67,7 +67,7 @@ place.OnServerInvoke=function(player,pieceType,rawPosition)
 	local record={
 		id=HttpService:GenerateGUID(false),baseId="base:"..tostring(player.UserId),ownerUserId=player.UserId,
 		type=pieceType,x=resolved.position.X,y=resolved.position.Y,z=resolved.position.Z,
-		rotation=resolved.rotation,socketKey=resolved.socketKey,createdAt=os.time()
+		rotation=resolved.rotation,socketKey=resolved.socketKey,foundationHeight=resolved.foundationHeight,schemaVersion=resolved.schemaVersion,createdAt=os.time()
 	}
 	local saved,saveErr=WorldState.update(worldId,function(current)
 		local b=baseFor(current,player.UserId,true)
@@ -75,6 +75,8 @@ place.OnServerInvoke=function(player,pieceType,rawPosition)
 		if not check or check.socketKey~=record.socketKey then return current end
 		record.x,record.y,record.z=check.position.X,check.position.Y,check.position.Z
 		record.rotation=check.rotation
+		record.foundationHeight=check.foundationHeight
+		record.schemaVersion=check.schemaVersion
 		b.lastActive=os.time();table.insert(b.pieces,record);return current
 	end)
 	if not saved then return {ok=false,message="Falha ao salvar: "..tostring(saveErr)} end
