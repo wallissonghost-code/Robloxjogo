@@ -11,6 +11,33 @@ if player:GetAttribute("IsGameAdmin") ~= true then
 	return
 end
 
+-- Only the authorized admin reaches this code. Mirror the physical perimeter locally
+-- so the admin can inspect it while regular players continue to see nothing.
+local boundaryVisuals = Instance.new("Folder")
+boundaryVisuals.Name = "AdminBoundaryVisuals"
+boundaryVisuals.Parent = Workspace
+
+local boundary = Workspace:WaitForChild("WorldBoundary", 30)
+if boundary then
+	for _, source in ipairs(boundary:GetChildren()) do
+		if source:IsA("BasePart") then
+			local visual = Instance.new("Part")
+			visual.Name = source.Name .. "Visual"
+			visual.Anchored = true
+			visual.CanCollide = false
+			visual.CanTouch = false
+			visual.CanQuery = false
+			visual.CastShadow = false
+			visual.Material = Enum.Material.Neon
+			visual.Color = Color3.fromRGB(255, 72, 72)
+			visual.Transparency = .82
+			visual.Size = source.Size
+			visual.CFrame = source.CFrame
+			visual.Parent = boundaryVisuals
+		end
+	end
+end
+
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PrivateAdmin"
