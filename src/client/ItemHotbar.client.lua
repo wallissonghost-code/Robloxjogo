@@ -12,15 +12,29 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.AnchorPoint = Vector2.new(.5, 1)
-root.Position = UDim2.new(.5, 0, 1, -14)
-root.BackgroundTransparency = 1
+root.Position = UDim2.new(.5, 0, 1, -12)
+root.BackgroundColor3 = Color3.fromRGB(12, 17, 14)
+root.BackgroundTransparency = .08
+root.BorderSizePixel = 0
+root.ClipsDescendants = true
 root.Parent = gui
+
+local rootCorner = Instance.new("UICorner")
+rootCorner.CornerRadius = UDim.new(0, 8)
+rootCorner.Parent = root
+
+local rootStroke = Instance.new("UIStroke")
+rootStroke.Color = Color3.fromRGB(67, 82, 72)
+rootStroke.Transparency = .08
+rootStroke.Thickness = 1
+rootStroke.Parent = root
 
 local layout = Instance.new("UIListLayout")
 layout.FillDirection = Enum.FillDirection.Horizontal
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 0)
 layout.Parent = root
 
 local slots = {}
@@ -32,59 +46,76 @@ local function makeSlot(index)
 	button.LayoutOrder = index
 	button.AutoButtonColor = false
 	button.Text = ""
-	button.BackgroundColor3 = Color3.fromRGB(15, 20, 17)
-	button.BackgroundTransparency = .12
+	button.BackgroundColor3 = Color3.fromRGB(16, 22, 18)
+	button.BackgroundTransparency = .1
 	button.BorderSizePixel = 0
 	button.Parent = root
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 9)
-	corner.Parent = button
+	if index > 1 then
+		local divider = Instance.new("Frame")
+		divider.Name = "Divider"
+		divider.AnchorPoint = Vector2.new(0, .5)
+		divider.Position = UDim2.new(0, 0, .5, 0)
+		divider.Size = UDim2.new(0, 1, .72, 0)
+		divider.BackgroundColor3 = Color3.fromRGB(64, 78, 69)
+		divider.BackgroundTransparency = .28
+		divider.BorderSizePixel = 0
+		divider.ZIndex = 3
+		divider.Parent = button
+	end
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Name = "Stroke"
-	stroke.Color = Color3.fromRGB(55, 70, 60)
-	stroke.Transparency = .15
-	stroke.Thickness = 1
-	stroke.Parent = button
+	local selectedBorder = Instance.new("Frame")
+	selectedBorder.Name = "SelectedBorder"
+	selectedBorder.Size = UDim2.fromScale(1, 1)
+	selectedBorder.BackgroundTransparency = 1
+	selectedBorder.Visible = false
+	selectedBorder.ZIndex = 4
+	selectedBorder.Parent = button
+	local selectedStroke = Instance.new("UIStroke")
+	selectedStroke.Color = Color3.fromRGB(95, 255, 140)
+	selectedStroke.Thickness = 2
+	selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	selectedStroke.Parent = selectedBorder
 
 	local number = Instance.new("TextLabel")
 	number.Name = "Number"
-	number.Position = UDim2.fromOffset(5, 3)
-	number.Size = UDim2.fromOffset(15, 14)
+	number.Position = UDim2.fromOffset(4, 2)
+	number.Size = UDim2.fromOffset(14, 12)
 	number.BackgroundTransparency = 1
 	number.Text = tostring(index)
 	number.TextColor3 = Color3.fromRGB(135, 150, 140)
 	number.Font = Enum.Font.GothamBold
-	number.TextSize = 9
+	number.TextSize = 8
 	number.TextXAlignment = Enum.TextXAlignment.Left
+	number.ZIndex = 2
 	number.Parent = button
 
 	local icon = Instance.new("ImageLabel")
 	icon.Name = "Icon"
 	icon.AnchorPoint = Vector2.new(.5, .5)
-	icon.Position = UDim2.fromScale(.5, .5)
+	icon.Position = UDim2.fromScale(.5, .52)
 	icon.Size = UDim2.fromScale(.68, .68)
 	icon.BackgroundTransparency = 1
 	icon.Image = ""
 	icon.ScaleType = Enum.ScaleType.Fit
+	icon.ZIndex = 2
 	icon.Parent = button
 
 	local quantity = Instance.new("TextLabel")
 	quantity.Name = "Quantity"
 	quantity.AnchorPoint = Vector2.new(1, 1)
-	quantity.Position = UDim2.new(1, -5, 1, -4)
-	quantity.Size = UDim2.fromOffset(28, 15)
+	quantity.Position = UDim2.new(1, -4, 1, -3)
+	quantity.Size = UDim2.fromOffset(25, 13)
 	quantity.BackgroundTransparency = 1
 	quantity.Text = ""
 	quantity.TextColor3 = Color3.fromRGB(238, 244, 240)
 	quantity.Font = Enum.Font.GothamBold
-	quantity.TextSize = 10
+	quantity.TextSize = 9
 	quantity.TextXAlignment = Enum.TextXAlignment.Right
+	quantity.ZIndex = 2
 	quantity.Parent = button
 
 	slots[index] = button
-	return button
 end
 
 for i = 1, MAX_SLOTS do makeSlot(i) end
@@ -94,16 +125,10 @@ local function selectSlot(index)
 	if index < 1 or index > MAX_SLOTS then return end
 	selected = index
 	for i, slot in ipairs(slots) do
-		local stroke = slot:FindFirstChild("Stroke")
-		if i == selected then
-			slot.BackgroundColor3 = Color3.fromRGB(25, 39, 30)
-			stroke.Color = Color3.fromRGB(95, 255, 140)
-			stroke.Thickness = 2
-		else
-			slot.BackgroundColor3 = Color3.fromRGB(15, 20, 17)
-			stroke.Color = Color3.fromRGB(55, 70, 60)
-			stroke.Thickness = 1
-		end
+		local border = slot:FindFirstChild("SelectedBorder")
+		local active = i == selected
+		slot.BackgroundColor3 = active and Color3.fromRGB(24, 37, 29) or Color3.fromRGB(16, 22, 18)
+		if border then border.Visible = active end
 	end
 	gui:SetAttribute("SelectedSlot", selected)
 end
@@ -123,14 +148,10 @@ local function resize()
 	local camera = workspace.CurrentCamera
 	if not camera then return end
 	local width = camera.ViewportSize.X
-	local sideMargin = width < 500 and 16 or 28
-	local available = math.max(240, width - sideMargin * 2)
-	local gap = math.clamp(math.floor(available * .012), 3, 8)
-	local slotSize = math.clamp(math.floor((available - gap * (MAX_SLOTS - 1)) / MAX_SLOTS), 34, 62)
-	local totalWidth = slotSize * MAX_SLOTS + gap * (MAX_SLOTS - 1)
-
+	local available = math.max(240, width - 24)
+	local slotSize = math.clamp(math.floor(available / MAX_SLOTS), 32, 48)
+	local totalWidth = slotSize * MAX_SLOTS
 	root.Size = UDim2.fromOffset(totalWidth, slotSize)
-	layout.Padding = UDim.new(0, gap)
 	for _, slot in ipairs(slots) do
 		slot.Size = UDim2.fromOffset(slotSize, slotSize)
 	end
@@ -139,9 +160,7 @@ end
 local function watchCamera()
 	if cameraConnection then cameraConnection:Disconnect() end
 	local camera = workspace.CurrentCamera
-	if camera then
-		cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
-	end
+	if camera then cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end
 	resize()
 end
 
