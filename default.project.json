@@ -111,6 +111,9 @@
         },
         "BuildingController": {
           "$path": "src/client/BuildingController.client.lua"
+        },
+        "ItemHotbar": {
+          "$path": "src/client/ItemHotbar.client.lua"
         }
       }
     },
