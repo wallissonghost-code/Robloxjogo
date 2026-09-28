@@ -5,6 +5,8 @@ local TerrainShape=require(script.Parent.World.Terrain)
 local worldId
 repeat worldId=game:GetAttribute("WorldId");if not worldId then game:GetAttributeChangedSignal("WorldId"):Wait() end until type(worldId)=="string" and worldId~=""
 
+while Workspace:GetAttribute("WorldReady")~=true do Workspace:GetAttributeChangedSignal("WorldReady"):Wait() end
+
 local resourceConfig=Config.RESOURCES
 local root=Workspace:FindFirstChild("WorldResources") or Instance.new("Folder")
 root.Name="WorldResources";root.Parent=Workspace
@@ -15,7 +17,14 @@ for i=1,#worldId do seed+=string.byte(worldId,i)*i end
 local rng=Random.new(seed)
 local clusters={}
 
-local function terrainY(x,z) return TerrainShape.heightAt(x,z) end
+local terrainParams=RaycastParams.new()
+terrainParams.FilterType=Enum.RaycastFilterType.Include
+terrainParams.FilterDescendantsInstances={Workspace.Terrain}
+local function terrainSurface(x,z)
+	local ray=Workspace:Raycast(Vector3.new(x,600,z),Vector3.new(0,-900,0),terrainParams)
+	if not ray or ray.Material==Enum.Material.Water then return nil end
+	return ray.Position.Y
+end
 local function insideWater(x,z,y)
 	if y<=Config.WATER_LEVEL+1 then return true end
 	for _,lake in ipairs(Config.LAKES) do
@@ -24,9 +33,11 @@ local function insideWater(x,z,y)
 	end
 	return false
 end
-local function slopeOK(x,z)
-	local y=terrainY(x,z);local d=5
-	local maxDelta=math.max(math.abs(terrainY(x+d,z)-y),math.abs(terrainY(x-d,z)-y),math.abs(terrainY(x,z+d)-y),math.abs(terrainY(x,z-d)-y))
+local function slopeOK(x,z,y)
+	local d=5
+	local a,b,c,e=terrainSurface(x+d,z),terrainSurface(x-d,z),terrainSurface(x,z+d),terrainSurface(x,z-d)
+	if not a or not b or not c or not e then return false end
+	local maxDelta=math.max(math.abs(a-y),math.abs(b-y),math.abs(c-y),math.abs(e-y))
 	return maxDelta<=5
 end
 local function nearBuild(pos,radius)
@@ -57,8 +68,8 @@ local function candidate(kind,def)
 		x=rng:NextNumber(-half,half);z=rng:NextNumber(-half,half)
 		if rng:NextNumber()<.28 then clusters[kind]=Vector2.new(x,z) end
 	end
-	local y=terrainY(x,z)
-	if insideWater(x,z,y) or not slopeOK(x,z) then return nil end
+	local y=terrainSurface(x,z)
+	if not y or insideWater(x,z,y) or not slopeOK(x,z,y) then return nil end
 	local pos=Vector3.new(x,y,z)
 	if nearBuild(pos,resourceConfig.BASE_EXCLUSION_RADIUS) or nearResource(pos,def.minSpacing) then return nil end
 	return pos
@@ -87,8 +98,14 @@ end
 local function counts()
 	local c={Tree=0,Rock=0,Stick=0,SmallStone=0}
 	for _,m in ipairs(root:GetChildren()) do local k=m:GetAttribute("ResourceType");if c[k]~=nil then c[k]+=1 end end
+	game:SetAttribute("ResourceTreeCount",c.Tree)
+	game:SetAttribute("ResourceRockCount",c.Rock)
+	game:SetAttribute("ResourceStickCount",c.Stick)
+	game:SetAttribute("ResourceSmallStoneCount",c.SmallStone)
+	game:SetAttribute("ResourceTotalCount",c.Tree+c.Rock+c.Stick+c.SmallStone)
 	return c
 end
+local function publishCounts() counts() end
 local RESOURCE_ORDER={"Tree","Rock","Stick","SmallStone"}
 local function populateInitial()
 	local c=counts()
@@ -100,9 +117,10 @@ local function populateInitial()
 		while missing>0 and attempts<maxAttempts do
 			attempts+=1
 			local pos=candidate(kind,def)
-			if pos then spawnResource(kind,pos);missing-=1 end
+			if pos then spawnResource(kind,pos);missing-=1;if missing%25==0 then task.wait() end end
 		end
 	end
+	publishCounts()
 end
 local function maintenance()
 	local c=counts();local budget=resourceConfig.MAX_SPAWNS_PER_CYCLE
@@ -117,6 +135,7 @@ local function maintenance()
 		end
 		if budget<=0 or attempts>=resourceConfig.MAX_ATTEMPTS_PER_CYCLE then break end
 	end
+	publishCounts()
 end
 
 populateInitial()
