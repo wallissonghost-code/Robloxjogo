@@ -31,6 +31,18 @@
       "$className": "ServerScriptService",
       "WorldGenerator": {
         "$path": "src/server/WorldGenerator.server.lua"
+      },
+      "AdminService": {
+        "$path": "src/server/AdminService.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "AdminPanel": {
+          "$path": "src/client/AdminPanel.client.lua"
+        }
       }
     }
   }
