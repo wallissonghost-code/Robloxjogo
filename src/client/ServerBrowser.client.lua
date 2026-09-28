@@ -1,25 +1,39 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local bootstrap = playerGui:FindFirstChild("WorldBootstrap")
 local remotes = ReplicatedStorage:WaitForChild("WorldRemotes")
 local getWorlds = remotes:WaitForChild("GetWorlds")
 local joinWorld = remotes:WaitForChild("JoinWorld")
 
 local ok, payload = pcall(function() return getWorlds:InvokeServer() end)
-if not ok or type(payload) ~= "table" or payload.inWorld then return end
+if not ok or type(payload) ~= "table" then
+	if bootstrap then bootstrap:Destroy() end
+	return
+end
+if payload.inWorld then
+	if bootstrap then bootstrap:Destroy() end
+	return
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "WorldBrowser"
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 1000
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local bg = Instance.new("Frame")
 bg.Size = UDim2.fromScale(1,1)
 bg.BackgroundColor3 = Color3.fromRGB(7,10,8)
 bg.BorderSizePixel = 0
 bg.Parent = gui
+
+if bootstrap then
+	bootstrap:Destroy()
+	bootstrap = nil
+end
 
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(.5,.5)
@@ -164,9 +178,18 @@ local function cardFor(world)
 		if busy or not button.Active then return end
 		busy = true
 		status.Text = "Entrando em "..world.name.."..."
+		local transition = Instance.new("Frame")
+		transition.Name = "Transition"
+		transition.Size = UDim2.fromScale(1,1)
+		transition.BackgroundColor3 = Color3.fromRGB(7,10,8)
+		transition.BorderSizePixel = 0
+		transition.ZIndex = 5000
+		transition.Parent = gui
 		local callOk,result = pcall(function() return joinWorld:InvokeServer(world.id) end)
 		if not callOk or type(result) ~= "table" or not result.ok then
 			status.Text = type(result)=="table" and result.message or "Não foi possível entrar agora."
+			local transition = gui:FindFirstChild("Transition")
+			if transition then transition:Destroy() end
 			busy = false
 		end
 	end)

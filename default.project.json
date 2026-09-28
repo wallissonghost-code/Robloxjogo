@@ -92,6 +92,12 @@
           "$path": "src/client/ServerBrowser.client.lua"
         }
       }
+    },
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "WorldBootstrap": {
+        "$path": "src/client/WorldBootstrap.client.lua"
+      }
     }
   }
 }
