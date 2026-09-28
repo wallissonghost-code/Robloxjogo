@@ -9,6 +9,8 @@ local CELL = 20
 local WATER_LEVEL = 4
 local RIVER_HALF_WIDTH = 34
 local LAND_HALF = 2480
+local BOUNDARY_HEIGHT = 220
+local BOUNDARY_THICKNESS = 80
 
 local function riverCenter(z)
 	return math.sin(z / 520) * 180 + math.sin(z / 190) * 55
@@ -198,6 +200,36 @@ for i = 1, 1600 do
 		blade.Parent = grassFolder
 	end
 end
+
+-- Continuous rectangular perimeter around the entire playable map.
+-- Each side spans corner-to-corner; together they form one closed collision ring.
+local barriers = Instance.new("Folder")
+barriers.Name = "WorldBoundary"
+barriers.Parent = Workspace
+
+local wallHeight = BOUNDARY_HEIGHT
+local wallThickness = BOUNDARY_THICKNESS
+local centerOffset = LAND_HALF + wallThickness / 2
+local perimeterSpan = LAND_HALF * 2 + wallThickness * 2
+
+local function createBoundaryWall(name, size, position)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Transparency = 1
+	part.CanCollide = true
+	part.CanTouch = false
+	part.CanQuery = true
+	part.Size = size
+	part.Position = position
+	part.Parent = barriers
+end
+
+-- Full closed frame: no isolated segments and no separate corner patches.
+createBoundaryWall("North", Vector3.new(perimeterSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight / 2, -centerOffset))
+createBoundaryWall("South", Vector3.new(perimeterSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight / 2, centerOffset))
+createBoundaryWall("West", Vector3.new(wallThickness, wallHeight, perimeterSpan), Vector3.new(-centerOffset, wallHeight / 2, 0))
+createBoundaryWall("East", Vector3.new(wallThickness, wallHeight, perimeterSpan), Vector3.new(centerOffset, wallHeight / 2, 0))
 
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
