@@ -201,8 +201,9 @@ for i = 1, 1600 do
 	end
 end
 
--- Continuous rectangular perimeter around the entire playable map.
--- Each side spans corner-to-corner; together they form one closed collision ring.
+-- Closed collision ring around the whole playable map.
+-- Build every side from short contiguous modules instead of oversized Parts.
+-- This keeps the entire perimeter occupied in runtime, including all four corners.
 local barriers = Instance.new("Folder")
 barriers.Name = "WorldBoundary"
 barriers.Parent = Workspace
@@ -210,7 +211,10 @@ barriers.Parent = Workspace
 local wallHeight = BOUNDARY_HEIGHT
 local wallThickness = BOUNDARY_THICKNESS
 local centerOffset = LAND_HALF + wallThickness / 2
-local perimeterSpan = LAND_HALF * 2 + wallThickness * 2
+local outerHalf = LAND_HALF + wallThickness
+local perimeterSpan = outerHalf * 2
+local segmentLength = 512
+local seamOverlap = 2
 
 local function createBoundaryWall(name, size, position)
 	local part = Instance.new("Part")
@@ -225,11 +229,43 @@ local function createBoundaryWall(name, size, position)
 	part.Parent = barriers
 end
 
--- Full closed frame: no isolated segments and no separate corner patches.
-createBoundaryWall("North", Vector3.new(perimeterSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight / 2, -centerOffset))
-createBoundaryWall("South", Vector3.new(perimeterSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight / 2, centerOffset))
-createBoundaryWall("West", Vector3.new(wallThickness, wallHeight, perimeterSpan), Vector3.new(-centerOffset, wallHeight / 2, 0))
-createBoundaryWall("East", Vector3.new(wallThickness, wallHeight, perimeterSpan), Vector3.new(centerOffset, wallHeight / 2, 0))
+local function tileHorizontal(prefix, z)
+	local cursor = -outerHalf
+	local index = 1
+	while cursor < outerHalf do
+		local length = math.min(segmentLength, outerHalf - cursor)
+		local center = cursor + length / 2
+		createBoundaryWall(
+			string.format("%s_%02d", prefix, index),
+			Vector3.new(length + seamOverlap, wallHeight, wallThickness),
+			Vector3.new(center, wallHeight / 2, z)
+		)
+		cursor += length
+		index += 1
+	end
+end
+
+local function tileVertical(prefix, x)
+	local cursor = -outerHalf
+	local index = 1
+	while cursor < outerHalf do
+		local length = math.min(segmentLength, outerHalf - cursor)
+		local center = cursor + length / 2
+		createBoundaryWall(
+			string.format("%s_%02d", prefix, index),
+			Vector3.new(wallThickness, wallHeight, length + seamOverlap),
+			Vector3.new(x, wallHeight / 2, center)
+		)
+		cursor += length
+		index += 1
+	end
+end
+
+-- Four complete sides. The perpendicular rows overlap at each 80x80 corner.
+tileHorizontal("North", -centerOffset)
+tileHorizontal("South", centerOffset)
+tileVertical("West", -centerOffset)
+tileVertical("East", centerOffset)
 
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
