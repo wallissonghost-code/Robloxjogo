@@ -3,32 +3,6 @@ local TerrainShape = require(script.Parent.Terrain)
 
 local Vegetation = {}
 
-local function makeTree(parent, position, scale)
-	local model = Instance.new("Model")
-	model.Name = "Tree"
-	model.Parent = parent
-
-	local trunk = Instance.new("Part")
-	trunk.Name = "Trunk"
-	trunk.Anchored = true
-	trunk.Material = Enum.Material.Wood
-	trunk.Color = Color3.fromRGB(91, 63, 42)
-	trunk.Size = Vector3.new(2.2, 9, 2.2) * scale
-	trunk.CFrame = CFrame.new(position + Vector3.new(0, trunk.Size.Y / 2, 0))
-	trunk.Parent = model
-
-	local crown = Instance.new("Part")
-	crown.Name = "Crown"
-	crown.Shape = Enum.PartType.Ball
-	crown.Anchored = true
-	crown.CanCollide = false
-	crown.Material = Enum.Material.Grass
-	crown.Color = Color3.fromRGB(48, 102, 48)
-	crown.Size = Vector3.new(9, 8, 9) * scale
-	crown.CFrame = CFrame.new(position + Vector3.new(0, trunk.Size.Y + crown.Size.Y * .25, 0))
-	crown.Parent = model
-end
-
 function Vegetation.generate(workspace)
 	local vegetation = Instance.new("Folder")
 	vegetation.Name = "Vegetation"
