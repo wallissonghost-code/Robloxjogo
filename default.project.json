@@ -74,6 +74,9 @@
       "BuildingService": {
         "$path": "src/server/BuildingService.server.lua"
       },
+      "ResourceService": {
+        "$path": "src/server/ResourceService.server.lua"
+      },
       "Building": {
         "$className": "Folder",
         "PlacementValidator": {

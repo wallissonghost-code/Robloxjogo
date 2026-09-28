@@ -17,6 +17,20 @@ return {
 		{ x = -1550, z = -1150, rx = 240, rz = 180, level = 5 },
 	},
 
+	RESOURCES = {
+		MAINTENANCE_SECONDS = 60,
+		MAX_SPAWNS_PER_CYCLE = 60,
+		MAX_ATTEMPTS_PER_CYCLE = 240,
+		BASE_EXCLUSION_RADIUS = 24,
+		EDGE_MARGIN = 120,
+		TYPES = {
+			Tree = { target = 420, minSpacing = 13, clusterRadius = 85, clusterChance = .62 },
+			Rock = { target = 170, minSpacing = 15, clusterRadius = 70, clusterChance = .48 },
+			Stick = { target = 300, minSpacing = 4, clusterRadius = 45, clusterChance = .72 },
+			SmallStone = { target = 260, minSpacing = 4, clusterRadius = 42, clusterChance = .68 },
+		},
+	},
+
 	FLAT_ZONES = {
 		{ x = 0, z = 0, radius = 180, height = 18 },
 		{ x = 820, z = -620, radius = 240, height = 24 },

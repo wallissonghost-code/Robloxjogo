@@ -35,14 +35,6 @@ function Vegetation.generate(workspace)
 	vegetation.Parent = workspace
 
 	local rng = Random.new(Config.SEED)
-	for _ = 1, 900 do
-		local x = rng:NextNumber(-Config.WORLD*.43, Config.WORLD*.43)
-		local z = rng:NextNumber(-Config.WORLD*.43, Config.WORLD*.43)
-		local h = TerrainShape.heightAt(x, z)
-		if math.abs(x - TerrainShape.riverCenter(z)) > 28 and h > 7 and h < 54 then
-			makeTree(vegetation, Vector3.new(x, h + .5, z), rng:NextNumber(.75, 1.25))
-		end
-	end
 
 	local grassFolder = Instance.new("Folder")
 	grassFolder.Name = "GrassDetails"
