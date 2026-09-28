@@ -1,10 +1,15 @@
 local WorldState = require(script.Parent.World.WorldState)
 
-local worldId = game:GetAttribute("WorldId")
-if type(worldId) ~= "string" or worldId == "" then
-	return
+local function waitForWorldId()
+	local id = game:GetAttribute("WorldId")
+	while type(id) ~= "string" or id == "" do
+		game:GetAttributeChangedSignal("WorldId"):Wait()
+		id = game:GetAttribute("WorldId")
+	end
+	return id
 end
 
+local worldId = waitForWorldId()
 local state, err = WorldState.load(worldId)
 if not state then
 	warn("Persistent world state unavailable:", worldId, err)
@@ -14,6 +19,3 @@ end
 game:SetAttribute("PersistentWorldId", worldId)
 game:SetAttribute("PersistentWorldVersion", state.version)
 game:SetAttribute("PersistentBaseCount", #state.bases)
-
--- BuildingService will consume state.bases in the next construction phase.
--- Keeping loading here makes world persistence independent from any player being online.

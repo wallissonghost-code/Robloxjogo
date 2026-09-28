@@ -70,6 +70,18 @@
       },
       "WorldRuntime": {
         "$path": "src/server/WorldRuntime.server.lua"
+      },
+      "BuildingService": {
+        "$path": "src/server/BuildingService.server.lua"
+      },
+      "Building": {
+        "$className": "Folder",
+        "PlacementValidator": {
+          "$path": "src/server/building/PlacementValidator.lua"
+        },
+        "PieceFactory": {
+          "$path": "src/server/building/PieceFactory.lua"
+        }
       }
     },
     "StarterPlayer": {
@@ -96,6 +108,9 @@
         },
         "ServerBrowser": {
           "$path": "src/client/ServerBrowser.client.lua"
+        },
+        "BuildingController": {
+          "$path": "src/client/BuildingController.client.lua"
         }
       }
     },
@@ -103,6 +118,15 @@
       "$className": "ReplicatedFirst",
       "WorldBootstrap": {
         "$path": "src/client/WorldBootstrap.client.lua"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Building": {
+        "$className": "Folder",
+        "PieceCatalog": {
+          "$path": "src/shared/building/PieceCatalog.lua"
+        }
       }
     }
   }
