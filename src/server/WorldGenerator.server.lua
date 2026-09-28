@@ -7,10 +7,35 @@ terrain:Clear()
 local WORLD = 5200
 local CELL = 20
 local WATER_LEVEL = 4
-local RIVER_HALF_WIDTH = 15
+local RIVER_HALF_WIDTH = 34
+local BOUNDARY_HEIGHT = 1400
 
 local function riverCenter(z)
 	return math.sin(z / 520) * 180 + math.sin(z / 190) * 55
+end
+
+local function riverTwoCenter(z)
+	return -1050 + math.sin(z / 430 + 1.7) * 260 + math.sin(z / 170) * 65
+end
+
+local function riverThreeCenter(x)
+	return 1050 + math.sin(x / 500 + .8) * 300 + math.sin(x / 210) * 70
+end
+
+local LAKES = {
+	{ x = 850, z = -850, rx = 230, rz = 165, level = 6 },
+	{ x = -1250, z = 1050, rx = 290, rz = 205, level = 3 },
+	{ x = 1450, z = 1250, rx = 190, rz = 250, level = 8 },
+	{ x = -1550, z = -1150, rx = 240, rz = 180, level = 5 },
+}
+
+local function lakeInfluence(x, z)
+	local best, level = math.huge, nil
+	for _, lake in ipairs(LAKES) do
+		local d = math.sqrt(((x-lake.x)/lake.rx)^2 + ((z-lake.z)/lake.rz)^2)
+		if d < best then best, level = d, lake.level end
+	end
+	return best, level
 end
 
 local FLAT_ZONES = {
@@ -41,10 +66,18 @@ local function heightAt(x, z)
 	local mountains = math.max(0, edge - 0.58) * 190 + ridgeNoise * math.max(0, edge - 0.35) * 95
 	local h = 15 + broad + detail + mountains
 
-	local distanceToRiver = math.abs(x - riverCenter(z))
-	if distanceToRiver < RIVER_HALF_WIDTH + 13 then
-		local t = math.clamp(distanceToRiver / (RIVER_HALF_WIDTH + 13), 0, 1)
-		h = WATER_LEVEL - 7 + t * t * math.max(0, h - (WATER_LEVEL - 7))
+	local d1 = math.abs(x - riverCenter(z))
+	local d2 = math.abs(x - riverTwoCenter(z))
+	local d3 = math.abs(z - riverThreeCenter(x))
+	local distanceToRiver = math.min(d1, d2, d3)
+	if distanceToRiver < RIVER_HALF_WIDTH + 34 then
+		local t = math.clamp(distanceToRiver / (RIVER_HALF_WIDTH + 34), 0, 1)
+		h = WATER_LEVEL - 9 + t * t * math.max(0, h - (WATER_LEVEL - 9))
+	end
+	local lakeD, lakeLevel = lakeInfluence(x, z)
+	if lakeLevel and lakeD < 1.18 then
+		local t = math.clamp((lakeD - .78) / .4, 0, 1)
+		h = (lakeLevel - 10) * (1-t) + h * t
 	end
 	h = flattenHeight(x, z, h)
 	return math.max(-5, h)
@@ -58,11 +91,32 @@ for x = -WORLD/2, WORLD/2, CELL do
 	end
 end
 
--- Continuous winding river with a natural bed.
-for z = -WORLD/2, WORLD/2, CELL do
-	local x = riverCenter(z)
-	terrain:FillBlock(CFrame.new(x, WATER_LEVEL - 4.5, z), Vector3.new(RIVER_HALF_WIDTH * 2, 5, CELL + 2), Enum.Material.Sand)
-	terrain:FillBlock(CFrame.new(x, WATER_LEVEL - 1.5, z), Vector3.new(RIVER_HALF_WIDTH * 2 - 3, 5, CELL + 2), Enum.Material.Water)
+-- Three broad river systems. Overlapping spherical stamps remove the old blocky channels.
+local function stampRiver(x, z, level, radius)
+	terrain:FillBall(Vector3.new(x, level - 7, z), radius + 7, Enum.Material.Sand)
+	terrain:FillBall(Vector3.new(x, level - 2, z), radius, Enum.Material.Water)
+end
+local RIVER_STEP = 24
+for z = -WORLD/2, WORLD/2, RIVER_STEP do
+	stampRiver(riverCenter(z), z, WATER_LEVEL, RIVER_HALF_WIDTH)
+	stampRiver(riverTwoCenter(z), z, WATER_LEVEL - 1, RIVER_HALF_WIDTH + 6)
+end
+for x = -WORLD/2, WORLD/2, RIVER_STEP do
+	stampRiver(x, riverThreeCenter(x), WATER_LEVEL + 1, RIVER_HALF_WIDTH + 4)
+end
+
+-- Lakes use overlapping terrain balls for rounded shorelines and reliable water volume.
+for _, lake in ipairs(LAKES) do
+	for ox = -lake.rx*.72, lake.rx*.72, 32 do
+		for oz = -lake.rz*.72, lake.rz*.72, 32 do
+			local normalized = (ox/(lake.rx*.78))^2 + (oz/(lake.rz*.78))^2
+			if normalized <= 1 then
+				local radius = 32
+				terrain:FillBall(Vector3.new(lake.x+ox, lake.level-8, lake.z+oz), radius+8, Enum.Material.Sand)
+				terrain:FillBall(Vector3.new(lake.x+ox, lake.level-3, lake.z+oz), radius, Enum.Material.Water)
+			end
+		end
+	end
 end
 
 local vegetation = Instance.new("Folder")
@@ -131,7 +185,7 @@ local barriers = Instance.new("Folder")
 barriers.Name = "WorldBoundary"
 barriers.Parent = Workspace
 local half = WORLD / 2 + 12
-local wallHeight = 220
+local wallHeight = BOUNDARY_HEIGHT
 local wallThickness = 10
 local function wall(name, size, position)
 	local part = Instance.new("Part")
@@ -140,7 +194,7 @@ local function wall(name, size, position)
 	part.Transparency = 1
 	part.CanCollide = true
 	part.CanTouch = false
-	part.CanQuery = false
+	part.CanQuery = true
 	part.Size = size
 	part.Position = position
 	part.Parent = barriers
