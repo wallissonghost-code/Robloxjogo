@@ -8,7 +8,9 @@ local WORLD = 5200
 local CELL = 20
 local WATER_LEVEL = 4
 local RIVER_HALF_WIDTH = 34
-local BOUNDARY_HEIGHT = 1400
+local BOUNDARY_HEIGHT = 4000
+local BOUNDARY_THICKNESS = 80
+local LAND_HALF = 2480
 
 local function riverCenter(z)
 	return math.sin(z / 520) * 180 + math.sin(z / 190) * 55
@@ -62,7 +64,7 @@ local function heightAt(x, z)
 	local broad = math.noise(x / 720, z / 720, 19) * 42
 	local detail = math.noise(x / 210, z / 210, 41) * 16
 	local ridgeNoise = math.abs(math.noise(x / 480, z / 480, 77))
-	local edge = math.max(math.abs(x), math.abs(z)) / (WORLD * 0.5)
+	local edge = math.max(math.abs(x), math.abs(z)) / LAND_HALF
 	local mountains = math.max(0, edge - 0.58) * 190 + ridgeNoise * math.max(0, edge - 0.35) * 95
 	local h = 15 + broad + detail + mountains
 
@@ -80,40 +82,59 @@ local function heightAt(x, z)
 		h = (lakeLevel - 10) * (1-t) + h * t
 	end
 	h = flattenHeight(x, z, h)
-	return math.max(-5, h)
+
+	-- Water shaping is applied last so flat building zones can never erase rivers/lakes.
+	if distanceToRiver < RIVER_HALF_WIDTH + 34 then
+		local t = math.clamp(distanceToRiver / (RIVER_HALF_WIDTH + 34), 0, 1)
+		h = math.min(h, WATER_LEVEL - 10 + t * t * 16)
+	end
+	if lakeLevel and lakeD < 1.18 then
+		local t = math.clamp((lakeD - .78) / .4, 0, 1)
+		h = math.min(h, (lakeLevel - 11) + t * 18)
+	end
+	return math.max(-8, h)
 end
 
-for x = -WORLD/2, WORLD/2, CELL do
-	for z = -WORLD/2, WORLD/2, CELL do
+for x = -LAND_HALF, LAND_HALF, CELL do
+	for z = -LAND_HALF, LAND_HALF, CELL do
 		local h = heightAt(x, z)
 		local material = h > 55 and Enum.Material.Rock or Enum.Material.Grass
 		terrain:FillBlock(CFrame.new(x, (h - 22) / 2, z), Vector3.new(CELL + 1, h + 22, CELL + 1), material)
 	end
 end
 
--- Three broad river systems. Overlapping spherical stamps remove the old blocky channels.
-local function stampRiver(x, z, level, radius)
-	terrain:FillBall(Vector3.new(x, level - 7, z), radius + 7, Enum.Material.Sand)
-	terrain:FillBall(Vector3.new(x, level - 2, z), radius, Enum.Material.Water)
-end
-local RIVER_STEP = 24
-for z = -WORLD/2, WORLD/2, RIVER_STEP do
-	stampRiver(riverCenter(z), z, WATER_LEVEL, RIVER_HALF_WIDTH)
-	stampRiver(riverTwoCenter(z), z, WATER_LEVEL - 1, RIVER_HALF_WIDTH + 6)
-end
-for x = -WORLD/2, WORLD/2, RIVER_STEP do
-	stampRiver(x, riverThreeCenter(x), WATER_LEVEL + 1, RIVER_HALF_WIDTH + 4)
+-- Waterways are carved first, then filled with continuous water columns.
+local function fillWaterDisc(cx, cz, level, radius)
+	local step = 12
+	for x = cx-radius, cx+radius, step do
+		for z = cz-radius, cz+radius, step do
+			local dx, dz = x-cx, z-cz
+			if dx*dx + dz*dz <= radius*radius then
+				local ground = level - 12
+				terrain:FillBlock(CFrame.new(x, ground + 2, z), Vector3.new(step+2, 4, step+2), Enum.Material.Sand)
+				terrain:FillBlock(CFrame.new(x, level - 3, z), Vector3.new(step+2, 6, step+2), Enum.Material.Water)
+			end
+		end
+	end
 end
 
--- Lakes use overlapping terrain balls for rounded shorelines and reliable water volume.
+local RIVER_STEP = 18
+for z = -LAND_HALF, LAND_HALF, RIVER_STEP do
+	fillWaterDisc(riverCenter(z), z, WATER_LEVEL, RIVER_HALF_WIDTH)
+	fillWaterDisc(riverTwoCenter(z), z, WATER_LEVEL-1, RIVER_HALF_WIDTH+6)
+end
+for x = -LAND_HALF, LAND_HALF, RIVER_STEP do
+	fillWaterDisc(x, riverThreeCenter(x), WATER_LEVEL+1, RIVER_HALF_WIDTH+4)
+end
+
 for _, lake in ipairs(LAKES) do
-	for ox = -lake.rx*.72, lake.rx*.72, 32 do
-		for oz = -lake.rz*.72, lake.rz*.72, 32 do
-			local normalized = (ox/(lake.rx*.78))^2 + (oz/(lake.rz*.78))^2
-			if normalized <= 1 then
-				local radius = 32
-				terrain:FillBall(Vector3.new(lake.x+ox, lake.level-8, lake.z+oz), radius+8, Enum.Material.Sand)
-				terrain:FillBall(Vector3.new(lake.x+ox, lake.level-3, lake.z+oz), radius, Enum.Material.Water)
+	local step = 16
+	for x = lake.x-lake.rx, lake.x+lake.rx, step do
+		for z = lake.z-lake.rz, lake.z+lake.rz, step do
+			local d = ((x-lake.x)/lake.rx)^2 + ((z-lake.z)/lake.rz)^2
+			if d <= 1 then
+				terrain:FillBlock(CFrame.new(x, lake.level-9, z), Vector3.new(step+2, 5, step+2), Enum.Material.Sand)
+				terrain:FillBlock(CFrame.new(x, lake.level-3, z), Vector3.new(step+2, 7, step+2), Enum.Material.Water)
 			end
 		end
 	end
@@ -184,9 +205,9 @@ end
 local barriers = Instance.new("Folder")
 barriers.Name = "WorldBoundary"
 barriers.Parent = Workspace
-local half = WORLD / 2 + 12
+local half = LAND_HALF + BOUNDARY_THICKNESS / 2
 local wallHeight = BOUNDARY_HEIGHT
-local wallThickness = 10
+local wallThickness = BOUNDARY_THICKNESS
 local function wall(name, size, position)
 	local part = Instance.new("Part")
 	part.Name = name
@@ -199,10 +220,11 @@ local function wall(name, size, position)
 	part.Position = position
 	part.Parent = barriers
 end
-wall("North", Vector3.new(WORLD + 40, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, -half))
-wall("South", Vector3.new(WORLD + 40, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, half))
-wall("West", Vector3.new(wallThickness, wallHeight, WORLD + 40), Vector3.new(-half, wallHeight/2, 0))
-wall("East", Vector3.new(wallThickness, wallHeight, WORLD + 40), Vector3.new(half, wallHeight/2, 0))
+local span = LAND_HALF * 2 + BOUNDARY_THICKNESS * 2
+wall("North", Vector3.new(span, wallHeight, wallThickness), Vector3.new(0, wallHeight/2 - 500, -half))
+wall("South", Vector3.new(span, wallHeight, wallThickness), Vector3.new(0, wallHeight/2 - 500, half))
+wall("West", Vector3.new(wallThickness, wallHeight, span), Vector3.new(-half, wallHeight/2 - 500, 0))
+wall("East", Vector3.new(wallThickness, wallHeight, span), Vector3.new(half, wallHeight/2 - 500, 0))
 
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
