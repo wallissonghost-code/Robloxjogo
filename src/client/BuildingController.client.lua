@@ -36,6 +36,9 @@ panel.Parent = gui
 Instance.new("UICorner",panel).CornerRadius=UDim.new(0,12)
 
 local selected, rotation, preview = "Foundation", 0, nil
+local previewValid = false
+local VALID_COLOR = Color3.fromRGB(80,255,125)
+local INVALID_COLOR = Color3.fromRGB(255,75,75)
 local status = Instance.new("TextLabel")
 status.Position=UDim2.fromOffset(10,184);status.Size=UDim2.new(1,-20,0,26);status.BackgroundTransparency=1
 status.Text="";status.TextColor3=Color3.fromRGB(190,200,193);status.Font=Enum.Font.Gotham;status.TextSize=11;status.Parent=panel
@@ -70,24 +73,59 @@ local function target()
 	return Workspace:Raycast(ray.Origin,ray.Direction*80,params)
 end
 
+local function localPlacementValid(hit, def, cf)
+	if not hit or hit.Material == Enum.Material.Water then return false end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - cf.Position).Magnitude > 45 then return false end
+
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character, preview }
+	local box = def.size - Vector3.new(.35,.15,.35)
+	for _, part in ipairs(Workspace:GetPartBoundsInBox(cf, box, params)) do
+		if part.CanCollide and part.Name ~= "SpawnLocation" then
+			return false
+		end
+	end
+	return true
+end
+
 local function refreshPreview()
 	local hit=target()
-	if not hit then if preview then preview.Transparency=1 end return end
+	if not hit then
+		previewValid=false
+		if preview then preview.Transparency=1 end
+		return
+	end
 	local def=Catalog[selected]
 	if not preview then
-		preview=Instance.new("Part");preview.Name="BuildPreview";preview.Anchored=true;preview.CanCollide=false;preview.CanTouch=false;preview.CanQuery=false
-		preview.Material=Enum.Material.ForceField;preview.Transparency=.45;preview.Parent=Workspace
+		preview=Instance.new("Part")
+		preview.Name="BuildPreview"
+		preview.Anchored=true
+		preview.CanCollide=false
+		preview.CanTouch=false
+		preview.CanQuery=false
+		preview.CastShadow=false
+		preview.Material=Enum.Material.Neon
+		preview.Parent=Workspace
 	end
 	preview.Size=def.size
-	preview.Transparency=.45
-	local x=math.floor(hit.Position.X/2+.5)*2;local z=math.floor(hit.Position.Z/2+.5)*2
-	preview.CFrame=CFrame.new(x,hit.Position.Y+def.offsetY,z)*CFrame.Angles(0,math.rad(rotation),0)
+	preview.Transparency=.55
+	local x=math.floor(hit.Position.X/2+.5)*2
+	local z=math.floor(hit.Position.Z/2+.5)*2
+	local cf=CFrame.new(x,hit.Position.Y+def.offsetY,z)*CFrame.Angles(0,math.rad(rotation),0)
+	preview.CFrame=cf
+	previewValid=localPlacementValid(hit,def,cf)
+	preview.Color=previewValid and VALID_COLOR or INVALID_COLOR
 end
 
 RunService.RenderStepped:Connect(function() if panel.Visible then refreshPreview() elseif preview then preview.Transparency=1 end end)
 open.Activated:Connect(function() panel.Visible=not panel.Visible;open.Text=panel.Visible and "FECHAR" or "CONSTRUIR" end)
 confirm.Activated:Connect(function()
 	local hit=target();if not hit then status.Text="Sem superfície válida.";return end
+	refreshPreview()
+	if not previewValid then status.Text="Não é possível construir aqui.";return end
 	status.Text="Colocando..."
 	local ok,result=pcall(function() return place:InvokeServer(selected,hit.Position,rotation) end)
 	status.Text=ok and result and (result.ok and "Construção salva." or result.message) or "Falha ao construir."
