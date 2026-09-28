@@ -8,8 +8,6 @@ local WORLD = 5200
 local CELL = 20
 local WATER_LEVEL = 4
 local RIVER_HALF_WIDTH = 34
-local BOUNDARY_HEIGHT = 220
-local BOUNDARY_THICKNESS = 80
 local LAND_HALF = 2480
 
 local function riverCenter(z)
@@ -200,45 +198,6 @@ for i = 1, 1600 do
 		blade.Parent = grassFolder
 	end
 end
-
--- Closed perimeter: four continuous overlapping sides around the playable square.
-local barriers = Instance.new("Folder")
-barriers.Name = "WorldBoundary"
-barriers.Parent = Workspace
-
-local wallHeight = BOUNDARY_HEIGHT
-local wallThickness = BOUNDARY_THICKNESS
-local innerHalf = LAND_HALF
-local outerHalf = innerHalf + wallThickness
-local centerOffset = innerHalf + wallThickness / 2
-local fullSpan = outerHalf * 2
-
-local function wall(name, size, position)
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Anchored = true
-	part.Transparency = 1
-	part.CanCollide = true
-	part.CanTouch = false
-	part.CanQuery = true
-	part.Size = size
-	part.Position = position
-	part.Parent = barriers
-end
-
--- North/South cover the complete outer width. West/East overlap them at all four corners.
-wall("North", Vector3.new(fullSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, -centerOffset))
-wall("South", Vector3.new(fullSpan, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, centerOffset))
-wall("West", Vector3.new(wallThickness, wallHeight, fullSpan), Vector3.new(-centerOffset, wallHeight/2, 0))
-wall("East", Vector3.new(wallThickness, wallHeight, fullSpan), Vector3.new(centerOffset, wallHeight/2, 0))
-
--- Dedicated corner blockers guarantee there is no diagonal route around the four side walls.
-local cornerSize = wallThickness * 2
-local cornerOffset = innerHalf + wallThickness
-wall("NorthWestCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(-cornerOffset, wallHeight/2, -cornerOffset))
-wall("NorthEastCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(cornerOffset, wallHeight/2, -cornerOffset))
-wall("SouthWestCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(-cornerOffset, wallHeight/2, cornerOffset))
-wall("SouthEastCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(cornerOffset, wallHeight/2, cornerOffset))
 
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
