@@ -1,169 +1,80 @@
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local Players=game:GetService("Players")
+local UserInputService=game:GetService("UserInputService")
+local player=Players.LocalPlayer
+local gui=Instance.new("ScreenGui");gui.Name="ItemHotbar";gui.ResetOnSpawn=false;gui.DisplayOrder=50;gui.Parent=player:WaitForChild("PlayerGui")
+local root=Instance.new("Frame");root.Name="Root";root.AnchorPoint=Vector2.new(.5,1);root.Position=UDim2.new(.5,0,1,-12);root.BackgroundColor3=Color3.fromRGB(12,17,14);root.BackgroundTransparency=.08;root.BorderSizePixel=0;root.ClipsDescendants=true;root.Parent=gui
+Instance.new("UICorner",root).CornerRadius=UDim.new(0,8)
+local rs=Instance.new("UIStroke",root);rs.Color=Color3.fromRGB(67,82,72);rs.Thickness=1
+local layout=Instance.new("UIListLayout",root);layout.FillDirection=Enum.FillDirection.Horizontal;layout.HorizontalAlignment=Enum.HorizontalAlignment.Center;layout.VerticalAlignment=Enum.VerticalAlignment.Center;layout.SortOrder=Enum.SortOrder.LayoutOrder
+local slots={};local MAX=8;local mode="normal";local selected=0
 
-local player = Players.LocalPlayer
-local gui = Instance.new("ScreenGui")
-gui.Name = "ItemHotbar"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = false
-gui.DisplayOrder = 50
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local root = Instance.new("Frame")
-root.Name = "Root"
-root.AnchorPoint = Vector2.new(.5, 1)
-root.Position = UDim2.new(.5, 0, 1, -12)
-root.BackgroundColor3 = Color3.fromRGB(12, 17, 14)
-root.BackgroundTransparency = .08
-root.BorderSizePixel = 0
-root.ClipsDescendants = true
-root.Parent = gui
-
-local rootCorner = Instance.new("UICorner")
-rootCorner.CornerRadius = UDim.new(0, 8)
-rootCorner.Parent = root
-
-local rootStroke = Instance.new("UIStroke")
-rootStroke.Color = Color3.fromRGB(67, 82, 72)
-rootStroke.Transparency = .08
-rootStroke.Thickness = 1
-rootStroke.Parent = root
-
-local layout = Instance.new("UIListLayout")
-layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.VerticalAlignment = Enum.VerticalAlignment.Center
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0, 0)
-layout.Parent = root
-
-local slots = {}
-local MAX_SLOTS = 8
-
-local function makeSlot(index)
-	local button = Instance.new("TextButton")
-	button.Name = "Slot" .. index
-	button.LayoutOrder = index
-	button.AutoButtonColor = false
-	button.Text = ""
-	button.BackgroundColor3 = Color3.fromRGB(16, 22, 18)
-	button.BackgroundTransparency = .1
-	button.BorderSizePixel = 0
-	button.Parent = root
-
-	if index > 1 then
-		local divider = Instance.new("Frame")
-		divider.Name = "Divider"
-		divider.AnchorPoint = Vector2.new(0, .5)
-		divider.Position = UDim2.new(0, 0, .5, 0)
-		divider.Size = UDim2.new(0, 1, .72, 0)
-		divider.BackgroundColor3 = Color3.fromRGB(64, 78, 69)
-		divider.BackgroundTransparency = .28
-		divider.BorderSizePixel = 0
-		divider.ZIndex = 3
-		divider.Parent = button
+local function line(parent,pos,size)
+	local f=Instance.new("Frame");f.Position=pos;f.Size=size;f.BackgroundColor3=Color3.fromRGB(220,230,223);f.BorderSizePixel=0;f.Parent=parent;return f
+end
+local function drawIcon(holder,kind)
+	holder:ClearAllChildren()
+	if kind=="bag" then
+		local body=line(holder,UDim2.fromScale(.25,.34),UDim2.fromScale(.5,.48));Instance.new("UICorner",body).CornerRadius=UDim.new(0,4)
+		line(holder,UDim2.fromScale(.36,.20),UDim2.fromScale(.28,.18))
+	elseif kind=="build" then
+		local a=line(holder,UDim2.fromScale(.43,.16),UDim2.fromScale(.14,.68));a.Rotation=40
+		local h=line(holder,UDim2.fromScale(.23,.18),UDim2.fromScale(.48,.14));h.Rotation=40
+	elseif kind=="foundation" or kind=="roof" then
+		local p=line(holder,UDim2.fromScale(.18,.34),UDim2.fromScale(.64,.34));p.Rotation=kind=="roof" and -8 or 0
+	elseif kind=="wall" then
+		line(holder,UDim2.fromScale(.2,.2),UDim2.fromScale(.6,.6))
+		for i=1,2 do local d=line(holder,UDim2.fromScale(.2,.2+i*.18),UDim2.fromScale(.6,.025));d.BackgroundColor3=Color3.fromRGB(80,95,85) end
+	elseif kind=="door" then
+		local p=line(holder,UDim2.fromScale(.27,.14),UDim2.fromScale(.46,.7));local cut=line(holder,UDim2.fromScale(.39,.31),UDim2.fromScale(.22,.53));cut.BackgroundColor3=Color3.fromRGB(16,22,18)
+	elseif kind=="rotate" then
+		local t=Instance.new("TextLabel");t.Size=UDim2.fromScale(1,1);t.BackgroundTransparency=1;t.Text="↻";t.TextColor3=Color3.fromRGB(220,230,223);t.TextScaled=true;t.Font=Enum.Font.GothamBold;t.Parent=holder
+	elseif kind=="exit" then
+		local a=line(holder,UDim2.fromScale(.46,.18),UDim2.fromScale(.08,.64));a.Rotation=45;local b=line(holder,UDim2.fromScale(.46,.18),UDim2.fromScale(.08,.64));b.Rotation=-45
 	end
-
-	local selectedBorder = Instance.new("Frame")
-	selectedBorder.Name = "SelectedBorder"
-	selectedBorder.Size = UDim2.fromScale(1, 1)
-	selectedBorder.BackgroundTransparency = 1
-	selectedBorder.Visible = false
-	selectedBorder.ZIndex = 4
-	selectedBorder.Parent = button
-	local selectedStroke = Instance.new("UIStroke")
-	selectedStroke.Color = Color3.fromRGB(95, 255, 140)
-	selectedStroke.Thickness = 2
-	selectedStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	selectedStroke.Parent = selectedBorder
-
-	local number = Instance.new("TextLabel")
-	number.Name = "Number"
-	number.Position = UDim2.fromOffset(4, 2)
-	number.Size = UDim2.fromOffset(14, 12)
-	number.BackgroundTransparency = 1
-	number.Text = tostring(index)
-	number.TextColor3 = Color3.fromRGB(135, 150, 140)
-	number.Font = Enum.Font.GothamBold
-	number.TextSize = 8
-	number.TextXAlignment = Enum.TextXAlignment.Left
-	number.ZIndex = 2
-	number.Parent = button
-
-	local icon = Instance.new("ImageLabel")
-	icon.Name = "Icon"
-	icon.AnchorPoint = Vector2.new(.5, .5)
-	icon.Position = UDim2.fromScale(.5, .52)
-	icon.Size = UDim2.fromScale(.68, .68)
-	icon.BackgroundTransparency = 1
-	icon.Image = ""
-	icon.ScaleType = Enum.ScaleType.Fit
-	icon.ZIndex = 2
-	icon.Parent = button
-
-	local quantity = Instance.new("TextLabel")
-	quantity.Name = "Quantity"
-	quantity.AnchorPoint = Vector2.new(1, 1)
-	quantity.Position = UDim2.new(1, -4, 1, -3)
-	quantity.Size = UDim2.fromOffset(25, 13)
-	quantity.BackgroundTransparency = 1
-	quantity.Text = ""
-	quantity.TextColor3 = Color3.fromRGB(238, 244, 240)
-	quantity.Font = Enum.Font.GothamBold
-	quantity.TextSize = 9
-	quantity.TextXAlignment = Enum.TextXAlignment.Right
-	quantity.ZIndex = 2
-	quantity.Parent = button
-
-	slots[index] = button
 end
+local function makeSlot(i)
+	local b=Instance.new("TextButton");b.Name="Slot"..i;b.LayoutOrder=i;b.AutoButtonColor=false;b.Text="";b.BackgroundColor3=Color3.fromRGB(16,22,18);b.BackgroundTransparency=.1;b.BorderSizePixel=0;b.Parent=root
+	if i>1 then local d=line(b,UDim2.new(0,0,.14,0),UDim2.new(0,1,.72,0));d.BackgroundColor3=Color3.fromRGB(64,78,69);d.BackgroundTransparency=.28 end
+	local border=Instance.new("Frame");border.Name="SelectedBorder";border.Size=UDim2.fromScale(1,1);border.BackgroundTransparency=1;border.Visible=false;border.ZIndex=5;border.Parent=b
+	local st=Instance.new("UIStroke",border);st.Color=Color3.fromRGB(95,255,140);st.Thickness=2
+	local icon=Instance.new("Frame");icon.Name="Icon";icon.AnchorPoint=Vector2.new(.5,.5);icon.Position=UDim2.fromScale(.5,.5);icon.Size=UDim2.fromScale(.68,.68);icon.BackgroundTransparency=1;icon.Parent=b
+	slots[i]=b
+end
+for i=1,MAX do makeSlot(i) end
 
-for i = 1, MAX_SLOTS do makeSlot(i) end
+local normalIcons={[7]="bag",[8]="build"}
+local buildIcons={[1]="foundation",[2]="wall",[3]="door",[4]="roof",[6]="rotate",[8]="exit"}
+local pieceBySlot={[1]="Foundation",[2]="Wall",[3]="Door",[4]="Roof"}
 
-local selected = 1
-local function selectSlot(index)
-	if index < 1 or index > MAX_SLOTS then return end
-	selected = index
-	for i, slot in ipairs(slots) do
-		local border = slot:FindFirstChild("SelectedBorder")
-		local active = i == selected
-		slot.BackgroundColor3 = active and Color3.fromRGB(24, 37, 29) or Color3.fromRGB(16, 22, 18)
-		if border then border.Visible = active end
+local function render()
+	for i,b in ipairs(slots) do
+		local kind=(mode=="build" and buildIcons or normalIcons)[i]
+		b.Visible=kind~=nil
+		if kind then drawIcon(b.Icon,kind) end
+		b.SelectedBorder.Visible=(i==selected)
 	end
-	gui:SetAttribute("SelectedSlot", selected)
+	gui:SetAttribute("Mode",mode);gui:SetAttribute("SelectedSlot",selected)
 end
-
-for i, slot in ipairs(slots) do
-	slot.Activated:Connect(function() selectSlot(i) end)
+local function activate(i)
+	if mode=="normal" then
+		if i==8 then mode="build";selected=0;render();gui:SetAttribute("BuildPiece","")
+		elseif i==7 then gui:SetAttribute("BackpackRequested",os.clock()) end
+	else
+		if pieceBySlot[i] then selected=i;gui:SetAttribute("BuildPiece",pieceBySlot[i])
+		elseif i==6 then gui:SetAttribute("RotateRequested",os.clock())
+		elseif i==8 then mode="normal";selected=0;gui:SetAttribute("BuildPiece","");render() end
+	end
+	render()
 end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	local n = tonumber(input.KeyCode.Name)
-	if n and n >= 1 and n <= MAX_SLOTS then selectSlot(n) end
-end)
+for i,b in ipairs(slots) do b.Activated:Connect(function() activate(i) end) end
+UserInputService.InputBegan:Connect(function(input,processed) if processed then return end local n=tonumber(input.KeyCode.Name);if n and n>=1 and n<=MAX then activate(n) end end)
 
 local cameraConnection
 local function resize()
-	local camera = workspace.CurrentCamera
-	if not camera then return end
-	local width = camera.ViewportSize.X
-	local available = math.max(240, width - 24)
-	local slotSize = math.clamp(math.floor(available / MAX_SLOTS), 32, 48)
-	local totalWidth = slotSize * MAX_SLOTS
-	root.Size = UDim2.fromOffset(totalWidth, slotSize)
-	for _, slot in ipairs(slots) do
-		slot.Size = UDim2.fromOffset(slotSize, slotSize)
-	end
+	local c=workspace.CurrentCamera;if not c then return end
+	local slotSize=math.clamp(math.floor(math.max(240,c.ViewportSize.X-24)/MAX),32,48)
+	root.Size=UDim2.fromOffset(slotSize*MAX,slotSize)
+	for _,b in ipairs(slots) do b.Size=UDim2.fromOffset(slotSize,slotSize) end
 end
-
-local function watchCamera()
-	if cameraConnection then cameraConnection:Disconnect() end
-	local camera = workspace.CurrentCamera
-	if camera then cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end
-	resize()
-end
-
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
-watchCamera()
-selectSlot(1)
+local function watch() if cameraConnection then cameraConnection:Disconnect() end local c=workspace.CurrentCamera;if c then cameraConnection=c:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end resize() end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watch);watch();render()

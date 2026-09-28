@@ -1,132 +1,68 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
-local player = Players.LocalPlayer
+local Players=game:GetService("Players")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local Workspace=game:GetService("Workspace")
+local player=Players.LocalPlayer
 if not player:GetAttribute("WorldId") then return end
 
-local Catalog = require(ReplicatedStorage:WaitForChild("Building"):WaitForChild("PieceCatalog"))
-local place = ReplicatedStorage:WaitForChild("BuildingRemotes"):WaitForChild("PlacePiece")
+local Catalog=require(ReplicatedStorage:WaitForChild("Building"):WaitForChild("PieceCatalog"))
+local remotes=ReplicatedStorage:WaitForChild("BuildingRemotes")
+local place=remotes:WaitForChild("PlacePiece")
+local resolve=remotes:WaitForChild("ResolvePlacement")
+local hotbar=player:WaitForChild("PlayerGui"):WaitForChild("ItemHotbar")
+local selected=nil
+local preview=nil
+local previewValid=false
+local lastResolve=0
+local pending=false
+local VALID=Color3.fromRGB(80,255,125)
+local INVALID=Color3.fromRGB(255,75,75)
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "BuildingUI"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local open = Instance.new("TextButton")
-open.AnchorPoint = Vector2.new(1,1)
-open.Position = UDim2.new(1,-18,1,-24)
-open.Size = UDim2.fromOffset(112,46)
-open.Text = "CONSTRUIR"
-open.Font = Enum.Font.GothamBold
-open.TextSize = 13
-open.BackgroundColor3 = Color3.fromRGB(20,27,22)
-open.TextColor3 = Color3.fromRGB(105,255,145)
-open.Parent = gui
-Instance.new("UICorner",open).CornerRadius=UDim.new(0,10)
-
-local panel = Instance.new("Frame")
-panel.AnchorPoint = Vector2.new(1,1)
-panel.Position = UDim2.new(1,-18,1,-80)
-panel.Size = UDim2.fromOffset(250,220)
-panel.BackgroundColor3 = Color3.fromRGB(14,19,16)
-panel.Visible = false
-panel.Parent = gui
-Instance.new("UICorner",panel).CornerRadius=UDim.new(0,12)
-
-local selected, rotation, preview = "Foundation", 0, nil
-local previewValid = false
-local VALID_COLOR = Color3.fromRGB(80,255,125)
-local INVALID_COLOR = Color3.fromRGB(255,75,75)
-local status = Instance.new("TextLabel")
-status.Position=UDim2.fromOffset(10,184);status.Size=UDim2.new(1,-20,0,26);status.BackgroundTransparency=1
-status.Text="";status.TextColor3=Color3.fromRGB(190,200,193);status.Font=Enum.Font.Gotham;status.TextSize=11;status.Parent=panel
-
-local names={"Foundation","Wall","Door","Roof"}
-for i,key in ipairs(names) do
-	local b=Instance.new("TextButton")
-	b.Position=UDim2.fromOffset(10+((i-1)%2)*116,10+math.floor((i-1)/2)*44)
-	b.Size=UDim2.fromOffset(108,36);b.Text=Catalog[key].label;b.Font=Enum.Font.GothamBold;b.TextSize=11
-	b.BackgroundColor3=Color3.fromRGB(28,37,31);b.TextColor3=Color3.fromRGB(235,242,237);b.Parent=panel
-	Instance.new("UICorner",b).CornerRadius=UDim.new(0,8)
-	b.Activated:Connect(function() selected=key end)
-end
-
-local rotate=Instance.new("TextButton")
-rotate.Position=UDim2.fromOffset(10,102);rotate.Size=UDim2.fromOffset(108,36);rotate.Text="GIRAR 90°"
-rotate.Font=Enum.Font.GothamBold;rotate.TextSize=11;rotate.BackgroundColor3=Color3.fromRGB(28,37,31);rotate.TextColor3=Color3.fromRGB(235,242,237);rotate.Parent=panel
-Instance.new("UICorner",rotate).CornerRadius=UDim.new(0,8)
-rotate.Activated:Connect(function() rotation=(rotation+90)%360 end)
-
-local confirm=Instance.new("TextButton")
-confirm.Position=UDim2.fromOffset(126,102);confirm.Size=UDim2.fromOffset(108,36);confirm.Text="COLOCAR"
-confirm.Font=Enum.Font.GothamBold;confirm.TextSize=11;confirm.BackgroundColor3=Color3.fromRGB(88,255,135);confirm.TextColor3=Color3.fromRGB(5,18,9);confirm.Parent=panel
-Instance.new("UICorner",confirm).CornerRadius=UDim.new(0,8)
+local actionGui=Instance.new("ScreenGui");actionGui.Name="BuildActions";actionGui.ResetOnSpawn=false;actionGui.DisplayOrder=51;actionGui.Parent=player.PlayerGui
+local placeButton=Instance.new("TextButton");placeButton.AnchorPoint=Vector2.new(1,1);placeButton.Position=UDim2.new(1,-18,1,-72);placeButton.Size=UDim2.fromOffset(58,58);placeButton.Text="✓";placeButton.TextScaled=true;placeButton.Font=Enum.Font.GothamBold;placeButton.TextColor3=Color3.fromRGB(5,18,9);placeButton.BackgroundColor3=VALID;placeButton.Visible=false;placeButton.Parent=actionGui
+Instance.new("UICorner",placeButton).CornerRadius=UDim.new(1,0)
 
 local function target()
-	local camera=Workspace.CurrentCamera
-	if not camera then return nil end
+	local camera=Workspace.CurrentCamera;if not camera then return nil end
 	local ray=camera:ViewportPointToRay(camera.ViewportSize.X/2,camera.ViewportSize.Y/2)
-	local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances={player.Character,preview}
-	return Workspace:Raycast(ray.Origin,ray.Direction*80,params)
+	local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude;params.FilterDescendantsInstances={player.Character,preview}
+	return Workspace:Raycast(ray.Origin,ray.Direction*90,params)
 end
-
-local function localPlacementValid(hit, def, cf)
-	if not hit or hit.Material == Enum.Material.Water then return false end
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or (root.Position - cf.Position).Magnitude > 45 then return false end
-
-	local params = OverlapParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character, preview }
-	local box = def.size - Vector3.new(.35,.15,.35)
-	for _, part in ipairs(Workspace:GetPartBoundsInBox(cf, box, params)) do
-		if part.CanCollide and part.Name ~= "SpawnLocation" then
-			return false
+local function ensurePreview(def)
+	if not preview then preview=Instance.new("Part");preview.Name="BuildPreview";preview.Anchored=true;preview.CanCollide=false;preview.CanTouch=false;preview.CanQuery=false;preview.CastShadow=false;preview.Material=Enum.Material.Neon;preview.Parent=Workspace end
+	preview.Size=def.size;preview.Transparency=.55
+end
+local function updatePreview()
+	if not selected then if preview then preview.Transparency=1 end;placeButton.Visible=false;return end
+	local hit=target();if not hit then previewValid=false;if preview then preview.Transparency=1 end;placeButton.Visible=false;return end
+	local def=Catalog[selected];ensurePreview(def)
+	if os.clock()-lastResolve<.08 or pending then return end
+	lastResolve=os.clock();pending=true
+	task.spawn(function()
+		local ok,result=pcall(function() return resolve:InvokeServer(selected,hit.Position) end)
+		pending=false
+		if selected and ok and type(result)=="table" and result.ok and typeof(result.position)=="Vector3" then
+			preview.CFrame=CFrame.new(result.position)*CFrame.Angles(0,math.rad(result.rotation or 0),0);preview.Color=VALID;preview.Transparency=.55;previewValid=true;placeButton.Visible=true
+		else
+			local p=hit.Position;preview.CFrame=CFrame.new(p.X,p.Y+def.offsetY,p.Z);preview.Color=INVALID;preview.Transparency=.65;previewValid=false;placeButton.Visible=false
 		end
-	end
-	return true
+	end)
 end
 
-local function refreshPreview()
-	local hit=target()
-	if not hit then
-		previewValid=false
-		if preview then preview.Transparency=1 end
-		return
-	end
-	local def=Catalog[selected]
-	if not preview then
-		preview=Instance.new("Part")
-		preview.Name="BuildPreview"
-		preview.Anchored=true
-		preview.CanCollide=false
-		preview.CanTouch=false
-		preview.CanQuery=false
-		preview.CastShadow=false
-		preview.Material=Enum.Material.Neon
-		preview.Parent=Workspace
-	end
-	preview.Size=def.size
-	preview.Transparency=.55
-	local x=math.floor(hit.Position.X/2+.5)*2
-	local z=math.floor(hit.Position.Z/2+.5)*2
-	local cf=CFrame.new(x,hit.Position.Y+def.offsetY,z)*CFrame.Angles(0,math.rad(rotation),0)
-	preview.CFrame=cf
-	previewValid=localPlacementValid(hit,def,cf)
-	preview.Color=previewValid and VALID_COLOR or INVALID_COLOR
-end
-
-RunService.RenderStepped:Connect(function() if panel.Visible then refreshPreview() elseif preview then preview.Transparency=1 end end)
-open.Activated:Connect(function() panel.Visible=not panel.Visible;open.Text=panel.Visible and "FECHAR" or "CONSTRUIR" end)
-confirm.Activated:Connect(function()
-	local hit=target();if not hit then status.Text="Sem superfície válida.";return end
-	refreshPreview()
-	if not previewValid then status.Text="Não é possível construir aqui.";return end
-	status.Text="Colocando..."
-	local ok,result=pcall(function() return place:InvokeServer(selected,hit.Position,rotation) end)
-	status.Text=ok and result and (result.ok and "Construção salva." or result.message) or "Falha ao construir."
+hotbar:GetAttributeChangedSignal("BuildPiece"):Connect(function()
+	local value=hotbar:GetAttribute("BuildPiece")
+	selected=(type(value)=="string" and Catalog[value]) and value or nil
+	previewValid=false
 end)
+hotbar:GetAttributeChangedSignal("RotateRequested"):Connect(function()
+	-- Rotation is socket-defined; reserved for future free/variant pieces.
+end)
+
+placeButton.Activated:Connect(function()
+	if not selected or not previewValid then return end
+	local hit=target();if not hit then return end
+	previewValid=false;placeButton.Visible=false
+	local ok,result=pcall(function() return place:InvokeServer(selected,hit.Position) end)
+	if not ok or not result or not result.ok then return end
+end)
+RunService.RenderStepped:Connect(updatePreview)

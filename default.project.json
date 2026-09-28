@@ -81,6 +81,9 @@
         },
         "PieceFactory": {
           "$path": "src/server/building/PieceFactory.lua"
+        },
+        "SocketResolver": {
+          "$path": "src/server/building/SocketResolver.lua"
         }
       }
     },
