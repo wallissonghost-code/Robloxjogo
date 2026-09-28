@@ -9,16 +9,8 @@
         "$properties": {
           "Anchored": true,
           "Neutral": true,
-          "Size": [
-            6,
-            1,
-            6
-          ],
-          "Position": [
-            0,
-            12,
-            0
-          ],
+          "Size": [6, 1, 6],
+          "Position": [0, 12, 0],
           "Transparency": 1,
           "CanCollide": false,
           "CanTouch": false,
@@ -29,19 +21,29 @@
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",
-      "WorldGenerator": {
-        "$path": "src/server/WorldGenerator.server.lua"
-      },
-      "AdminService": {
-        "$path": "src/server/AdminService.server.lua"
+      "WorldGenerator": { "$path": "src/server/WorldGenerator.server.lua" },
+      "AdminService": { "$path": "src/server/AdminService.server.lua" },
+      "World": {
+        "$className": "Folder",
+        "Config": { "$path": "src/server/world/Config.lua" },
+        "Terrain": { "$path": "src/server/world/Terrain.lua" },
+        "Water": { "$path": "src/server/world/Water.lua" },
+        "Vegetation": { "$path": "src/server/world/Vegetation.lua" },
+        "Boundary": { "$path": "src/server/world/Boundary.lua" },
+        "Lighting": { "$path": "src/server/world/Lighting.lua" }
       }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "AdminPanel": {
-          "$path": "src/client/AdminPanel.client.lua"
+        "AdminPanel": { "$path": "src/client/AdminPanel.client.lua" },
+        "AdminModules": {
+          "$className": "Folder",
+          "UI": { "$path": "src/client/admin/UI.lua" },
+          "Flight": { "$path": "src/client/admin/Flight.lua" },
+          "Diagnostics": { "$path": "src/client/admin/Diagnostics.lua" },
+          "BoundaryVisualizer": { "$path": "src/client/admin/BoundaryVisualizer.lua" }
         }
       }
     }
