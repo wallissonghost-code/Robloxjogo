@@ -232,6 +232,14 @@ wall("South", Vector3.new(fullSpan, wallHeight, wallThickness), Vector3.new(0, w
 wall("West", Vector3.new(wallThickness, wallHeight, fullSpan), Vector3.new(-centerOffset, wallHeight/2, 0))
 wall("East", Vector3.new(wallThickness, wallHeight, fullSpan), Vector3.new(centerOffset, wallHeight/2, 0))
 
+-- Dedicated corner blockers guarantee there is no diagonal route around the four side walls.
+local cornerSize = wallThickness * 2
+local cornerOffset = innerHalf + wallThickness
+wall("NorthWestCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(-cornerOffset, wallHeight/2, -cornerOffset))
+wall("NorthEastCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(cornerOffset, wallHeight/2, -cornerOffset))
+wall("SouthWestCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(-cornerOffset, wallHeight/2, cornerOffset))
+wall("SouthEastCorner", Vector3.new(cornerSize, wallHeight, cornerSize), Vector3.new(cornerOffset, wallHeight/2, cornerOffset))
+
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
 	local y = heightAt(0, 0)
