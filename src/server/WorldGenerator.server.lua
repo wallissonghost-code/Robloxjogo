@@ -4,21 +4,41 @@ local Lighting = game:GetService("Lighting")
 local terrain = Workspace.Terrain
 terrain:Clear()
 
-local WORLD = 520
-local CELL = 8
+local WORLD = 5200
+local CELL = 20
 local WATER_LEVEL = 4
 local RIVER_HALF_WIDTH = 15
 
 local function riverCenter(z)
-	return math.sin(z / 72) * 38 + math.sin(z / 31) * 10
+	return math.sin(z / 520) * 180 + math.sin(z / 190) * 55
+end
+
+local FLAT_ZONES = {
+	{ x = 0, z = 0, radius = 180, height = 18 },
+	{ x = 820, z = -620, radius = 240, height = 24 },
+	{ x = -1050, z = 760, radius = 280, height = 20 },
+	{ x = 1250, z = 1150, radius = 220, height = 28 },
+	{ x = -1450, z = -1050, radius = 260, height = 22 },
+}
+
+local function flattenHeight(x, z, height)
+	for _, zone in ipairs(FLAT_ZONES) do
+		local dx, dz = x - zone.x, z - zone.z
+		local distance = math.sqrt(dx * dx + dz * dz)
+		if distance < zone.radius then
+			local blend = math.clamp((zone.radius - distance) / 70, 0, 1)
+			height = height + (zone.height - height) * blend
+		end
+	end
+	return height
 end
 
 local function heightAt(x, z)
-	local broad = math.noise(x / 150, z / 150, 19) * 30
-	local detail = math.noise(x / 58, z / 58, 41) * 12
-	local ridgeNoise = math.abs(math.noise(x / 105, z / 105, 77))
+	local broad = math.noise(x / 720, z / 720, 19) * 42
+	local detail = math.noise(x / 210, z / 210, 41) * 16
+	local ridgeNoise = math.abs(math.noise(x / 480, z / 480, 77))
 	local edge = math.max(math.abs(x), math.abs(z)) / (WORLD * 0.5)
-	local mountains = math.max(0, edge - 0.42) * 105 + ridgeNoise * math.max(0, edge - 0.25) * 55
+	local mountains = math.max(0, edge - 0.58) * 190 + ridgeNoise * math.max(0, edge - 0.35) * 95
 	local h = 15 + broad + detail + mountains
 
 	local distanceToRiver = math.abs(x - riverCenter(z))
@@ -26,6 +46,7 @@ local function heightAt(x, z)
 		local t = math.clamp(distanceToRiver / (RIVER_HALF_WIDTH + 13), 0, 1)
 		h = WATER_LEVEL - 7 + t * t * math.max(0, h - (WATER_LEVEL - 7))
 	end
+	h = flattenHeight(x, z, h)
 	return math.max(-5, h)
 end
 
@@ -75,7 +96,7 @@ local function makeTree(position, scale)
 	crown.Parent = model
 end
 
-for i = 1, 125 do
+for i = 1, 900 do
 	local x = rng:NextNumber(-WORLD*.43, WORLD*.43)
 	local z = rng:NextNumber(-WORLD*.43, WORLD*.43)
 	local h = heightAt(x, z)
@@ -87,7 +108,7 @@ end
 local grassFolder = Instance.new("Folder")
 grassFolder.Name = "GrassDetails"
 grassFolder.Parent = vegetation
-for i = 1, 260 do
+for i = 1, 1600 do
 	local x = rng:NextNumber(-WORLD*.42, WORLD*.42)
 	local z = rng:NextNumber(-WORLD*.42, WORLD*.42)
 	local h = heightAt(x, z)
@@ -104,6 +125,30 @@ for i = 1, 260 do
 		blade.Parent = grassFolder
 	end
 end
+
+-- Invisible perimeter prevents players from walking into the void.
+local barriers = Instance.new("Folder")
+barriers.Name = "WorldBoundary"
+barriers.Parent = Workspace
+local half = WORLD / 2 + 12
+local wallHeight = 220
+local wallThickness = 10
+local function wall(name, size, position)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Transparency = 1
+	part.CanCollide = true
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Size = size
+	part.Position = position
+	part.Parent = barriers
+end
+wall("North", Vector3.new(WORLD + 40, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, -half))
+wall("South", Vector3.new(WORLD + 40, wallHeight, wallThickness), Vector3.new(0, wallHeight/2, half))
+wall("West", Vector3.new(wallThickness, wallHeight, WORLD + 40), Vector3.new(-half, wallHeight/2, 0))
+wall("East", Vector3.new(wallThickness, wallHeight, WORLD + 40), Vector3.new(half, wallHeight/2, 0))
 
 local spawn = Workspace:FindFirstChild("SpawnLocation")
 if spawn then
