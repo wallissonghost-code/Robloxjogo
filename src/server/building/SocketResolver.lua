@@ -6,7 +6,7 @@ local HALF_FOUNDATION=FOUNDATION_HEIGHT/2
 local SNAP_FOUNDATION=11
 local SNAP_EDGE=11
 local SNAP_ROOF=12
-local FOUNDATION_LEVELS={Low=-3,Medium=0,High=4}
+local FOUNDATION_LEVELS={Medium=2,High=4}
 local EDGES={N={dx=0,dz=-6,rot=0},S={dx=0,dz=6,rot=0},W={dx=-6,dz=0,rot=90},E={dx=6,dz=0,rot=90}}
 
 local function pieces(base) return base and base.pieces or {} end
@@ -22,7 +22,7 @@ end
 local function foundationKey(x,z) return string.format("F:%d:%d",math.round(x*10),math.round(z*10)) end
 local function edgeKey(x,z,rotation) local axis=rotation==0 and "H" or "V";return string.format("EDGE:%s:%d:%d",axis,math.round(x*10),math.round(z*10)) end
 local function foundationTop(f) local height=tonumber(f.foundationHeight) or (f.schemaVersion==2 and FOUNDATION_HEIGHT or 1);return f.y+height/2 end
-local function normalizeLevel(level) return FOUNDATION_LEVELS[level] and level or "Medium" end
+local function normalizeLevel(level) return FOUNDATION_LEVELS[level] and level or "High" end
 local function freeFoundation(base,raw,level)
 	local x=math.floor(raw.X/CELL+.5)*CELL;local z=math.floor(raw.Z/CELL+.5)*CELL
 	local ground=groundAt(x,z,raw.Y);if not ground then return nil,"Terreno inválido." end

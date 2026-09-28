@@ -39,7 +39,7 @@ local function updatePreview()
 	if os.clock()-lastResolve<.08 or pending then return end
 	lastResolve=os.clock();pending=true
 	task.spawn(function()
-		local ok,result=pcall(function() return resolve:InvokeServer(selected,hit.Position,{foundationLevel=hotbar:GetAttribute("FoundationLevel") or "Medium"}) end)
+		local ok,result=pcall(function() return resolve:InvokeServer(selected,hit.Position,{foundationLevel=hotbar:GetAttribute("FoundationLevel") or "High"}) end)
 		pending=false
 		if selected and ok and type(result)=="table" and result.ok and typeof(result.position)=="Vector3" then
 			preview.CFrame=CFrame.new(result.position)*CFrame.Angles(0,math.rad(result.rotation or 0),0);preview.Color=VALID;preview.Transparency=.55;previewValid=true;placeButton.Visible=true
@@ -62,7 +62,7 @@ placeButton.Activated:Connect(function()
 	if not selected or not previewValid then return end
 	local hit=target();if not hit then return end
 	previewValid=false;placeButton.Visible=false
-	local ok,result=pcall(function() return place:InvokeServer(selected,hit.Position,{foundationLevel=hotbar:GetAttribute("FoundationLevel") or "Medium"}) end)
+	local ok,result=pcall(function() return place:InvokeServer(selected,hit.Position,{foundationLevel=hotbar:GetAttribute("FoundationLevel") or "High"}) end)
 	if not ok or not result or not result.ok then return end
 end)
 RunService.RenderStepped:Connect(updatePreview)

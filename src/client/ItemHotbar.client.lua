@@ -50,12 +50,12 @@ local normalSlots={}
 normalSlots[1]=makeSlot(normalRoot,1,"bag")
 for i=2,8 do normalSlots[i]=makeSlot(normalRoot,i,nil) end
 
-local foundationLevels={"Low","Medium","High"}
+local foundationLevels={"Medium","High"}
 local variantSlots={}
 for i,level in ipairs(foundationLevels) do
 	local b=makeSlot(variantRoot,i,"foundation")
 	local icon=b.Icon
-	local scale=({Low=.45,Medium=.65,High=.85})[level]
+	local scale=({Medium=.68,High=.88})[level]
 	icon.Size=UDim2.fromScale(.68,scale)
 	icon.Position=UDim2.fromScale(.5,1-scale/2-.08)
 	variantSlots[i]=b
@@ -79,7 +79,7 @@ local function setMode(nextMode)
 	selectedBuild=0
 	gui:SetAttribute("Mode",mode)
 	gui:SetAttribute("BuildPiece","")
-	gui:SetAttribute("FoundationLevel","Medium")
+	gui:SetAttribute("FoundationLevel","High")
 	variantRoot.Visible=false
 	for _,b in ipairs(buildSlots) do b.SelectedBorder.Visible=false end
 	toggleStroke.Color=mode=="build" and Color3.fromRGB(95,255,140) or Color3.fromRGB(67,82,72)
@@ -136,7 +136,7 @@ local function resize()
 	for _,b in ipairs(normalSlots) do b.Size=UDim2.fromOffset(normalSize,normalSize) end
 	buildRoot.Size=UDim2.fromOffset(buildSize*4,buildSize)
 	for _,b in ipairs(buildSlots) do b.Size=UDim2.fromOffset(buildSize,buildSize) end
-	variantRoot.Size=UDim2.fromOffset(buildSize*3,buildSize)
+	variantRoot.Size=UDim2.fromOffset(buildSize*2,buildSize)
 	for _,b in ipairs(variantSlots) do b.Size=UDim2.fromOffset(buildSize,buildSize) end
 	local toggleSize=math.clamp(normalSize,38,48);buildToggle.Size=UDim2.fromOffset(toggleSize,toggleSize)
 end
