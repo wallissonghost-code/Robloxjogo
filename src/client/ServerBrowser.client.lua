@@ -51,10 +51,16 @@ sub.Font = Enum.Font.Gotham
 sub.TextSize = 14
 sub.Parent = panel
 
-local list = Instance.new("Frame")
+local list = Instance.new("ScrollingFrame")
 list.Position = UDim2.fromOffset(0,88)
 list.Size = UDim2.new(1,0,1,-122)
 list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = 0
+list.ScrollingDirection = Enum.ScrollingDirection.Y
+list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+list.CanvasSize = UDim2.fromOffset(0,0)
+list.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
 list.Parent = panel
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0,12)
@@ -99,6 +105,17 @@ local function cardFor(world)
 	name.TextSize = 20
 	name.Parent = button
 
+	local visited = Instance.new("TextLabel")
+	visited.AnchorPoint = Vector2.new(1,0)
+	visited.Position = UDim2.new(1,-138,0,13)
+	visited.Size = UDim2.fromOffset(120,22)
+	visited.BackgroundTransparency = 1
+	visited.TextXAlignment = Enum.TextXAlignment.Right
+	visited.TextColor3 = Color3.fromRGB(143,166,150)
+	visited.Font = Enum.Font.GothamBold
+	visited.TextSize = 10
+	visited.Parent = button
+
 	local count = Instance.new("TextLabel")
 	count.Position = UDim2.fromOffset(18,43)
 	count.Size = UDim2.new(.6,0,0,20)
@@ -123,6 +140,17 @@ local function cardFor(world)
 	local function render(data)
 		local full = data.players >= data.maxPlayers
 		count.Text = string.format("%d/%d JOGADORES",data.players,data.maxPlayers)
+		if type(data.lastJoined) == "number" then
+			local elapsed = math.max(0, os.time() - data.lastJoined)
+			local when
+			if elapsed < 60 then when = "AGORA"
+			elseif elapsed < 3600 then when = tostring(math.floor(elapsed/60)).." MIN"
+			elseif elapsed < 86400 then when = tostring(math.floor(elapsed/3600)).." H"
+			else when = tostring(math.floor(elapsed/86400)).." D" end
+			visited.Text = "ÚLTIMA ENTRADA · "..when
+		else
+			visited.Text = ""
+		end
 		count.TextColor3 = full and Color3.fromRGB(255,120,120) or Color3.fromRGB(105,235,145)
 		action.Text = full and "LOTADO" or "ENTRAR"
 		action.BackgroundColor3 = full and Color3.fromRGB(48,48,48) or Color3.fromRGB(88,255,135)

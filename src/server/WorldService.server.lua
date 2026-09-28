@@ -7,6 +7,7 @@ local TeleportService = game:GetService("TeleportService")
 local Directory = require(script.Parent.World.WorldDirectory)
 local occupancy = MemoryStoreService:GetSortedMap("WorldOccupancyV1")
 local worldServers = DataStoreService:GetDataStore("WorldServersV1")
+local playerHistory = DataStoreService:GetDataStore("WorldHistoryV1")
 local TTL = 75
 
 local remotes = Instance.new("Folder")
@@ -87,7 +88,11 @@ Players.PlayerRemoving:Connect(function(player)
 	if currentWorldId then releaseSlot(currentWorldId, player.UserId) end
 end)
 
-getWorlds.OnServerInvoke = function()
+getWorlds.OnServerInvoke = function(player)
+	local history = {}
+	pcall(function()
+		history = playerHistory:GetAsync(tostring(player.UserId)) or {}
+	end)
 	local result = {}
 	for _, world in ipairs(Directory.Worlds) do
 		local count, available = activeCount(world.id)
@@ -95,6 +100,7 @@ getWorlds.OnServerInvoke = function()
 			id = world.id, name = world.name,
 			players = math.min(count, Directory.MaxPlayers),
 			maxPlayers = Directory.MaxPlayers, available = available,
+			lastJoined = type(history) == "table" and history[world.id] or nil,
 		})
 	end
 	return { inWorld = currentWorldId ~= nil, worlds = result }
@@ -108,6 +114,14 @@ joinWorld.OnServerInvoke = function(player, worldId)
 	if not reserveSlot(worldId, player.UserId) then
 		return { ok = false, message = "Servidor lotado ou indisponível." }
 	end
+
+	pcall(function()
+		playerHistory:UpdateAsync(tostring(player.UserId), function(history)
+			history = type(history) == "table" and history or {}
+			history[worldId] = os.time()
+			return history
+		end)
+	end)
 
 	local server = getWorldServer(worldId)
 	if not server then
