@@ -158,6 +158,11 @@ local function makeKey(label,x,z,index)
 				piece.Material=Enum.Material.Neon
 				piece.Color=activeColor
 			end
+			local importedVisual=holder:FindFirstChild("ImportedKeycapVisual")
+			if importedVisual and importedVisual:IsA("BasePart") then
+				importedVisual.Color=activeColor
+				importedVisual.Material=Enum.Material.Neon
+			end
 			txt.TextColor3=Color3.fromRGB(18,18,18)
 			pressSound.TimePosition=0
 			pressSound:Play()
@@ -170,6 +175,11 @@ local function makeKey(label,x,z,index)
 			for _,piece in ipairs(pieces) do
 				piece.Material=Enum.Material.SmoothPlastic
 				piece.Color=activeColor
+			end
+			local importedVisual=holder:FindFirstChild("ImportedKeycapVisual")
+			if importedVisual and importedVisual:IsA("BasePart") then
+				importedVisual.Color=activeColor
+				importedVisual.Material=Enum.Material.SmoothPlastic
 			end
 			txt.TextColor3=Color3.fromRGB(18,18,18)
 			move(raised,.14,Enum.EasingStyle.Back)
