@@ -288,6 +288,7 @@ local VISUAL_ASSETS={
 	{id=113427265105121,name="TestPortalGun",pos=Vector3.new(34,0,0)},
 	{id=5352156968,name="TestPlayerRank",pos=Vector3.new(42,0,0)},
 	{id=6432306802,name="TestForest2",pos=Vector3.new(52,0,0)},
+	{id=3725991689,name="SakuraTree",pos=Vector3.new(64,0,0)},
 }
 
 local function loadVisualAsset(spec)
@@ -472,9 +473,80 @@ local function setupMorph(player)
 	end
 end
 
-for _,player in ipairs(Players:GetPlayers()) do setupMorph(player) end
-Players.PlayerAdded:Connect(setupMorph)
+-- Character replacement disabled: imported rig behaved as an independent NPC.
+-- Keep the real Roblox Character as the controller and attach the imported rig as a visual shell.
 
+
+-- Stable visual morph: preserve the player's real Character, camera and controls.
+local function attachVisualMorph(player,character)
+	task.wait(1.5)
+	if character~=player.Character or character:FindFirstChild("VisualMorph") then return end
+	local realRoot=character:FindFirstChild("HumanoidRootPart")
+	local realHumanoid=character:FindFirstChildOfClass("Humanoid")
+	if not realRoot or not realHumanoid then return end
+
+	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
+	if not ok then warn("[VisualMorph] LoadAsset failed: "..tostring(container)); return end
+	local rig
+	for _,candidate in ipairs(container:GetDescendants()) do
+		if candidate:IsA("Model") and candidate:FindFirstChild("HumanoidRootPart") and candidate:FindFirstChild("UpperTorso") then
+			rig=candidate; break
+		end
+	end
+	if not rig then container:Destroy(); warn("[VisualMorph] R15 rig not found"); return end
+	rig.Parent=character
+	container:Destroy()
+	rig.Name="VisualMorph"
+	local rigRoot=rig:FindFirstChild("HumanoidRootPart")
+	local importedHumanoid=rig:FindFirstChildOfClass("Humanoid")
+	if importedHumanoid then importedHumanoid:Destroy() end
+
+	-- Imported model is visual only: no scripts, collisions or autonomous physics.
+	for _,obj in ipairs(rig:GetDescendants()) do
+		if obj:IsA("Script") or obj:IsA("LocalScript") then
+			obj:Destroy()
+		elseif obj:IsA("BasePart") then
+			obj.Anchored=false
+			obj.CanCollide=false
+			obj.CanTouch=false
+			obj.CanQuery=false
+			obj.Massless=true
+			obj.AssemblyLinearVelocity=Vector3.zero
+			obj.AssemblyAngularVelocity=Vector3.zero
+		end
+	end
+
+	-- Hide the original avatar but keep HumanoidRootPart/control/camera alive.
+	for _,obj in ipairs(character:GetDescendants()) do
+		if obj:IsA("BasePart") and not obj:IsDescendantOf(rig) then
+			obj.Transparency=1
+			obj.CanCollide=(obj==realRoot)
+		elseif (obj:IsA("Decal") or obj:IsA("Texture")) and not obj:IsDescendantOf(rig) then
+			obj.Transparency=1
+		end
+	end
+	realRoot.Transparency=1
+
+	-- Align imported rig root to the real player's root and weld it permanently.
+	rig:PivotTo(realRoot.CFrame)
+	rigRoot.CFrame=realRoot.CFrame
+	local weld=Instance.new("WeldConstraint")
+	weld.Name="VisualMorphWeld"
+	weld.Part0=realRoot
+	weld.Part1=rigRoot
+	weld.Parent=rigRoot
+
+	-- The actual player character remains untouched, so Roblox's camera and controls
+	-- continue following the original Humanoid/HRP.
+	print("[VisualMorph] attached to "..player.Name)
+end
+
+local function setupVisualMorph(player)
+	player.CharacterAdded:Connect(function(character) task.spawn(attachVisualMorph,player,character) end)
+	if player.Character then task.spawn(attachVisualMorph,player,player.Character) end
+end
+for _,player in ipairs(Players:GetPlayers()) do setupVisualMorph(player) end
+Players.PlayerAdded:Connect(setupVisualMorph)
 
 -- In-game rig diagnostic for morph asset 117859430905186.
 
