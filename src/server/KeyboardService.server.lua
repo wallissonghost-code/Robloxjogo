@@ -536,23 +536,66 @@ local function attachVisualMorph(player,character)
 	weld.Part1=rigRoot
 	weld.Parent=rigRoot
 
-	-- Inspect the imported rig's REAL joint graph without changing any joint.
-	-- We map Motor6D Name + Part0 + Part1 so the next animation pass targets
-	-- the asset's actual limbs instead of assuming standard R15 joint names.
-	local jointLines={"JOINT MAP "..MORPH_ASSET_ID}
-	local jointCount=0
+	-- Animate only visual limb joints. The Root Motor6D (HRP -> LowerTorso),
+	-- rigRoot and stable weld are deliberately excluded.
+	local joints={}
 	for _,joint in ipairs(rig:GetDescendants()) do
-		if joint:IsA("Motor6D") then
-			jointCount+=1
-			local p0=joint.Part0 and joint.Part0.Name or "nil"
-			local p1=joint.Part1 and joint.Part1.Name or "nil"
-			table.insert(jointLines,string.format("%02d | %s | %s -> %s",jointCount,joint.Name,p0,p1))
+		if joint:IsA("Motor6D") and joint.Part0 and joint.Part1
+			and joint.Part0~=rigRoot and joint.Part1~=rigRoot
+			and joint.Name~="Root" and joint.Name~="RootJoint" then
+			joints[joint.Name]={motor=joint,base=joint.Transform}
 		end
 	end
-	table.insert(jointLines,2,"Motor6D total: "..jointCount)
-	local jointReport=table.concat(jointLines,"\n")
-	print("[VisualMorphJointMap]\n"..jointReport)
-	task.spawn(showMorphDiagnostic,player,jointReport)
+
+	local function pose(name,cf)
+		local j=joints[name]
+		if j then j.motor.Transform=j.base*cf end
+	end
+	local function resetJoints()
+		for _,j in pairs(joints) do j.motor.Transform=j.base end
+	end
+
+	local phase=0
+	local animConn
+	animConn=game:GetService("RunService").Heartbeat:Connect(function(dt)
+		if not rig.Parent or player.Character~=character or realHumanoid.Health<=0 then
+			if animConn then animConn:Disconnect() end
+			return
+		end
+		phase+=dt
+		resetJoints()
+		local state=realHumanoid:GetState()
+		local moving=realHumanoid.MoveDirection.Magnitude>.05
+
+		if state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.Freefall then
+			pose("LeftShoulder",CFrame.Angles(math.rad(-30),0,math.rad(-8)))
+			pose("RightShoulder",CFrame.Angles(math.rad(-30),0,math.rad(8)))
+			pose("LeftHip",CFrame.Angles(math.rad(18),0,0))
+			pose("RightHip",CFrame.Angles(math.rad(18),0,0))
+			pose("LeftKnee",CFrame.Angles(math.rad(18),0,0))
+			pose("RightKnee",CFrame.Angles(math.rad(18),0,0))
+		elseif moving then
+			local s=math.sin(phase*9)
+			local arm=s*math.rad(38)
+			local leg=s*math.rad(31)
+			pose("LeftShoulder",CFrame.Angles(arm,0,0))
+			pose("RightShoulder",CFrame.Angles(-arm,0,0))
+			pose("LeftHip",CFrame.Angles(-leg,0,0))
+			pose("RightHip",CFrame.Angles(leg,0,0))
+			pose("LeftElbow",CFrame.Angles(math.max(0,-s)*math.rad(22),0,0))
+			pose("RightElbow",CFrame.Angles(math.max(0,s)*math.rad(22),0,0))
+			pose("LeftKnee",CFrame.Angles(math.max(0,s)*math.rad(28),0,0))
+			pose("RightKnee",CFrame.Angles(math.max(0,-s)*math.rad(28),0,0))
+			-- Custom torso chain seen in this asset.
+			pose("Spine2",CFrame.Angles(0,-s*math.rad(4),0))
+			pose("Spine3",CFrame.Angles(0,s*math.rad(3),0))
+		else
+			local breathe=math.sin(phase*2)
+			pose("Spine2",CFrame.Angles(breathe*math.rad(1.5),0,0))
+			pose("LeftShoulder",CFrame.Angles(0,0,-math.rad(3)))
+			pose("RightShoulder",CFrame.Angles(0,0,math.rad(3)))
+		end
+	end)
 
 
 	-- The actual player character remains untouched, so Roblox's camera and controls
