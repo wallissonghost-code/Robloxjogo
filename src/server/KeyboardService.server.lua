@@ -16,8 +16,9 @@ local GAP=.38
 local PITCH=KEY+GAP
 local KEY_HEIGHT=2.05
 local TOP_SCALE=.82
-local PRESS=.72
+local PRESS=.20
 local Y=2.05
+local ACTIVE_COLORS={Color3.fromRGB(36,220,120),Color3.fromRGB(55,170,255),Color3.fromRGB(255,190,45),Color3.fromRGB(255,85,125),Color3.fromRGB(165,95,255),Color3.fromRGB(40,225,210),Color3.fromRGB(255,120,45),Color3.fromRGB(100,225,80),Color3.fromRGB(80,135,255)}
 
 local deck=Instance.new("Part")
 deck.Name="KeypadDeck"
@@ -101,13 +102,24 @@ local function makeKey(label,x,z,index)
 	local downTop=upTop*CFrame.new(0,-PRESS,0)
 	local occupants={}
 	local pressed=false
+	local activeColor=ACTIVE_COLORS[index]
+	local pressSound=Instance.new("Sound")
+	pressSound.Name="KeyPressSound"
+	pressSound.SoundId="rbxasset://sounds/button.wav"
+	pressSound.Volume=.28
+	pressSound.PlaybackSpeed=.96+((index-1)%5)*.018
+	pressSound.Parent=lower
 
 	local function setPressed(value,player)
 		if pressed==value then return end
 		pressed=value
 		if value then
-			lower.Color=Color3.fromRGB(196,197,193)
-			bevel.Color=Color3.fromRGB(216,217,212)
+			lower.Material=Enum.Material.Neon
+			bevel.Material=Enum.Material.Neon
+			lower.Color=activeColor
+			bevel.Color=activeColor
+			pressSound.TimePosition=0
+			pressSound:Play()
 			TweenService:Create(lower,TweenInfo.new(.07,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=downBody}):Play()
 			TweenService:Create(bevel,TweenInfo.new(.07,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=downTop}):Play()
 			keypad:SetAttribute("LastKey",label)
@@ -115,6 +127,8 @@ local function makeKey(label,x,z,index)
 		else
 			TweenService:Create(lower,TweenInfo.new(.14,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{CFrame=upBody}):Play()
 			TweenService:Create(bevel,TweenInfo.new(.14,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{CFrame=upTop}):Play()
+			lower.Material=Enum.Material.SmoothPlastic
+			bevel.Material=Enum.Material.SmoothPlastic
 			lower.Color=Color3.fromRGB(224,224,218)
 			bevel.Color=Color3.fromRGB(242,242,236)
 		end
@@ -143,7 +157,7 @@ end
 
 for r,row in ipairs(rows) do
 	for c,label in ipairs(row) do
-		makeKey(label,(c-2)*PITCH,(r-2)*PITCH)
+		makeKey(label,(c-2)*PITCH,(r-2)*PITCH,(r-1)*3+c)
 	end
 end
 
