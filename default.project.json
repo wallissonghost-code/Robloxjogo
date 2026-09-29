@@ -10,7 +10,7 @@
           "Anchored": true,
           "Neutral": true,
           "Size": [12, 1, 12],
-          "Position": [0, 3, 0],
+          "Position": [0, 3, 18],
           "Duration": 0
         }
       },
@@ -22,6 +22,12 @@
           "Position": [0, 0, 0],
           "Material": "Grass"
         }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "KeyboardService": {
+        "$path": "src/server/KeyboardService.server.lua"
       }
     }
   }
