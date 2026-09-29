@@ -75,7 +75,7 @@ keypad.Parent=workspace
 
 local rows={{"1","2","3"},{"4","5","6"},{"7","8","9"}}
 local KEY=3.35
-local GAP=.15
+local GAP=0
 local PITCH=KEY+GAP
 local KEY_HEIGHT=2.05
 local TOP_SCALE=.82
