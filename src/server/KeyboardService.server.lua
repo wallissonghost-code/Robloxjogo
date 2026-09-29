@@ -5,7 +5,7 @@ local old=workspace:FindFirstChild("Keyboard")
 if old then old:Destroy() end
 
 local keyboard=Instance.new("Model")
-keyboard.Name="Keyboard"
+keyboard.Name="RetroKeyboard"
 keyboard.Parent=workspace
 
 local rows={
@@ -14,21 +14,21 @@ local rows={
 	{"A","S","D","F","G","H","J","K","L"},
 	{"Z","X","C","V","B","N","M"},
 }
-local KEY_SIZE=Vector3.new(5.2,1.15,5.2)
-local GAP=.55
+local KEY_SIZE=Vector3.new(5.2,1.55,5.2)
+local GAP=.62
 local PITCH=KEY_SIZE.X+GAP
 local PRESS_DEPTH=.72
-local ORIGIN_Y=1.35
+local ORIGIN_Y=2.15
 local states={}
 
 local maxColumns=10
 local base=Instance.new("Part")
 base.Name="KeyboardBase"
 base.Anchored=true
-base.Size=Vector3.new(maxColumns*PITCH+2,1,4*PITCH+2)
-base.Position=Vector3.new(0,.35,0)
+base.Size=Vector3.new(maxColumns*PITCH+6,1.45,4*PITCH+6)
+base.Position=Vector3.new(0,.72,0)
 base.Material=Enum.Material.SmoothPlastic
-base.Color=Color3.fromRGB(20,22,25)
+base.Color=Color3.fromRGB(190,184,158)
 base.TopSurface=Enum.SurfaceType.Smooth
 base.Parent=keyboard
 
@@ -47,7 +47,7 @@ local function makeKey(label,x,z)
 	key.Size=KEY_SIZE
 	key.Position=Vector3.new(x,ORIGIN_Y,z)
 	key.Material=Enum.Material.SmoothPlastic
-	key.Color=Color3.fromRGB(55,59,64)
+	key.Color=Color3.fromRGB(218,212,186)
 	key.TopSurface=Enum.SurfaceType.Smooth
 	key.BottomSurface=Enum.SurfaceType.Smooth
 	key:SetAttribute("Key",label)
@@ -63,9 +63,9 @@ local function makeKey(label,x,z)
 	text.Size=UDim2.fromScale(1,1)
 	text.BackgroundTransparency=1
 	text.Text=label
-	text.TextColor3=Color3.fromRGB(245,247,250)
+	text.TextColor3=Color3.fromRGB(38,36,31)
 	text.TextScaled=true
-	text.Font=Enum.Font.GothamBold
+	text.Font=Enum.Font.ArialBold
 	text.Parent=gui
 	local padding=Instance.new("UIPadding")
 	padding.PaddingTop=UDim.new(.24,0);padding.PaddingBottom=UDim.new(.24,0);padding.PaddingLeft=UDim.new(.24,0);padding.PaddingRight=UDim.new(.24,0);padding.Parent=text
@@ -79,13 +79,13 @@ local function makeKey(label,x,z)
 		if state.pressed==isPressed then return end
 		state.pressed=isPressed
 		if isPressed then
-			key.Color=Color3.fromRGB(88,96,103)
+			key.Color=Color3.fromRGB(174,169,149)
 			TweenService:Create(key,TweenInfo.new(.075,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=down}):Play()
 			keyboard:SetAttribute("LastKey",label)
 			key:SetAttribute("LastPressedBy",player and player.UserId or 0)
 		else
 			TweenService:Create(key,TweenInfo.new(.13,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{CFrame=up}):Play()
-			key.Color=Color3.fromRGB(55,59,64)
+			key.Color=Color3.fromRGB(218,212,186)
 		end
 	end
 
@@ -124,4 +124,4 @@ for rowIndex,row in ipairs(rows) do
 end
 
 local spawn=workspace:FindFirstChild("SpawnLocation")
-if spawn then spawn.CFrame=CFrame.new(0,3,18) end
+if spawn then spawn.CFrame=CFrame.new(0,4,23) end
