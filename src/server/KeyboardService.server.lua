@@ -20,27 +20,6 @@ local PRESS=1.30
 local Y=2.05
 local ACTIVE_COLORS={Color3.fromRGB(36,220,120),Color3.fromRGB(55,170,255),Color3.fromRGB(255,190,45),Color3.fromRGB(255,85,125),Color3.fromRGB(165,95,255),Color3.fromRGB(40,225,210),Color3.fromRGB(255,120,45),Color3.fromRGB(100,225,80),Color3.fromRGB(80,135,255)}
 
-local deck=Instance.new("Part")
-deck.Name="KeypadDeck"
-deck.Anchored=true
-deck.Size=Vector3.new(PITCH*3+.35,1,PITCH*3+.35)
-deck.Position=Vector3.new(0,0.525,0)
-deck.Material=Enum.Material.SmoothPlastic
-deck.Color=Color3.fromRGB(205,207,203)
-deck.TopSurface=Enum.SurfaceType.Smooth
-deck.BottomSurface=Enum.SurfaceType.Smooth
-deck.Parent=keypad
-
-local rim=Instance.new("Part")
-rim.Name="InnerPlate"
-rim.Anchored=true
-rim.CanCollide=false
-rim.Size=Vector3.new(PITCH*3+.18,.18,PITCH*3+.18)
-rim.Position=Vector3.new(0,1.015,0)
-rim.Material=Enum.Material.Metal
-rim.Color=Color3.fromRGB(205,207,203)
-rim.Parent=keypad
-
 local function playerFromHit(hit)
 	local character=hit and hit:FindFirstAncestorOfClass("Model")
 	if not character then return end
