@@ -522,7 +522,6 @@ local function attachVisualMorph(player,character)
 	for _,obj in ipairs(character:GetDescendants()) do
 		if obj:IsA("BasePart") and not obj:IsDescendantOf(rig) then
 			obj.Transparency=1
-			obj.CanCollide=(obj==realRoot)
 		elseif (obj:IsA("Decal") or obj:IsA("Texture")) and not obj:IsDescendantOf(rig) then
 			obj.Transparency=1
 		end
@@ -538,11 +537,21 @@ local function attachVisualMorph(player,character)
 	rig:PivotTo(rig:GetPivot()+Vector3.new(0,groundOffset,0))
 	local rootOffset=realRoot.CFrame:ToObjectSpace(rigRoot.CFrame)
 
-	local weld=Instance.new("WeldConstraint")
-	weld.Name="VisualMorphWeld"
-	weld.Part0=realRoot
-	weld.Part1=rigRoot
-	weld.Parent=rigRoot
+	-- Do NOT physically weld the animated shell root to the real HRP. R15 animation
+	-- can animate the shell root joint and a WeldConstraint would feed that motion
+	-- back into the real character, separating the camera from the visible avatar.
+	-- Instead, keep the shell root kinematically locked to the real controller.
+	rigRoot.Anchored=true
+	local rootLockConn
+	rootLockConn=game:GetService("RunService").Heartbeat:Connect(function()
+		if not rig.Parent or character~=player.Character or realHumanoid.Health<=0 then
+			if rootLockConn then rootLockConn:Disconnect() end
+			return
+		end
+		rigRoot.CFrame=realRoot.CFrame*rootOffset
+		rigRoot.AssemblyLinearVelocity=Vector3.zero
+		rigRoot.AssemblyAngularVelocity=Vector3.zero
+	end)
 
 	-- Real R15 Ninja animation pack, reused from Robloxstudio/MovementShop.
 	-- The imported shell gets its own AnimationController/Animator while the
@@ -615,13 +624,15 @@ local function attachVisualMorph(player,character)
 		elseif newState==Enum.HumanoidStateType.Landed
 			or newState==Enum.HumanoidStateType.Running
 			or newState==Enum.HumanoidStateType.RunningNoPhysics then
-			updateLocomotion(realRoot.AssemblyLinearVelocity*Vector3.new(1,0,1).Magnitude)
+			local v=realRoot.AssemblyLinearVelocity
+			updateLocomotion(Vector3.new(v.X,0,v.Z).Magnitude)
 		end
 	end)
 	play("idle",0,1)
 	rig.Destroying:Connect(function()
 		runningConn:Disconnect()
 		stateConn:Disconnect()
+		if rootLockConn then rootLockConn:Disconnect() end
 	end)
 
 	-- The actual player character remains untouched, so Roblox's camera and controls
