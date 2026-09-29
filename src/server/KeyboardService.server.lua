@@ -279,3 +279,58 @@ end
 
 local spawn=workspace:FindFirstChild("SpawnLocation")
 if spawn then spawn.CFrame=CFrame.new(0,3,13.5) end
+
+
+-- Visual-only asset gallery test. No gameplay mechanics are intentionally added.
+local VISUAL_ASSETS={
+	{id=106424344571308,name="TestKeyboard",pos=Vector3.new(18,0,0)},
+	{id=117859430905186,name="TestHumanoid",pos=Vector3.new(26,0,0)},
+	{id=113427265105121,name="TestPortalGun",pos=Vector3.new(34,0,0)},
+	{id=5352156968,name="TestPlayerRank",pos=Vector3.new(42,0,0)},
+}
+
+local function loadVisualAsset(spec)
+	local ok,container=pcall(function() return InsertService:LoadAsset(spec.id) end)
+	if not ok then
+		warn(("[VisualAssetTest] %s (%s) failed: %s"):format(spec.name,spec.id,tostring(container)))
+		return
+	end
+	local children=container:GetChildren()
+	if #children==0 then
+		warn(("[VisualAssetTest] %s (%s) returned empty"):format(spec.name,spec.id))
+		container:Destroy()
+		return
+	end
+	local root
+	if #children==1 then
+		root=children[1]; root.Parent=workspace; container:Destroy()
+	else
+		root=Instance.new("Model"); root.Parent=workspace
+		for _,child in ipairs(children) do child.Parent=root end
+		container:Destroy()
+	end
+	root.Name=spec.name.."_"..spec.id
+	if root:IsA("BasePart") then root.Anchored=true end
+	for _,obj in ipairs(root:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			obj.Anchored=true
+		end
+	end
+	if root:IsA("Model") then
+		local cf,size=root:GetBoundingBox()
+		local pivot=root:GetPivot()
+		local bottom=cf.Position.Y-size.Y/2
+		root:PivotTo(pivot+Vector3.new(spec.pos.X-pivot.Position.X,spec.pos.Y-bottom,spec.pos.Z-pivot.Position.Z))
+	elseif root:IsA("BasePart") then
+		root.Position=Vector3.new(spec.pos.X,spec.pos.Y+root.Size.Y/2,spec.pos.Z)
+	end
+	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
+end
+
+task.spawn(function()
+	task.wait(1)
+	for _,spec in ipairs(VISUAL_ASSETS) do
+		loadVisualAsset(spec)
+		task.wait(.25)
+	end
+end)
