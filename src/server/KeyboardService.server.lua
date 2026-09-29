@@ -424,13 +424,33 @@ local function morphPlayer(player,character)
 		status("7. Humanoid R15 INJETADO")
 	end
 
-	-- The gallery copy is anchored, but the playable morph must be physical.
+	-- Stabilize the imported rig before handing it to the player.
+	-- Imported decorative rigs can contain dozens of collidable parts that
+	-- explode apart / fling the character when all are released at once.
 	for _,obj in ipairs(morph:GetDescendants()) do
-		if obj:IsA("BasePart") then obj.Anchored=false end
+		if obj:IsA("BasePart") then
+			obj.Anchored=false
+			obj.CanCollide=false
+			obj.CanTouch=false
+			obj.CanQuery=true
+			obj.AssemblyLinearVelocity=Vector3.zero
+			obj.AssemblyAngularVelocity=Vector3.zero
+			obj.Massless=(obj~=root)
+		end
 	end
-	status("8. Desancorado")
-	root.CFrame=spawnCF
-	status("9. Posicionado no player")
+	root.CanCollide=false
+	root.Massless=false
+	root.AssemblyLinearVelocity=Vector3.zero
+	root.AssemblyAngularVelocity=Vector3.zero
+	status("8. Rig estabilizado / colisao interna removida")
+	-- Pivot the whole rig instead of moving only HRP; this preserves every
+	-- imported Motor6D offset and avoids a physics impulse on spawn.
+	local currentPivot=morph:GetPivot()
+	local relative=currentPivot:ToObjectSpace(root.CFrame)
+	morph:PivotTo(spawnCF*relative:Inverse())
+	root.AssemblyLinearVelocity=Vector3.zero
+	root.AssemblyAngularVelocity=Vector3.zero
+	status("9. Rig inteiro posicionado no player")
 	morph:SetAttribute("MorphAssetId",MORPH_ASSET_ID)
 
 	local okSet,errSet=pcall(function() player.Character=morph end)
