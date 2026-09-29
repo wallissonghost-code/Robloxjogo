@@ -274,7 +274,40 @@ local function applyImportedKeycapTemplate(assetRoot)
 			table.insert(details,"specialScale="..tostring(sm.Scale))
 		end
 	end
-	warn("[KEYCAP_CAPTURE] "..table.concat(details," | "))
+	local captureText="[KEYCAP_CAPTURE] "..table.concat(details," | ")
+	warn(captureText)
+	-- Show the captured geometry in-game so Studio/Output is not required.
+	local function showCapture(player)
+		local pg=player:WaitForChild("PlayerGui",10)
+		if not pg then return end
+		local previous=pg:FindFirstChild("KeycapCaptureDiagnostic")
+		if previous then previous:Destroy() end
+		local gui=Instance.new("ScreenGui")
+		gui.Name="KeycapCaptureDiagnostic"
+		gui.ResetOnSpawn=false
+		gui.Parent=pg
+		local frame=Instance.new("Frame")
+		frame.Size=UDim2.new(.9,0,0,230)
+		frame.Position=UDim2.new(.05,0,.05,0)
+		frame.BackgroundColor3=Color3.fromRGB(15,17,20)
+		frame.BackgroundTransparency=.08
+		frame.Parent=gui
+		Instance.new("UICorner",frame).CornerRadius=UDim.new(0,12)
+		local label=Instance.new("TextLabel")
+		label.Size=UDim2.new(1,-24,1,-24)
+		label.Position=UDim2.new(0,12,0,12)
+		label.BackgroundTransparency=1
+		label.TextWrapped=true
+		label.TextXAlignment=Enum.TextXAlignment.Left
+		label.TextYAlignment=Enum.TextYAlignment.Top
+		label.Font=Enum.Font.Code
+		label.TextSize=15
+		label.TextColor3=Color3.new(1,1,1)
+		label.Text=captureText
+		label.Parent=frame
+	end
+	for _,player in ipairs(Players:GetPlayers()) do task.spawn(showCapture,player) end
+	Players.PlayerAdded:Connect(function(player) task.wait(2); showCapture(player) end)
 	print(("[KeycapTemplate] using %s %s repeated=%d"):format(template.ClassName,template.Name,#best))
 	for _,holder in ipairs(keypad:GetChildren()) do
 		if holder:IsA("Model") and holder.Name:match("^Key_") then
