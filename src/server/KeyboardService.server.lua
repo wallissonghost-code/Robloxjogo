@@ -251,6 +251,64 @@ local function applyImportedKeycapTemplate(assetRoot)
 	end
 
 	local template=best[1]
+	-- Deep, read-only capture of the exact donor key. This does not change the working clone flow.
+	local function safe(label,fn,out)
+		local ok,v=pcall(fn)
+		table.insert(out,label.."="..(ok and tostring(v) or "<unavailable>"))
+	end
+	local details={}
+	safe("ClassName",function() return template.ClassName end,details)
+	safe("Name",function() return template.Name end,details)
+	safe("Size",function() return template.Size end,details)
+	safe("CFrame",function() return template.CFrame end,details)
+	safe("Orientation",function() return template.Orientation end,details)
+	safe("PivotOffset",function() return template.PivotOffset end,details)
+	safe("Color",function() return template.Color end,details)
+	safe("Material",function() return template.Material end,details)
+	safe("MaterialVariant",function() return template.MaterialVariant end,details)
+	safe("Transparency",function() return template.Transparency end,details)
+	safe("Reflectance",function() return template.Reflectance end,details)
+	safe("CastShadow",function() return template.CastShadow end,details)
+	safe("TopSurface",function() return template.TopSurface end,details)
+	safe("BottomSurface",function() return template.BottomSurface end,details)
+	if template:IsA("MeshPart") then
+		safe("MeshId",function() return template.MeshId end,details)
+		safe("TextureID",function() return template.TextureID end,details)
+		safe("MeshSize",function() return template.MeshSize end,details)
+		safe("DoubleSided",function() return template.DoubleSided end,details)
+		safe("RenderFidelity",function() return template.RenderFidelity end,details)
+		safe("CollisionFidelity",function() return template.CollisionFidelity end,details)
+	end
+	local childInfo={}
+	for _,d in ipairs(template:GetDescendants()) do
+		local row=d.ClassName..":"..d.Name
+		if d:IsA("Decal") or d:IsA("Texture") then
+			row=row.." Texture="..tostring(d.Texture).." Face="..tostring(d.Face)
+		elseif d:IsA("SurfaceGui") then
+			row=row.." Face="..tostring(d.Face)
+		elseif d:IsA("SpecialMesh") then
+			row=row.." MeshId="..tostring(d.MeshId).." TextureId="..tostring(d.TextureId).." Scale="..tostring(d.Scale)
+		end
+		table.insert(childInfo,row)
+	end
+	table.insert(details,"Descendants="..(#childInfo>0 and table.concat(childInfo," ; ") or "<none>"))
+	local captureText="[KEYCAP_DEEP_CAPTURE]\n"..table.concat(details,"\n")
+	warn(captureText)
+	local function showCapture(player)
+		local pg=player:WaitForChild("PlayerGui",10); if not pg then return end
+		local old=pg:FindFirstChild("KeycapDeepCapture"); if old then old:Destroy() end
+		local gui=Instance.new("ScreenGui"); gui.Name="KeycapDeepCapture"; gui.ResetOnSpawn=false; gui.Parent=pg
+		local frame=Instance.new("Frame"); frame.Size=UDim2.new(.94,0,.88,0); frame.Position=UDim2.new(.03,0,.05,0)
+		frame.BackgroundColor3=Color3.fromRGB(12,14,17); frame.BackgroundTransparency=.04; frame.Parent=gui
+		Instance.new("UICorner",frame).CornerRadius=UDim.new(0,12)
+		local scroll=Instance.new("ScrollingFrame"); scroll.Size=UDim2.new(1,-16,1,-16); scroll.Position=UDim2.new(0,8,0,8)
+		scroll.BackgroundTransparency=1; scroll.BorderSizePixel=0; scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; scroll.CanvasSize=UDim2.new(); scroll.Parent=frame
+		local label=Instance.new("TextLabel"); label.Size=UDim2.new(1,-12,0,0); label.AutomaticSize=Enum.AutomaticSize.Y
+		label.BackgroundTransparency=1; label.TextWrapped=true; label.TextXAlignment=Enum.TextXAlignment.Left; label.TextYAlignment=Enum.TextYAlignment.Top
+		label.Font=Enum.Font.Code; label.TextSize=14; label.TextColor3=Color3.new(1,1,1); label.Text=captureText; label.Parent=scroll
+	end
+	for _,player in ipairs(Players:GetPlayers()) do task.spawn(showCapture,player) end
+	Players.PlayerAdded:Connect(function(player) task.wait(2); showCapture(player) end)
 	print(("[KeycapTemplate] using %s %s repeated=%d"):format(template.ClassName,template.Name,#best))
 	for _,holder in ipairs(keypad:GetChildren()) do
 		if holder:IsA("Model") and holder.Name:match("^Key_") then
