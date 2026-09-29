@@ -325,6 +325,48 @@ local function loadVisualAsset(spec)
 		root.Position=Vector3.new(spec.pos.X,spec.pos.Y+root.Size.Y/2,spec.pos.Z)
 	end
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
+
+	-- Turn the humanoid test asset into a static avatar statue.
+	if spec.id==117859430905186 then
+		local humanoid=root:FindFirstChildOfClass("Humanoid") or root:FindFirstChildWhichIsA("Humanoid",true)
+		if not humanoid then
+			warn("[AvatarStatue] Asset loaded, but no Humanoid was found")
+			return
+		end
+		local function applyPlayerAvatar(player)
+			local okDesc,description=pcall(function()
+				return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+			end)
+			if not okDesc then
+				warn("[AvatarStatue] Could not get avatar for "..player.Name..": "..tostring(description))
+				return
+			end
+			local okApply,err=pcall(function()
+				humanoid:ApplyDescription(description)
+			end)
+			if not okApply then
+				warn("[AvatarStatue] Could not apply avatar: "..tostring(err))
+				return
+			end
+			-- Applying a description can create new accessory parts; freeze them too.
+			task.wait(.5)
+			for _,obj in ipairs(root:GetDescendants()) do
+				if obj:IsA("BasePart") then obj.Anchored=true end
+			end
+			root:SetAttribute("AvatarUserId",player.UserId)
+			print("[AvatarStatue] Applied avatar from "..player.Name)
+		end
+		local player=Players:GetPlayers()[1]
+		if player then
+			task.spawn(applyPlayerAvatar,player)
+		else
+			local conn
+			conn=Players.PlayerAdded:Connect(function(joined)
+				conn:Disconnect()
+				task.spawn(applyPlayerAvatar,joined)
+			end)
+		end
+	end
 end
 
 task.spawn(function()
