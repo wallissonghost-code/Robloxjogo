@@ -340,83 +340,6 @@ end)
 -- Player morph test: replace the player's Character with asset 117859430905186.
 local MORPH_ASSET_ID=117859430905186
 
-local function morphPlayer(player,character)
-	task.wait(1)
-	if not character or character~=player.Character then return end
-	local oldRoot=character:FindFirstChild("HumanoidRootPart")
-	if not oldRoot then return end
-	local spawnCF=oldRoot.CFrame
-
-	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
-	if not ok then
-		warn("[PlayerMorph] LoadAsset failed: "..tostring(container))
-		return
-	end
-	local candidates=container:GetChildren()
-	local morph
-	for _,candidate in ipairs(candidates) do
-		if candidate:IsA("Model") and candidate:FindFirstChildOfClass("Humanoid") then
-			morph=candidate
-			break
-		end
-	end
-	if not morph and #candidates==1 and candidates[1]:IsA("Model") then morph=candidates[1] end
-	if not morph then
-		warn("[PlayerMorph] No usable model found in asset")
-		container:Destroy()
-		return
-	end
-	morph.Parent=workspace
-	container:Destroy()
-	morph.Name=player.Name
-
-	local humanoid=morph:FindFirstChildOfClass("Humanoid")
-	local root=morph:FindFirstChild("HumanoidRootPart")
-	if not root then
-		warn("[PlayerMorph] Model has no HumanoidRootPart")
-		morph:Destroy()
-		return
-	end
-	-- This asset is an R15 rig but ships without a Humanoid. Inject one so
-	-- Roblox can treat the imported rig as a playable Character.
-	if not humanoid then
-		humanoid=Instance.new("Humanoid")
-		humanoid.Name="Humanoid"
-		humanoid.RigType=Enum.HumanoidRigType.R15
-		humanoid.WalkSpeed=16
-		humanoid.JumpPower=50
-		humanoid.AutoRotate=true
-		humanoid.Parent=morph
-		print("[PlayerMorph] Injected R15 Humanoid")
-	end
-
-	-- The gallery copy is anchored, but the playable morph must be physical.
-	for _,obj in ipairs(morph:GetDescendants()) do
-		if obj:IsA("BasePart") then obj.Anchored=false end
-	end
-	root.CFrame=spawnCF
-	morph:SetAttribute("MorphAssetId",MORPH_ASSET_ID)
-
-	player.Character=morph
-	character:Destroy()
-	print("[PlayerMorph] "..player.Name.." transformed into asset "..MORPH_ASSET_ID)
-end
-
-local function setupMorph(player)
-	player.CharacterAdded:Connect(function(character)
-		if character:GetAttribute("MorphAssetId")==MORPH_ASSET_ID then return end
-		task.spawn(morphPlayer,player,character)
-	end)
-	if player.Character and player.Character:GetAttribute("MorphAssetId")~=MORPH_ASSET_ID then
-		task.spawn(morphPlayer,player,player.Character)
-	end
-end
-
-for _,player in ipairs(Players:GetPlayers()) do setupMorph(player) end
-Players.PlayerAdded:Connect(setupMorph)
-
-
--- In-game rig diagnostic for morph asset 117859430905186.
 local function showMorphDiagnostic(player,text)
 	local pg=player:WaitForChild("PlayerGui",10)
 	if not pg then return end
@@ -435,6 +358,92 @@ local function showMorphDiagnostic(player,text)
 	label.Font=Enum.Font.Code; label.TextSize=15; label.TextColor3=Color3.new(1,1,1)
 	label.Text=text; label.Parent=frame
 end
+
+
+local function morphPlayer(player,character)
+	local steps={}
+	local function status(message)
+		table.insert(steps,message)
+		print("[PlayerMorph] "..message)
+		task.spawn(showMorphDiagnostic,player,"MORPH EXECUTION "..MORPH_ASSET_ID.."\n"..table.concat(steps,"\n"))
+	end
+	status("1. morphPlayer INICIO")
+	task.wait(1)
+	if not character or character~=player.Character then status("PAROU: Character mudou antes do teste"); return end
+	status("2. Character original confirmado")
+	local oldRoot=character:FindFirstChild("HumanoidRootPart")
+	if not oldRoot then status("PAROU: Character original sem HumanoidRootPart"); return end
+	status("3. Root original OK")
+	local spawnCF=oldRoot.CFrame
+
+	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
+	if not ok then status("PAROU: LoadAsset FALHOU - "..tostring(container)); return end
+	status("4. LoadAsset OK")
+	local candidates=container:GetChildren()
+	local morph
+	for _,candidate in ipairs(candidates) do
+		if candidate:IsA("Model") and candidate:FindFirstChildOfClass("Humanoid") then
+			morph=candidate
+			break
+		end
+	end
+	if not morph and #candidates==1 and candidates[1]:IsA("Model") then morph=candidates[1] end
+	if not morph then status("PAROU: nenhum Model candidato encontrado"); container:Destroy(); return end
+	status("5. Model candidato: "..morph.Name)
+	morph.Parent=workspace
+	container:Destroy()
+	morph.Name=player.Name
+
+	local humanoid=morph:FindFirstChildOfClass("Humanoid")
+	local root=morph:FindFirstChild("HumanoidRootPart")
+	if not root then status("PAROU: modelo sem HumanoidRootPart"); morph:Destroy(); return end
+	status("6. HumanoidRootPart OK")
+	-- This asset is an R15 rig but ships without a Humanoid. Inject one so
+	-- Roblox can treat the imported rig as a playable Character.
+	if not humanoid then
+		humanoid=Instance.new("Humanoid")
+		humanoid.Name="Humanoid"
+		humanoid.RigType=Enum.HumanoidRigType.R15
+		humanoid.WalkSpeed=16
+		humanoid.JumpPower=50
+		humanoid.AutoRotate=true
+		humanoid.Parent=morph
+		status("7. Humanoid R15 INJETADO")
+	end
+
+	-- The gallery copy is anchored, but the playable morph must be physical.
+	for _,obj in ipairs(morph:GetDescendants()) do
+		if obj:IsA("BasePart") then obj.Anchored=false end
+	end
+	status("8. Desancorado")
+	root.CFrame=spawnCF
+	status("9. Posicionado no player")
+	morph:SetAttribute("MorphAssetId",MORPH_ASSET_ID)
+
+	local okSet,errSet=pcall(function() player.Character=morph end)
+	if not okSet then status("PAROU: player.Character falhou - "..tostring(errSet)); morph:Destroy(); return end
+	status("10. player.Character SUBSTITUIDO")
+	task.wait(.2)
+	if player.Character~=morph then status("PAROU: Roblox nao manteve o novo Character"); return end
+	character:Destroy()
+	status("11. SUCESSO - personagem antigo destruido")
+end
+
+local function setupMorph(player)
+	player.CharacterAdded:Connect(function(character)
+		if character:GetAttribute("MorphAssetId")==MORPH_ASSET_ID then return end
+		task.spawn(morphPlayer,player,character)
+	end)
+	if player.Character and player.Character:GetAttribute("MorphAssetId")~=MORPH_ASSET_ID then
+		task.spawn(morphPlayer,player,player.Character)
+	end
+end
+
+for _,player in ipairs(Players:GetPlayers()) do setupMorph(player) end
+Players.PlayerAdded:Connect(setupMorph)
+
+
+-- In-game rig diagnostic for morph asset 117859430905186.
 
 task.spawn(function()
 	task.wait(3)
