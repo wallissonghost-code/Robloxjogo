@@ -541,12 +541,34 @@ local function attachVisualMorph(player,character)
 				end
 			end
 			visual.Anchored=false; visual.CanCollide=false; visual.CanTouch=false; visual.CanQuery=false; visual.Massless=true
-			-- Preserve the imported segment's authored offset/orientation relative
-			-- to its own R15 body part instead of forcing its center onto dst.
-			-- This is especially important for shoulders, forearms and hands.
-			local srcPartCF=src.CFrame
-			local authoredOffset=srcPartCF:ToObjectSpace(visual.CFrame)
-			visual.CFrame=dst.CFrame*authoredOffset
+			-- Map the imported segment through its ORIGINAL joint frame instead of
+			-- matching part centers. Custom arms/hands often have different pivots
+			-- from stock R15, while their Motor6D joint frames preserve the authored fit.
+			local sourceJoint
+			for _,m in ipairs(source:GetDescendants()) do
+				if m:IsA("Motor6D") and m.Part1==src and m.Part0 then
+					sourceJoint=m
+					break
+				end
+			end
+			local targetJoint
+			for _,m in ipairs(character:GetDescendants()) do
+				if m:IsA("Motor6D") and m.Part1==dst and m.Part0 and not m:IsDescendantOf(visual) then
+					targetJoint=m
+					break
+				end
+			end
+			if sourceJoint and targetJoint then
+				-- Source joint world frame = Part0 * C0. Preserve the source visual's
+				-- transform relative to that frame and reproduce it at the live R15 joint.
+				local sourceJointWorld=sourceJoint.Part0.CFrame*sourceJoint.C0
+				local targetJointWorld=targetJoint.Part0.CFrame*targetJoint.C0
+				local visualFromJoint=sourceJointWorld:ToObjectSpace(src.CFrame)
+				visual.CFrame=targetJointWorld*visualFromJoint
+			else
+				-- Head/torso or any unmatched segment: safe stock-body fallback.
+				visual.CFrame=dst.CFrame
+			end
 			visual.Parent=dst
 			local weld=Instance.new("WeldConstraint")
 			weld.Part0=dst; weld.Part1=visual; weld.Parent=visual
