@@ -357,9 +357,20 @@ local function loadVisualAsset(spec)
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
 	if spec.id==106424344571308 then
 		applyImportedKeycapTemplate(root)
-		-- The loaded keyboard is only a donor/template. Once its keycap has been
-		-- cloned onto our 3x3, remove the donor so only the final keypad remains.
-		root:Destroy()
+		-- Keep the donor instance alive: cloned asset-backed key geometry can depend
+		-- on the loaded source at runtime. Hide it instead of destroying it.
+		for _,obj in ipairs(root:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				obj.Transparency=1
+				obj.CanCollide=false
+				obj.CanTouch=false
+				obj.CanQuery=false
+			elseif obj:IsA("Decal") or obj:IsA("Texture") then
+				obj.Transparency=1
+			elseif obj:IsA("SurfaceGui") or obj:IsA("BillboardGui") then
+				obj.Enabled=false
+			end
+		end
 	end
 
 end
