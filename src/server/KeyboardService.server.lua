@@ -528,18 +528,69 @@ local function attachVisualMorph(player,character)
 	end
 	realRoot.Transparency=1
 
-	-- Align imported rig root to the real player's root and weld it permanently.
-	rig:PivotTo(realRoot.CFrame)
-	rigRoot.CFrame=realRoot.CFrame
+	-- Ground the imported rig by comparing its visual bottom with the real
+	-- character's visual bottom. This avoids feet sinking below the floor.
+	local rigBoxCF,rigBoxSize=rig:GetBoundingBox()
+	local rigBottom=rigBoxCF.Position.Y-rigBoxSize.Y/2
+	local realBottom=realRoot.Position.Y-realHumanoid.HipHeight-(realRoot.Size.Y/2)
+	local groundOffset=realBottom-rigBottom
+	rig:PivotTo(rig:GetPivot()+Vector3.new(0,groundOffset,0))
+	local rootOffset=realRoot.CFrame:ToObjectSpace(rigRoot.CFrame)
+
 	local weld=Instance.new("WeldConstraint")
 	weld.Name="VisualMorphWeld"
 	weld.Part0=realRoot
 	weld.Part1=rigRoot
 	weld.Parent=rigRoot
 
+	-- Lightweight procedural animation for this imported R15-style rig. It keeps
+	-- the player's real Humanoid as controller while posing the shell's Motor6Ds.
+	local motors={}
+	for _,joint in ipairs(rig:GetDescendants()) do
+		if joint:IsA("Motor6D") then
+			motors[joint.Name]=joint
+		end
+	end
+	local baseTransform={}
+	for _,joint in pairs(motors) do baseTransform[joint]=joint.Transform end
+
+	local runService=game:GetService("RunService")
+	local t=0
+	local animConn
+	animConn=runService.Heartbeat:Connect(function(dt)
+		if not rig.Parent or character~=player.Character or realHumanoid.Health<=0 then
+			if animConn then animConn:Disconnect() end
+			return
+		end
+		t+=dt
+		local moving=realHumanoid.MoveDirection.Magnitude>.05
+		local state=realHumanoid:GetState()
+		local airborne=state==Enum.HumanoidStateType.Jumping
+			or state==Enum.HumanoidStateType.Freefall
+		local swing=moving and math.sin(t*10)*math.rad(28) or 0
+		local bob=moving and math.sin(t*20)*math.rad(2) or 0
+
+		local function pose(name,cf)
+			local m=motors[name]
+			if m then m.Transform=baseTransform[m]*cf end
+		end
+		if airborne then
+			pose("LeftShoulder",CFrame.Angles(math.rad(-18),0,0))
+			pose("RightShoulder",CFrame.Angles(math.rad(-18),0,0))
+			pose("LeftHip",CFrame.Angles(math.rad(18),0,0))
+			pose("RightHip",CFrame.Angles(math.rad(18),0,0))
+		else
+			pose("LeftShoulder",CFrame.Angles(swing,0,0))
+			pose("RightShoulder",CFrame.Angles(-swing,0,0))
+			pose("LeftHip",CFrame.Angles(-swing,0,0))
+			pose("RightHip",CFrame.Angles(swing,0,0))
+		end
+		pose("Waist",CFrame.Angles(bob,0,0))
+	end)
+
 	-- The actual player character remains untouched, so Roblox's camera and controls
 	-- continue following the original Humanoid/HRP.
-	print("[VisualMorph] attached to "..player.Name)
+	print(("[VisualMorph] attached to %s | ground offset %.2f"):format(player.Name,groundOffset))
 end
 
 local function setupVisualMorph(player)
