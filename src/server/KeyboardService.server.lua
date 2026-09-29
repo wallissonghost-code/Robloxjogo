@@ -27,7 +27,6 @@ base.Position=Vector3.new(0,.48,0)
 base.Material=Enum.Material.SmoothPlastic
 base.Color=Color3.fromRGB(24,26,29)
 base.Parent=keyboard
-Instance.new("UICorner") -- harmless placeholder avoided? 
 
 local function makeKey(label,x,z,width)
 	width=width or keySize.X
