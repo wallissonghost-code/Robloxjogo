@@ -3,10 +3,8 @@ local Players=game:GetService("Players")
 
 local InsertService=game:GetService("InsertService")
 
-for _,name in ipairs({"Keyboard","RetroKeyboard","PremiumKeypad"}) do
-	local old=workspace:FindFirstChild(name)
-	if old then old:Destroy() end
-end
+local old=workspace:FindFirstChild("PremiumKeypad")
+if old then old:Destroy() end
 
 local keypad=Instance.new("Model")
 keypad.Name="PremiumKeypad"
