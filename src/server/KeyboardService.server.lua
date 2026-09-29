@@ -112,9 +112,16 @@ local function makeKey(label,x,z,index)
 
 	local raised={}
 	local pressedTargets={}
+	local raisedSizes={}
+	local pressedSizes={}
 	for i,piece in ipairs(pieces) do
 		raised[i]=piece.CFrame
-		pressedTargets[i]=piece.CFrame*CFrame.new(0,-PRESS,0)
+		raisedSizes[i]=piece.Size
+		local newY=math.max(.08,piece.Size.Y-PRESS)
+		pressedSizes[i]=Vector3.new(piece.Size.X,newY,piece.Size.Z)
+		-- Keep the bottom face fixed: shrinking by D moves the center down by D/2.
+		local shrink=piece.Size.Y-newY
+		pressedTargets[i]=piece.CFrame*CFrame.new(0,-shrink/2,0)
 	end
 
 	local occupants={}
@@ -127,12 +134,12 @@ local function makeKey(label,x,z,index)
 	pressSound.PlaybackSpeed=.96+((index-1)%5)*.018
 	pressSound.Parent=body
 
-	local function move(targets,time,easing)
+	local function move(targets,sizes,time,easing)
 		for _,t in ipairs(tweens) do t:Cancel() end
 		table.clear(tweens)
 		local info=TweenInfo.new(time,easing,Enum.EasingDirection.Out)
 		for i,piece in ipairs(pieces) do
-			local t=TweenService:Create(piece,info,{CFrame=targets[i]})
+			local t=TweenService:Create(piece,info,{CFrame=targets[i],Size=sizes[i]})
 			table.insert(tweens,t)
 			t:Play()
 		end
@@ -149,7 +156,7 @@ local function makeKey(label,x,z,index)
 			txt.TextColor3=Color3.fromRGB(18,18,18)
 			pressSound.TimePosition=0
 			pressSound:Play()
-			move(pressedTargets,.07,Enum.EasingStyle.Quad)
+			move(pressedTargets,pressedSizes,.07,Enum.EasingStyle.Quad)
 			keypad:SetAttribute("LastKey",label)
 			body:SetAttribute("LastPressedBy",player and player.UserId or 0)
 		else
@@ -162,7 +169,7 @@ local function makeKey(label,x,z,index)
 				end
 			end
 			txt.TextColor3=Color3.fromRGB(31,32,34)
-			move(raised,.14,Enum.EasingStyle.Back)
+			move(raised,raisedSizes,.14,Enum.EasingStyle.Back)
 		end
 	end
 
