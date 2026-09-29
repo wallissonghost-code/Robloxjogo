@@ -522,6 +522,7 @@ local function attachVisualMorph(player,character)
 	for _,obj in ipairs(character:GetDescendants()) do
 		if obj:IsA("BasePart") and not obj:IsDescendantOf(rig) then
 			obj.Transparency=1
+			obj.CanCollide=(obj==realRoot)
 		elseif (obj:IsA("Decal") or obj:IsA("Texture")) and not obj:IsDescendantOf(rig) then
 			obj.Transparency=1
 		end
@@ -537,102 +538,50 @@ local function attachVisualMorph(player,character)
 	rig:PivotTo(rig:GetPivot()+Vector3.new(0,groundOffset,0))
 	local rootOffset=realRoot.CFrame:ToObjectSpace(rigRoot.CFrame)
 
-	-- Do NOT physically weld the animated shell root to the real HRP. R15 animation
-	-- can animate the shell root joint and a WeldConstraint would feed that motion
-	-- back into the real character, separating the camera from the visible avatar.
-	-- Instead, keep the shell root kinematically locked to the real controller.
-	rigRoot.Anchored=true
-	local rootLockConn
-	rootLockConn=game:GetService("RunService").Heartbeat:Connect(function()
+	local weld=Instance.new("WeldConstraint")
+	weld.Name="VisualMorphWeld"
+	weld.Part0=realRoot
+	weld.Part1=rigRoot
+	weld.Parent=rigRoot
+
+	-- Stable visual-only motion test. Keep the real character as controller/camera.
+	local motors={}
+	for _,joint in ipairs(rig:GetDescendants()) do
+		if joint:IsA("Motor6D") then motors[joint.Name]=joint end
+	end
+	local baseTransform={}
+	for _,joint in pairs(motors) do baseTransform[joint]=joint.Transform end
+
+	local runService=game:GetService("RunService")
+	local t=0
+	local animConn
+	animConn=runService.Heartbeat:Connect(function(dt)
 		if not rig.Parent or character~=player.Character or realHumanoid.Health<=0 then
-			if rootLockConn then rootLockConn:Disconnect() end
+			if animConn then animConn:Disconnect() end
 			return
 		end
-		rigRoot.CFrame=realRoot.CFrame*rootOffset
-		rigRoot.AssemblyLinearVelocity=Vector3.zero
-		rigRoot.AssemblyAngularVelocity=Vector3.zero
-	end)
-
-	-- Real R15 Ninja animation pack, reused from Robloxstudio/MovementShop.
-	-- The imported shell gets its own AnimationController/Animator while the
-	-- invisible real Humanoid remains responsible for movement and camera.
-	local animationController=Instance.new("AnimationController")
-	animationController.Name="VisualMorphAnimationController"
-	animationController.Parent=rig
-	local animator=Instance.new("Animator")
-	animator.Parent=animationController
-
-	local NINJA={
-		idle1=656117400,
-		idle2=656118341,
-		walk=656121766,
-		run=656118852,
-		jump=656117878,
-		fall=656115606,
-	}
-	local tracks={}
-	local function makeTrack(name,id,looped,priority)
-		local animation=Instance.new("Animation")
-		animation.Name=name
-		animation.AnimationId="rbxassetid://"..tostring(id)
-		animation.Parent=animationController
-		local ok,track=pcall(function() return animator:LoadAnimation(animation) end)
-		if not ok then warn("[VisualMorph] animation failed "..name..": "..tostring(track)); return nil end
-		track.Looped=looped
-		track.Priority=priority
-		tracks[name]=track
-		return track
-	end
-	makeTrack("idle",NINJA.idle1,true,Enum.AnimationPriority.Idle)
-	makeTrack("walk",NINJA.walk,true,Enum.AnimationPriority.Movement)
-	makeTrack("run",NINJA.run,true,Enum.AnimationPriority.Movement)
-	makeTrack("jump",NINJA.jump,false,Enum.AnimationPriority.Action)
-	makeTrack("fall",NINJA.fall,true,Enum.AnimationPriority.Action)
-
-	local current
-	local function play(name,fade,speed)
-		local track=tracks[name]
-		if not track then return end
-		if current==track and track.IsPlaying then
-			if speed then track:AdjustSpeed(speed) end
-			return
-		end
-		if current and current.IsPlaying then current:Stop(fade or .15) end
-		current=track
-		track:Play(fade or .15)
-		if speed then track:AdjustSpeed(speed) end
-	end
-
-	local function updateLocomotion(speed)
+		t+=dt
+		local moving=realHumanoid.MoveDirection.Magnitude>.05
 		local state=realHumanoid:GetState()
-		if state==Enum.HumanoidStateType.Jumping then play("jump",.08); return end
-		if state==Enum.HumanoidStateType.Freefall then play("fall",.12); return end
-		if speed>.5 then
-			if speed>12 then play("run",.12,math.clamp(speed/16,.7,1.5))
-			else play("walk",.12,math.clamp(speed/8,.65,1.5)) end
+		local airborne=state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.Freefall
+		local swing=moving and math.sin(t*10)*math.rad(28) or 0
+		local bob=moving and math.sin(t*20)*math.rad(2) or 0
+		local function pose(name,cf)
+			local m=motors[name]
+			if m then m.Transform=baseTransform[m]*cf end
+		end
+		if airborne then
+			pose("LeftShoulder",CFrame.Angles(math.rad(-18),0,0))
+			pose("RightShoulder",CFrame.Angles(math.rad(-18),0,0))
+			pose("LeftHip",CFrame.Angles(math.rad(18),0,0))
+			pose("RightHip",CFrame.Angles(math.rad(18),0,0))
 		else
-			play("idle",.18,1)
+			pose("LeftShoulder",CFrame.Angles(swing,0,0))
+			pose("RightShoulder",CFrame.Angles(-swing,0,0))
+			pose("LeftHip",CFrame.Angles(-swing,0,0))
+			pose("RightHip",CFrame.Angles(swing,0,0))
 		end
-	end
-
-	local runningConn=realHumanoid.Running:Connect(updateLocomotion)
-	local stateConn=realHumanoid.StateChanged:Connect(function(_,newState)
-		if newState==Enum.HumanoidStateType.Jumping then
-			play("jump",.08,1)
-		elseif newState==Enum.HumanoidStateType.Freefall then
-			play("fall",.12,1)
-		elseif newState==Enum.HumanoidStateType.Landed
-			or newState==Enum.HumanoidStateType.Running
-			or newState==Enum.HumanoidStateType.RunningNoPhysics then
-			local v=realRoot.AssemblyLinearVelocity
-			updateLocomotion(Vector3.new(v.X,0,v.Z).Magnitude)
-		end
-	end)
-	play("idle",0,1)
-	rig.Destroying:Connect(function()
-		runningConn:Disconnect()
-		stateConn:Disconnect()
-		if rootLockConn then rootLockConn:Disconnect() end
+		pose("Waist",CFrame.Angles(bob,0,0))
 	end)
 
 	-- The actual player character remains untouched, so Roblox's camera and controls
