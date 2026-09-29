@@ -504,6 +504,20 @@ local function attachVisualMorph(player,character)
 		LeftUpperLeg=true,LeftLowerLeg=true,LeftFoot=true,
 		RightUpperLeg=true,RightLowerLeg=true,RightFoot=true,
 	}
+	-- Remove the player's own avatar cosmetics so they do not render over the morph.
+	-- Keep the real R15 body/skeleton itself because it drives the animation.
+	for _,obj in ipairs(character:GetChildren()) do
+		if obj:IsA("Accessory") or obj:IsA("Shirt") or obj:IsA("Pants")
+			or obj:IsA("ShirtGraphic") or obj:IsA("CharacterMesh") then
+			obj:Destroy()
+		end
+	end
+	for _,obj in ipairs(character:GetDescendants()) do
+		if obj:IsA("Decal") and not obj:IsDescendantOf(source) then
+			obj.Transparency=1
+		end
+	end
+
 	local copied=0
 	for partName in pairs(bodyNames) do
 		local src=source:FindFirstChild(partName,true)
