@@ -9,141 +9,18 @@
         "$properties": {
           "Anchored": true,
           "Neutral": true,
-          "Size": [
-            6,
-            1,
-            6
-          ],
-          "Position": [
-            0,
-            12,
-            0
-          ],
-          "Transparency": 1,
-          "CanCollide": false,
-          "CanTouch": false,
-          "CanQuery": false,
+          "Size": [12, 1, 12],
+          "Position": [0, 3, 0],
           "Duration": 0
         }
-      }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "WorldGenerator": {
-        "$path": "src/server/WorldGenerator.server.lua"
       },
-      "AdminService": {
-        "$path": "src/server/AdminService.server.lua"
-      },
-      "World": {
-        "$className": "Folder",
-        "Config": {
-          "$path": "src/server/world/Config.lua"
-        },
-        "Terrain": {
-          "$path": "src/server/world/Terrain.lua"
-        },
-        "Water": {
-          "$path": "src/server/world/Water.lua"
-        },
-        "Vegetation": {
-          "$path": "src/server/world/Vegetation.lua"
-        },
-        "Boundary": {
-          "$path": "src/server/world/Boundary.lua"
-        },
-        "Lighting": {
-          "$path": "src/server/world/Lighting.lua"
-        },
-        "WorldDirectory": {
-          "$path": "src/server/world/WorldDirectory.lua"
-        },
-        "SafeSpawn": {
-          "$path": "src/server/world/SafeSpawn.lua"
-        },
-        "WorldState": {
-          "$path": "src/server/world/WorldState.lua"
-        }
-      },
-      "WorldService": {
-        "$path": "src/server/WorldService.server.lua"
-      },
-      "WorldRuntime": {
-        "$path": "src/server/WorldRuntime.server.lua"
-      },
-      "BuildingService": {
-        "$path": "src/server/BuildingService.server.lua"
-      },
-      "CombatService": {
-        "$path": "src/server/CombatService.server.lua"
-      },
-      "Combat": {
-        "$className": "Folder",
-        "WeaponConfig": {
-          "$path": "src/shared/combat/WeaponConfig.lua"
-        }
-      },
-      "Building": {
-        "$className": "Folder",
-        "PlacementValidator": {
-          "$path": "src/server/building/PlacementValidator.lua"
-        },
-        "PieceFactory": {
-          "$path": "src/server/building/PieceFactory.lua"
-        },
-        "SocketResolver": {
-          "$path": "src/server/building/SocketResolver.lua"
-        }
-      }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "AdminPanel": {
-          "$path": "src/client/AdminPanel.client.lua"
-        },
-        "AdminModules": {
-          "$className": "Folder",
-          "UI": {
-            "$path": "src/client/admin/UI.lua"
-          },
-          "Flight": {
-            "$path": "src/client/admin/Flight.lua"
-          },
-          "Diagnostics": {
-            "$path": "src/client/admin/Diagnostics.lua"
-          },
-          "BoundaryVisualizer": {
-            "$path": "src/client/admin/BoundaryVisualizer.lua"
-          }
-        },
-        "ServerBrowser": {
-          "$path": "src/client/ServerBrowser.client.lua"
-        },
-        "BuildingController": {
-          "$path": "src/client/BuildingController.client.lua"
-        },
-        "ItemHotbar": {
-          "$path": "src/client/ItemHotbar.client.lua"
-        },
-        "CombatController": {
-          "$path": "src/client/CombatController.client.lua"
-        }
-      }
-    },
-    "ReplicatedFirst": {
-      "$className": "ReplicatedFirst",
-      "WorldBootstrap": {
-        "$path": "src/client/WorldBootstrap.client.lua"
-      }
-    },
-    "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Building": {
-        "$className": "Folder",
-        "PieceCatalog": {
-          "$path": "src/shared/building/PieceCatalog.lua"
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
+          "Material": "Grass"
         }
       }
     }
