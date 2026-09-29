@@ -32,6 +32,34 @@ base.Color=Color3.fromRGB(190,184,158)
 base.TopSurface=Enum.SurfaceType.Smooth
 base.Parent=keyboard
 
+local well=Instance.new("Part")
+well.Name="KeyWell"
+well.Anchored=true
+well.CanCollide=false
+well.Size=Vector3.new(maxColumns*PITCH+2,.35,4*PITCH+2)
+well.Position=Vector3.new(0,1.52,0)
+well.Material=Enum.Material.SmoothPlastic
+well.Color=Color3.fromRGB(126,122,105)
+well.Parent=keyboard
+
+local front=Instance.new("Part")
+front.Name="FrontBezel"
+front.Anchored=true
+front.Size=Vector3.new(maxColumns*PITCH+6,1.25,3.2)
+front.Position=Vector3.new(0,1.05,(4*PITCH+6)/2)
+front.Material=Enum.Material.SmoothPlastic
+front.Color=Color3.fromRGB(190,184,158)
+front.Parent=keyboard
+
+local rear=Instance.new("Part")
+rear.Name="RearBezel"
+rear.Anchored=true
+rear.Size=Vector3.new(maxColumns*PITCH+6,2.1,3.2)
+rear.Position=Vector3.new(0,1.3,-(4*PITCH+6)/2)
+rear.Material=Enum.Material.SmoothPlastic
+rear.Color=Color3.fromRGB(190,184,158)
+rear.Parent=keyboard
+
 local function characterOnKey(hit)
 	local character=hit and hit:FindFirstAncestorOfClass("Model")
 	if not character then return nil end
