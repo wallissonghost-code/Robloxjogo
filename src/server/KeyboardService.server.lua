@@ -402,3 +402,59 @@ end
 
 for _,player in ipairs(Players:GetPlayers()) do setupMorph(player) end
 Players.PlayerAdded:Connect(setupMorph)
+
+
+-- In-game rig diagnostic for morph asset 117859430905186.
+local function showMorphDiagnostic(player,text)
+	local pg=player:WaitForChild("PlayerGui",10)
+	if not pg then return end
+	local old=pg:FindFirstChild("MorphRigDiagnostic")
+	if old then old:Destroy() end
+	local gui=Instance.new("ScreenGui")
+	gui.Name="MorphRigDiagnostic"; gui.ResetOnSpawn=false; gui.Parent=pg
+	local frame=Instance.new("Frame")
+	frame.Size=UDim2.new(0,560,0,235); frame.Position=UDim2.new(.5,-280,0,175)
+	frame.BackgroundColor3=Color3.fromRGB(15,17,21); frame.BackgroundTransparency=.05; frame.Parent=gui
+	Instance.new("UICorner",frame).CornerRadius=UDim.new(0,12)
+	local label=Instance.new("TextLabel")
+	label.Size=UDim2.new(1,-24,1,-20); label.Position=UDim2.new(0,12,0,10)
+	label.BackgroundTransparency=1; label.TextWrapped=true
+	label.TextXAlignment=Enum.TextXAlignment.Left; label.TextYAlignment=Enum.TextYAlignment.Top
+	label.Font=Enum.Font.Code; label.TextSize=15; label.TextColor3=Color3.new(1,1,1)
+	label.Text=text; label.Parent=frame
+end
+
+task.spawn(function()
+	task.wait(3)
+	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
+	local report={"MORPH RIG "..MORPH_ASSET_ID}
+	if not ok then
+		table.insert(report,"LoadAsset: FALHOU")
+		table.insert(report,tostring(container))
+	else
+		local descendants=container:GetDescendants()
+		local humanoid=container:FindFirstChildWhichIsA("Humanoid",true)
+		local hrp=container:FindFirstChild("HumanoidRootPart",true)
+		local head=container:FindFirstChild("Head",true)
+		local torso=container:FindFirstChild("Torso",true)
+		local upper=container:FindFirstChild("UpperTorso",true)
+		local parts,motors,models=0,0,0
+		for _,obj in ipairs(descendants) do
+			if obj:IsA("BasePart") then parts+=1 end
+			if obj:IsA("Motor6D") then motors+=1 end
+			if obj:IsA("Model") then models+=1 end
+		end
+		table.insert(report,"LoadAsset: OK")
+		table.insert(report,"Humanoid: "..(humanoid and "SIM" or "NAO"))
+		table.insert(report,"HumanoidRootPart: "..(hrp and "SIM" or "NAO"))
+		table.insert(report,"Head: "..(head and "SIM" or "NAO"))
+		table.insert(report,"Torso R6: "..(torso and "SIM" or "NAO"))
+		table.insert(report,"UpperTorso R15: "..(upper and "SIM" or "NAO"))
+		table.insert(report,"BaseParts: "..parts.." | Motor6D: "..motors.." | Models: "..models)
+		if humanoid then table.insert(report,"RigType: "..tostring(humanoid.RigType)) end
+		container:Destroy()
+	end
+	local textReport=table.concat(report,"\n")
+	for _,p in ipairs(Players:GetPlayers()) do task.spawn(showMorphDiagnostic,p,textReport) end
+	Players.PlayerAdded:Connect(function(p) task.wait(2); showMorphDiagnostic(p,textReport) end)
+end)
