@@ -187,9 +187,21 @@ local function makeKey(label,x,z,index)
 		local player,character=playerFromHit(hit)
 		if not player then return end
 		task.delay(.08,function()
-			-- TouchEnded means this character is no longer maintaining this key press.
-			-- Always clear the stale occupant instead of testing against the moved key.
-			occupants[character]=nil
+			local root=character and character:FindFirstChild("HumanoidRootPart")
+			if not root then
+				occupants[character]=nil
+			else
+				-- Judge release against the key's fixed X/Z footprint, not its moving Y position.
+				-- This prevents the downward tween itself from firing TouchEnded and making
+				-- a stationary player repeatedly press/release the same key.
+				local dx=math.abs(root.Position.X-x)
+				local dz=math.abs(root.Position.Z-z)
+				if dx>KEY/2+.7 or dz>KEY/2+.7 then
+					occupants[character]=nil
+				else
+					occupants[character]=true
+				end
+			end
 			if next(occupants)==nil then setPressed(false) end
 		end)
 	end)
