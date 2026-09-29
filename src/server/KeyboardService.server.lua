@@ -347,9 +347,18 @@ local function applyImportedKeycapTemplate(assetRoot)
 				visual.CFrame=body.CFrame*CFrame.new(0,KEY_HEIGHT*.36,0)
 				visual.Parent=holder
 
+				-- Strip the source key's original legend (A, Q, etc.) before
+				-- drawing our own 1-9 label. Keep only geometry/material.
 				for _,d in ipairs(visual:GetDescendants()) do
-					if d:IsA("Script") or d:IsA("LocalScript") then d:Destroy() end
+					if d:IsA("Script") or d:IsA("LocalScript")
+						or d:IsA("Decal") or d:IsA("Texture")
+						or d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
+						d:Destroy()
+					end
 				end
+				-- Some legacy keys store the printed character directly on a face.
+				pcall(function() visual.TopSurface=Enum.SurfaceType.Smooth end)
+				pcall(function() visual.BottomSurface=Enum.SurfaceType.Smooth end)
 				local weld=Instance.new("WeldConstraint")
 				weld.Part0=body
 				weld.Part1=visual
