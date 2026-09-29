@@ -1,6 +1,69 @@
 local TweenService=game:GetService("TweenService")
 local Players=game:GetService("Players")
 
+-- Temporary diagnostic/import for inventory tree asset.
+local InsertService=game:GetService("InsertService")
+local TREE_ASSET_ID=580221169
+
+local function showTreeStatus(status,detail)
+	local function show(player)
+		local pg=player:WaitForChild("PlayerGui",10)
+		if not pg then return end
+		local old=pg:FindFirstChild("TreeAssetDiagnostic")
+		if old then old:Destroy() end
+		local gui=Instance.new("ScreenGui")
+		gui.Name="TreeAssetDiagnostic"; gui.ResetOnSpawn=false; gui.Parent=pg
+		local frame=Instance.new("Frame")
+		frame.Size=UDim2.new(0,520,0,145); frame.Position=UDim2.new(.5,-260,0,18)
+		frame.BackgroundColor3=Color3.fromRGB(18,20,24); frame.BackgroundTransparency=.08; frame.Parent=gui
+		Instance.new("UICorner",frame).CornerRadius=UDim.new(0,12)
+		local label=Instance.new("TextLabel")
+		label.Size=UDim2.new(1,-24,1,-20); label.Position=UDim2.new(0,12,0,10)
+		label.BackgroundTransparency=1; label.TextWrapped=true
+		label.TextXAlignment=Enum.TextXAlignment.Left; label.TextYAlignment=Enum.TextYAlignment.Top
+		label.Font=Enum.Font.Gotham; label.TextSize=17; label.TextColor3=Color3.new(1,1,1)
+		label.Text="TREE ASSET "..TREE_ASSET_ID.."\nSTATUS: "..status.."\n"..tostring(detail)
+		label.Parent=frame
+	end
+	for _,p in ipairs(Players:GetPlayers()) do task.spawn(show,p) end
+	Players.PlayerAdded:Connect(function(p) task.wait(2); show(p) end)
+end
+
+task.spawn(function()
+	local ok,result=pcall(function() return InsertService:LoadAsset(TREE_ASSET_ID) end)
+	if not ok then
+		showTreeStatus("FALHOU",tostring(result))
+		return
+	end
+	local children=result:GetChildren()
+	if #children==0 then
+		result:Destroy()
+		showTreeStatus("VAZIO","Roblox aceitou o ID, mas devolveu 0 objetos.")
+		return
+	end
+	local tree
+	if #children==1 then
+		tree=children[1]; tree.Parent=workspace; result:Destroy()
+	else
+		tree=Instance.new("Model"); tree.Parent=workspace
+		for _,v in ipairs(children) do v.Parent=tree end
+		result:Destroy()
+	end
+	tree.Name="ImportedTree_"..TREE_ASSET_ID
+	if tree:IsA("BasePart") then tree.Anchored=true end
+	for _,v in ipairs(tree:GetDescendants()) do if v:IsA("BasePart") then v.Anchored=true end end
+	if tree:IsA("Model") then
+		local cf,size=tree:GetBoundingBox()
+		local pivot=tree:GetPivot()
+		local bottom=cf.Position.Y-size.Y/2
+		tree:PivotTo(pivot+Vector3.new(10-pivot.Position.X,-bottom,3-pivot.Position.Z))
+	elseif tree:IsA("BasePart") then
+		tree.Position=Vector3.new(10,tree.Size.Y/2,3)
+	end
+	showTreeStatus("CARREGOU","Asset recebido pelo Roblox e colocado em X=10, Z=3.")
+end)
+
+
 for _,name in ipairs({"Keyboard","RetroKeyboard","PremiumKeypad"}) do
 	local old=workspace:FindFirstChild(name)
 	if old then old:Destroy() end
