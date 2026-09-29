@@ -291,6 +291,93 @@ local VISUAL_ASSETS={
 	{id=3725991689,name="SakuraTree",pos=Vector3.new(64,0,0)},
 }
 
+
+local function applyImportedKeycapTemplate(assetRoot)
+	-- Find repeated, key-sized BaseParts inside the already-loaded keyboard asset.
+	-- Repetition is intentional: a keyboard normally contains many copies of one key shape.
+	local groups={}
+	for _,obj in ipairs(assetRoot:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local s=obj.Size
+			if s.X>.15 and s.Y>.08 and s.Z>.15 then
+				local a=math.floor(math.min(s.X,s.Z)*20+.5)/20
+				local b=math.floor(math.max(s.X,s.Z)*20+.5)/20
+				local h=math.floor(s.Y*20+.5)/20
+				local sig=string.format("%.2f/%.2f/%.2f",a,b,h)
+				groups[sig]=groups[sig] or {}
+				table.insert(groups[sig],obj)
+			end
+		end
+	end
+	local best
+	for _,group in pairs(groups) do
+		if #group>=9 and (not best or #group>#best) then best=group end
+	end
+	if not best then
+		warn("[KeycapTemplate] no repeated 9+ part group found; procedural keypad preserved")
+		return
+	end
+
+	local template=best[1]
+	print(("[KeycapTemplate] using %s %s repeated=%d"):format(template.ClassName,template.Name,#best))
+	for _,holder in ipairs(keypad:GetChildren()) do
+		if holder:IsA("Model") and holder.Name:match("^Key_") then
+			local body=holder:FindFirstChild("KeycapCollision")
+			local oldTop=holder:FindFirstChild("KeycapTop")
+			if body then
+				-- Keep the original collision/tween body as the mechanic.
+				-- Only replace its visible shell with one cloned asset key.
+				for _,p in ipairs(holder:GetChildren()) do
+					if p:IsA("BasePart") and p~=body then p.Transparency=1 end
+				end
+				body.Transparency=1
+
+				local visual=template:Clone()
+				visual.Name="ImportedKeycapVisual"
+				visual.Anchored=false
+				visual.CanCollide=false
+				visual.CanTouch=false
+				visual.CanQuery=false
+				visual.Massless=true
+
+				-- Normalize the source key to our 3x3 footprint while preserving its proportions.
+				local maxXZ=math.max(visual.Size.X,visual.Size.Z)
+				local scale=(KEY*.94)/maxXZ
+				visual.Size=Vector3.new(visual.Size.X*scale,math.min(visual.Size.Y*scale,KEY_HEIGHT),visual.Size.Z*scale)
+				visual.CFrame=body.CFrame*CFrame.new(0,KEY_HEIGHT*.36,0)
+				visual.Parent=holder
+
+				for _,d in ipairs(visual:GetDescendants()) do
+					if d:IsA("Script") or d:IsA("LocalScript") then d:Destroy() end
+				end
+				local weld=Instance.new("WeldConstraint")
+				weld.Part0=body
+				weld.Part1=visual
+				weld.Parent=visual
+
+				local gui=Instance.new("SurfaceGui")
+				gui.Name="ImportedNumber"
+				gui.Face=Enum.NormalId.Top
+				gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud
+				gui.PixelsPerStud=50
+				gui.Parent=visual
+				local txt=Instance.new("TextLabel")
+				txt.Size=UDim2.fromScale(1,1)
+				txt.BackgroundTransparency=1
+				txt.Text=holder.Name:sub(5)
+				txt.TextColor3=Color3.fromRGB(25,25,25)
+				txt.TextScaled=true
+				txt.Font=Enum.Font.GothamBold
+				txt.Parent=gui
+				local pad=Instance.new("UIPadding")
+				pad.PaddingTop=UDim.new(.2,0); pad.PaddingBottom=UDim.new(.2,0)
+				pad.PaddingLeft=UDim.new(.2,0); pad.PaddingRight=UDim.new(.2,0)
+				pad.Parent=txt
+			end
+		end
+	end
+end
+
 local function loadVisualAsset(spec)
 	local ok,container=pcall(function() return InsertService:LoadAsset(spec.id) end)
 	if not ok then
@@ -327,6 +414,9 @@ local function loadVisualAsset(spec)
 		root.Position=Vector3.new(spec.pos.X,spec.pos.Y+root.Size.Y/2,spec.pos.Z)
 	end
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
+	if spec.id==106424344571308 then
+		applyImportedKeycapTemplate(root)
+	end
 
 end
 
