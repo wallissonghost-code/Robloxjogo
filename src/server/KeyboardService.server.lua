@@ -600,4 +600,38 @@ end
 for _,player in ipairs(Players:GetPlayers()) do setupVisualMorph(player) end
 Players.PlayerAdded:Connect(setupVisualMorph)
 
--- Morph diagnostics removed after switching to the real R15 skeleton.\n
+-- Morph diagnostics removed after switching to the real R15 skeleton.
+
+-- Temporary structure probe for keyboard asset: inspect only, do not alter the working keypad.
+task.spawn(function()
+	task.wait(4)
+	local KEYBOARD_ASSET_ID=106424344571308
+	local ok,container=pcall(function() return InsertService:LoadAsset(KEYBOARD_ASSET_ID) end)
+	local lines={"KEYBOARD ASSET "..KEYBOARD_ASSET_ID}
+	if not ok then
+		table.insert(lines,"LoadAsset: FALHOU")
+		table.insert(lines,tostring(container))
+	else
+		table.insert(lines,"LoadAsset: OK")
+		local models,parts,meshes=0,0,0
+		for _,obj in ipairs(container:GetDescendants()) do
+			if obj:IsA("Model") then models+=1 end
+			if obj:IsA("BasePart") then
+				parts+=1
+				if obj:IsA("MeshPart") then meshes+=1 end
+				if parts<=35 then
+					local parent=obj.Parent and obj.Parent.Name or "nil"
+					table.insert(lines,string.format("%02d | %s | %s | parent=%s | size=%.2f,%.2f,%.2f",
+						parts,obj.ClassName,obj.Name,parent,obj.Size.X,obj.Size.Y,obj.Size.Z))
+				end
+			end
+		end
+		table.insert(lines,2,string.format("Models:%d Parts:%d MeshParts:%d",models,parts,meshes))
+		container:Destroy()
+	end
+	local report=table.concat(lines,"\n")
+	print("[KeyboardAssetProbe]\n"..report)
+	for _,p in ipairs(Players:GetPlayers()) do task.spawn(showMorphDiagnostic,p,report) end
+	Players.PlayerAdded:Connect(function(p) task.wait(2); showMorphDiagnostic(p,report) end)
+end)
+\n
