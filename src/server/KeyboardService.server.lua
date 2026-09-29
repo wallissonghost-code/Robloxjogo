@@ -165,15 +165,13 @@ local function makeKey(label,x,z,index)
 			keypad:SetAttribute("LastKey",label)
 			body:SetAttribute("LastPressedBy",player and player.UserId or 0)
 		else
-			body.Material=Enum.Material.SmoothPlastic
-			body.Color=baseColor
+			-- Keep the key's activated color after the player leaves it.
+			-- Only restore the physical height; color remains as a persistent stepped-on state.
 			for _,piece in ipairs(pieces) do
-				if piece~=body then
-					piece.Material=Enum.Material.SmoothPlastic
-					piece.Color=piece==top and topColor or sideColor
-				end
+				piece.Material=Enum.Material.SmoothPlastic
+				piece.Color=activeColor
 			end
-			txt.TextColor3=Color3.fromRGB(31,32,34)
+			txt.TextColor3=Color3.fromRGB(18,18,18)
 			move(raised,.14,Enum.EasingStyle.Back)
 		end
 	end
