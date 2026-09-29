@@ -326,47 +326,6 @@ local function loadVisualAsset(spec)
 	end
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
 
-	-- Turn the humanoid test asset into a static avatar statue.
-	if spec.id==117859430905186 then
-		local humanoid=root:FindFirstChildOfClass("Humanoid") or root:FindFirstChildWhichIsA("Humanoid",true)
-		if not humanoid then
-			warn("[AvatarStatue] Asset loaded, but no Humanoid was found")
-			return
-		end
-		local function applyPlayerAvatar(player)
-			local okDesc,description=pcall(function()
-				return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-			end)
-			if not okDesc then
-				warn("[AvatarStatue] Could not get avatar for "..player.Name..": "..tostring(description))
-				return
-			end
-			local okApply,err=pcall(function()
-				humanoid:ApplyDescription(description)
-			end)
-			if not okApply then
-				warn("[AvatarStatue] Could not apply avatar: "..tostring(err))
-				return
-			end
-			-- Applying a description can create new accessory parts; freeze them too.
-			task.wait(.5)
-			for _,obj in ipairs(root:GetDescendants()) do
-				if obj:IsA("BasePart") then obj.Anchored=true end
-			end
-			root:SetAttribute("AvatarUserId",player.UserId)
-			print("[AvatarStatue] Applied avatar from "..player.Name)
-		end
-		local player=Players:GetPlayers()[1]
-		if player then
-			task.spawn(applyPlayerAvatar,player)
-		else
-			local conn
-			conn=Players.PlayerAdded:Connect(function(joined)
-				conn:Disconnect()
-				task.spawn(applyPlayerAvatar,joined)
-			end)
-		end
-	end
 end
 
 task.spawn(function()
@@ -376,3 +335,70 @@ task.spawn(function()
 		task.wait(.25)
 	end
 end)
+
+
+-- Player morph test: replace the player's Character with asset 117859430905186.
+local MORPH_ASSET_ID=117859430905186
+
+local function morphPlayer(player,character)
+	task.wait(1)
+	if not character or character~=player.Character then return end
+	local oldRoot=character:FindFirstChild("HumanoidRootPart")
+	if not oldRoot then return end
+	local spawnCF=oldRoot.CFrame
+
+	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
+	if not ok then
+		warn("[PlayerMorph] LoadAsset failed: "..tostring(container))
+		return
+	end
+	local candidates=container:GetChildren()
+	local morph
+	for _,candidate in ipairs(candidates) do
+		if candidate:IsA("Model") and candidate:FindFirstChildOfClass("Humanoid") then
+			morph=candidate
+			break
+		end
+	end
+	if not morph and #candidates==1 and candidates[1]:IsA("Model") then morph=candidates[1] end
+	if not morph then
+		warn("[PlayerMorph] No usable model found in asset")
+		container:Destroy()
+		return
+	end
+	morph.Parent=workspace
+	container:Destroy()
+	morph.Name=player.Name
+
+	local humanoid=morph:FindFirstChildOfClass("Humanoid")
+	local root=morph:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root then
+		warn("[PlayerMorph] Model needs Humanoid + HumanoidRootPart")
+		morph:Destroy()
+		return
+	end
+
+	-- The gallery copy is anchored, but the playable morph must be physical.
+	for _,obj in ipairs(morph:GetDescendants()) do
+		if obj:IsA("BasePart") then obj.Anchored=false end
+	end
+	root.CFrame=spawnCF
+	morph:SetAttribute("MorphAssetId",MORPH_ASSET_ID)
+
+	player.Character=morph
+	character:Destroy()
+	print("[PlayerMorph] "..player.Name.." transformed into asset "..MORPH_ASSET_ID)
+end
+
+local function setupMorph(player)
+	player.CharacterAdded:Connect(function(character)
+		if character:GetAttribute("MorphAssetId")==MORPH_ASSET_ID then return end
+		task.spawn(morphPlayer,player,character)
+	end)
+	if player.Character and player.Character:GetAttribute("MorphAssetId")~=MORPH_ASSET_ID then
+		task.spawn(morphPlayer,player,player.Character)
+	end
+end
+
+for _,player in ipairs(Players:GetPlayers()) do setupMorph(player) end
+Players.PlayerAdded:Connect(setupMorph)
