@@ -480,127 +480,76 @@ end
 -- Stable visual morph: preserve the player's real Character, camera and controls.
 local function attachVisualMorph(player,character)
 	task.wait(1.5)
-	if character~=player.Character or character:FindFirstChild("VisualMorph") then return end
+	if character~=player.Character or character:GetAttribute("MorphAppearanceApplied") then return end
+	local humanoid=character:FindFirstChildOfClass("Humanoid")
 	local realRoot=character:FindFirstChild("HumanoidRootPart")
-	local realHumanoid=character:FindFirstChildOfClass("Humanoid")
-	if not realRoot or not realHumanoid then return end
+	if not humanoid or not realRoot then return end
 
 	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
-	if not ok then warn("[VisualMorph] LoadAsset failed: "..tostring(container)); return end
-	local rig
+	if not ok then warn("[MorphAppearance] LoadAsset failed: "..tostring(container)); return end
+	local source
 	for _,candidate in ipairs(container:GetDescendants()) do
 		if candidate:IsA("Model") and candidate:FindFirstChild("HumanoidRootPart") and candidate:FindFirstChild("UpperTorso") then
-			rig=candidate; break
+			source=candidate; break
 		end
 	end
-	if not rig then container:Destroy(); warn("[VisualMorph] R15 rig not found"); return end
-	rig.Parent=character
+	if not source then container:Destroy(); warn("[MorphAppearance] source rig not found"); return end
+
+	-- Keep Roblox's REAL R15 character skeleton, Humanoid, Animator, camera and physics.
+	-- Only transplant the imported rig's visual objects onto matching body parts.
+	local bodyNames={
+		Head=true,UpperTorso=true,LowerTorso=true,
+		LeftUpperArm=true,LeftLowerArm=true,LeftHand=true,
+		RightUpperArm=true,RightLowerArm=true,RightHand=true,
+		LeftUpperLeg=true,LeftLowerLeg=true,LeftFoot=true,
+		RightUpperLeg=true,RightLowerLeg=true,RightFoot=true,
+	}
+	local copied=0
+	for partName in pairs(bodyNames) do
+		local src=source:FindFirstChild(partName,true)
+		local dst=character:FindFirstChild(partName)
+		if src and src:IsA("BasePart") and dst and dst:IsA("BasePart") then
+			-- Hide the stock Roblox body part; it remains the animated skeleton.
+			dst.Transparency=1
+			for _,child in ipairs(dst:GetChildren()) do
+				if child:GetAttribute("MorphVisual") then child:Destroy() end
+			end
+			-- Clone visual descendants from the imported body segment and weld them
+			-- to the corresponding REAL animated R15 body part.
+			local visual=src:Clone()
+			visual.Name="MorphVisual_"..partName
+			visual:SetAttribute("MorphVisual",true)
+			for _,d in ipairs(visual:GetDescendants()) do
+				if d:IsA("Motor6D") or d:IsA("Weld") or d:IsA("WeldConstraint") or d:IsA("Script") or d:IsA("LocalScript") then
+					d:Destroy()
+				elseif d:IsA("BasePart") then
+					d.Anchored=false; d.CanCollide=false; d.CanTouch=false; d.CanQuery=false; d.Massless=true
+				end
+			end
+			visual.Anchored=false; visual.CanCollide=false; visual.CanTouch=false; visual.CanQuery=false; visual.Massless=true
+			visual.CFrame=dst.CFrame
+			visual.Parent=dst
+			local weld=Instance.new("WeldConstraint")
+			weld.Part0=dst; weld.Part1=visual; weld.Parent=visual
+			copied+=1
+		end
+	end
+
+	-- Copy accessories as visuals and attach them to the nearest matching body
+	-- part using their source position relative to that source body segment.
+	for _,obj in ipairs(source:GetChildren()) do
+		if obj:IsA("Accessory") then
+			local acc=obj:Clone()
+			for _,d in ipairs(acc:GetDescendants()) do
+				if d:IsA("Script") or d:IsA("LocalScript") then d:Destroy() end
+			end
+			pcall(function() humanoid:AddAccessory(acc) end)
+		end
+	end
+
 	container:Destroy()
-	rig.Name="VisualMorph"
-	local rigRoot=rig:FindFirstChild("HumanoidRootPart")
-	local importedHumanoid=rig:FindFirstChildOfClass("Humanoid")
-	if importedHumanoid then importedHumanoid:Destroy() end
-
-	-- Imported model is visual only: no scripts, collisions or autonomous physics.
-	for _,obj in ipairs(rig:GetDescendants()) do
-		if obj:IsA("Script") or obj:IsA("LocalScript") then
-			obj:Destroy()
-		elseif obj:IsA("BasePart") then
-			obj.Anchored=false
-			obj.CanCollide=false
-			obj.CanTouch=false
-			obj.CanQuery=false
-			obj.Massless=true
-			obj.AssemblyLinearVelocity=Vector3.zero
-			obj.AssemblyAngularVelocity=Vector3.zero
-		end
-	end
-
-	-- Hide the original avatar but keep HumanoidRootPart/control/camera alive.
-	for _,obj in ipairs(character:GetDescendants()) do
-		if obj:IsA("BasePart") and not obj:IsDescendantOf(rig) then
-			obj.Transparency=1
-			obj.CanCollide=(obj==realRoot)
-		elseif (obj:IsA("Decal") or obj:IsA("Texture")) and not obj:IsDescendantOf(rig) then
-			obj.Transparency=1
-		end
-	end
-	realRoot.Transparency=1
-
-	-- Align imported rig root to the real player's root and weld it permanently.
-	rig:PivotTo(realRoot.CFrame)
-	rigRoot.CFrame=realRoot.CFrame
-	local weld=Instance.new("WeldConstraint")
-	weld.Name="VisualMorphWeld"
-	weld.Part0=realRoot
-	weld.Part1=rigRoot
-	weld.Parent=rigRoot
-
-	-- Animate only visual limb joints. The Root Motor6D (HRP -> LowerTorso),
-	-- rigRoot and stable weld are deliberately excluded.
-	local joints={}
-	for _,joint in ipairs(rig:GetDescendants()) do
-		if joint:IsA("Motor6D") and joint.Part0 and joint.Part1
-			and joint.Part0~=rigRoot and joint.Part1~=rigRoot
-			and joint.Name~="Root" and joint.Name~="RootJoint" then
-			joints[joint.Name]={motor=joint,base=joint.Transform}
-		end
-	end
-
-	local function pose(name,cf)
-		local j=joints[name]
-		if j then j.motor.Transform=j.base*cf end
-	end
-	local function resetJoints()
-		for _,j in pairs(joints) do j.motor.Transform=j.base end
-	end
-
-	local phase=0
-	local animConn
-	animConn=game:GetService("RunService").Heartbeat:Connect(function(dt)
-		if not rig.Parent or player.Character~=character or realHumanoid.Health<=0 then
-			if animConn then animConn:Disconnect() end
-			return
-		end
-		phase+=dt
-		resetJoints()
-		local state=realHumanoid:GetState()
-		local moving=realHumanoid.MoveDirection.Magnitude>.05
-
-		if state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.Freefall then
-			pose("LeftShoulder",CFrame.Angles(math.rad(-30),0,math.rad(-8)))
-			pose("RightShoulder",CFrame.Angles(math.rad(-30),0,math.rad(8)))
-			pose("LeftHip",CFrame.Angles(math.rad(18),0,0))
-			pose("RightHip",CFrame.Angles(math.rad(18),0,0))
-			pose("LeftKnee",CFrame.Angles(math.rad(18),0,0))
-			pose("RightKnee",CFrame.Angles(math.rad(18),0,0))
-		elseif moving then
-			local s=math.sin(phase*9)
-			local arm=s*math.rad(38)
-			local leg=s*math.rad(31)
-			pose("LeftShoulder",CFrame.Angles(arm,0,0))
-			pose("RightShoulder",CFrame.Angles(-arm,0,0))
-			pose("LeftHip",CFrame.Angles(-leg,0,0))
-			pose("RightHip",CFrame.Angles(leg,0,0))
-			pose("LeftElbow",CFrame.Angles(math.max(0,-s)*math.rad(22),0,0))
-			pose("RightElbow",CFrame.Angles(math.max(0,s)*math.rad(22),0,0))
-			pose("LeftKnee",CFrame.Angles(math.max(0,s)*math.rad(28),0,0))
-			pose("RightKnee",CFrame.Angles(math.max(0,-s)*math.rad(28),0,0))
-			-- Custom torso chain seen in this asset.
-			pose("Spine2",CFrame.Angles(0,-s*math.rad(4),0))
-			pose("Spine3",CFrame.Angles(0,s*math.rad(3),0))
-		else
-			local breathe=math.sin(phase*2)
-			pose("Spine2",CFrame.Angles(breathe*math.rad(1.5),0,0))
-			pose("LeftShoulder",CFrame.Angles(0,0,-math.rad(3)))
-			pose("RightShoulder",CFrame.Angles(0,0,math.rad(3)))
-		end
-	end)
-
-
-	-- The actual player character remains untouched, so Roblox's camera and controls
-	-- continue following the original Humanoid/HRP.
-	print("[VisualMorph] attached to "..player.Name)
+	character:SetAttribute("MorphAppearanceApplied",true)
+	print(("[MorphAppearance] %s: visuals transplanted to real R15 (%d body parts)"):format(player.Name,copied))
 end
 
 local function setupVisualMorph(player)
@@ -610,39 +559,4 @@ end
 for _,player in ipairs(Players:GetPlayers()) do setupVisualMorph(player) end
 Players.PlayerAdded:Connect(setupVisualMorph)
 
--- In-game rig diagnostic for morph asset 117859430905186.
-
-task.spawn(function()
-	task.wait(3)
-	local ok,container=pcall(function() return InsertService:LoadAsset(MORPH_ASSET_ID) end)
-	local report={"MORPH RIG "..MORPH_ASSET_ID}
-	if not ok then
-		table.insert(report,"LoadAsset: FALHOU")
-		table.insert(report,tostring(container))
-	else
-		local descendants=container:GetDescendants()
-		local humanoid=container:FindFirstChildWhichIsA("Humanoid",true)
-		local hrp=container:FindFirstChild("HumanoidRootPart",true)
-		local head=container:FindFirstChild("Head",true)
-		local torso=container:FindFirstChild("Torso",true)
-		local upper=container:FindFirstChild("UpperTorso",true)
-		local parts,motors,models=0,0,0
-		for _,obj in ipairs(descendants) do
-			if obj:IsA("BasePart") then parts+=1 end
-			if obj:IsA("Motor6D") then motors+=1 end
-			if obj:IsA("Model") then models+=1 end
-		end
-		table.insert(report,"LoadAsset: OK")
-		table.insert(report,"Humanoid: "..(humanoid and "SIM" or "NAO"))
-		table.insert(report,"HumanoidRootPart: "..(hrp and "SIM" or "NAO"))
-		table.insert(report,"Head: "..(head and "SIM" or "NAO"))
-		table.insert(report,"Torso R6: "..(torso and "SIM" or "NAO"))
-		table.insert(report,"UpperTorso R15: "..(upper and "SIM" or "NAO"))
-		table.insert(report,"BaseParts: "..parts.." | Motor6D: "..motors.." | Models: "..models)
-		if humanoid then table.insert(report,"RigType: "..tostring(humanoid.RigType)) end
-		container:Destroy()
-	end
-	local textReport=table.concat(report,"\n")
-	for _,p in ipairs(Players:GetPlayers()) do task.spawn(showMorphDiagnostic,p,textReport) end
-	Players.PlayerAdded:Connect(function(p) task.wait(2); showMorphDiagnostic(p,textReport) end)
-end)
+-- Morph diagnostics removed after switching to the real R15 skeleton.\n
