@@ -372,10 +372,22 @@ local function morphPlayer(player,character)
 
 	local humanoid=morph:FindFirstChildOfClass("Humanoid")
 	local root=morph:FindFirstChild("HumanoidRootPart")
-	if not humanoid or not root then
-		warn("[PlayerMorph] Model needs Humanoid + HumanoidRootPart")
+	if not root then
+		warn("[PlayerMorph] Model has no HumanoidRootPart")
 		morph:Destroy()
 		return
+	end
+	-- This asset is an R15 rig but ships without a Humanoid. Inject one so
+	-- Roblox can treat the imported rig as a playable Character.
+	if not humanoid then
+		humanoid=Instance.new("Humanoid")
+		humanoid.Name="Humanoid"
+		humanoid.RigType=Enum.HumanoidRigType.R15
+		humanoid.WalkSpeed=16
+		humanoid.JumpPower=50
+		humanoid.AutoRotate=true
+		humanoid.Parent=morph
+		print("[PlayerMorph] Injected R15 Humanoid")
 	end
 
 	-- The gallery copy is anchored, but the playable morph must be physical.
