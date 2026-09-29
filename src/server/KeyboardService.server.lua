@@ -187,12 +187,9 @@ local function makeKey(label,x,z,index)
 		local player,character=playerFromHit(hit)
 		if not player then return end
 		task.delay(.08,function()
-			local root=character and character:FindFirstChild("HumanoidRootPart")
-			if not root then occupants[character]=nil
-			else
-				local p=body.CFrame:PointToObjectSpace(root.Position)
-				if math.abs(p.X)>KEY/2+.7 or math.abs(p.Z)>KEY/2+.7 then occupants[character]=nil end
-			end
+			-- TouchEnded means this character is no longer maintaining this key press.
+			-- Always clear the stale occupant instead of testing against the moved key.
+			occupants[character]=nil
 			if next(occupants)==nil then setPressed(false) end
 		end)
 	end)
