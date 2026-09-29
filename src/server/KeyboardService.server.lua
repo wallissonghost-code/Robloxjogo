@@ -357,11 +357,6 @@ local function loadVisualAsset(spec)
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
 	if spec.id==106424344571308 then
 		applyImportedKeycapTemplate(root)
-		-- Keep the donor completely intact. Do not hide/destroy its descendants:
-		-- the imported key visual is cloned from this loaded asset. Move only the
-		-- donor assembly far below the playable map so it remains available as source.
-		local donorPivot=root:GetPivot()
-		root:PivotTo(donorPivot + Vector3.new(0,-10000,0))
 	end
 
 end
