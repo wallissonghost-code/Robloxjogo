@@ -531,6 +531,14 @@ local function attachVisualMorph(player,character)
 			-- Clone visual descendants from the imported body segment and weld them
 			-- to the corresponding REAL animated R15 body part.
 			local visual=src:Clone()
+			-- Black morph test: recolor only the cloned visual shell.
+			-- Movement, real R15 skeleton, Humanoid and weld logic stay untouched.
+			visual.Color=Color3.fromRGB(8,8,8)
+			for _,v in ipairs(visual:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.Color=Color3.fromRGB(8,8,8)
+				end
+			end
 			visual.Name="MorphVisual_"..partName
 			visual:SetAttribute("MorphVisual",true)
 			for _,d in ipairs(visual:GetDescendants()) do
