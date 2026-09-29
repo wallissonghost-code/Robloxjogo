@@ -21,10 +21,10 @@ local Y=2.05
 local ACTIVE_COLORS={Color3.fromRGB(36,220,120),Color3.fromRGB(55,170,255),Color3.fromRGB(255,190,45),Color3.fromRGB(255,85,125),Color3.fromRGB(165,95,255),Color3.fromRGB(40,225,210),Color3.fromRGB(255,120,45),Color3.fromRGB(100,225,80),Color3.fromRGB(80,135,255)}
 
 local stopPlate=Instance.new("Part")
-stopPlate.Name="KeypadTravelStop"
+stopPlate.Name="KeypadBase"
 stopPlate.Anchored=true
-stopPlate.Size=Vector3.new(PITCH*3+.35,.20,PITCH*3+.35)
-stopPlate.Position=Vector3.new(0,-.375,0)
+stopPlate.Size=Vector3.new(PITCH*3+.35,1,PITCH*3+.35)
+stopPlate.Position=Vector3.new(0,.525,0)
 stopPlate.Material=Enum.Material.SmoothPlastic
 stopPlate.Color=Color3.fromRGB(205,207,203)
 stopPlate.TopSurface=Enum.SurfaceType.Smooth
