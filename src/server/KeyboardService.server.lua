@@ -1,5 +1,6 @@
 local TweenService=game:GetService("TweenService")
 local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
 
 local InsertService=game:GetService("InsertService")
 
@@ -16,7 +17,7 @@ local GAP=0
 local PITCH=3.05 -- slight visual overlap to compensate imported mesh internal margins
 local KEY_HEIGHT=2.05
 local TOP_SCALE=.82
-local PRESS=1.0045 -- 70% of the 1.435-stud mechanical key height
+local PRESS=.861 -- 60% of the 1.435-stud mechanical key height
 local Y=2.05
 local ACTIVE_COLORS={Color3.fromRGB(36,220,120),Color3.fromRGB(55,170,255),Color3.fromRGB(255,190,45),Color3.fromRGB(255,85,125),Color3.fromRGB(165,95,255),Color3.fromRGB(40,225,210),Color3.fromRGB(255,120,45),Color3.fromRGB(100,225,80),Color3.fromRGB(80,135,255)}
 
@@ -177,33 +178,50 @@ local function makeKey(label,x,z,index)
 		end
 	end
 
+	-- Touched is only a wake-up hint. The authoritative state is checked against
+	-- the player's fixed X/Z footprint below, so moving the key cannot toggle itself.
 	body.Touched:Connect(function(hit)
 		local player,character=playerFromHit(hit)
 		if not player then return end
 		occupants[character]=true
 		setPressed(true,player)
 	end)
-	body.TouchEnded:Connect(function(hit)
-		local player,character=playerFromHit(hit)
-		if not player then return end
-		task.delay(.08,function()
+
+	local accumulator=0
+	local heartbeatConnection
+	heartbeatConnection=RunService.Heartbeat:Connect(function(dt)
+		if not holder.Parent then
+			heartbeatConnection:Disconnect()
+			return
+		end
+		accumulator+=dt
+		if accumulator<.05 then return end
+		accumulator=0
+
+		local anyPlayer=nil
+		table.clear(occupants)
+		for _,player in ipairs(Players:GetPlayers()) do
+			local character=player.Character
+			local hum=character and character:FindFirstChildOfClass("Humanoid")
 			local root=character and character:FindFirstChild("HumanoidRootPart")
-			if not root then
-				occupants[character]=nil
-			else
-				-- Judge release against the key's fixed X/Z footprint, not its moving Y position.
-				-- This prevents the downward tween itself from firing TouchEnded and making
-				-- a stationary player repeatedly press/release the same key.
+			if hum and hum.Health>0 and root then
 				local dx=math.abs(root.Position.X-x)
 				local dz=math.abs(root.Position.Z-z)
-				if dx>KEY/2+.7 or dz>KEY/2+.7 then
-					occupants[character]=nil
-				else
+				-- Y guard rejects players far above/below while remaining independent
+				-- from the animated key body's own moving position.
+				local dy=root.Position.Y-Y
+				if dx<=KEY/2+.45 and dz<=KEY/2+.45 and dy>=-.5 and dy<=5.5 then
 					occupants[character]=true
+					anyPlayer=anyPlayer or player
 				end
 			end
-			if next(occupants)==nil then setPressed(false) end
-		end)
+		end
+
+		if next(occupants) then
+			setPressed(true,anyPlayer)
+		else
+			setPressed(false)
+		end
 	end)
 end
 
