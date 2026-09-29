@@ -1,6 +1,8 @@
 local TweenService=game:GetService("TweenService")
 local Players=game:GetService("Players")
 
+local InsertService=game:GetService("InsertService")
+
 local old=workspace:FindFirstChild("PremiumKeypad")
 if old then old:Destroy() end
 
@@ -216,46 +218,160 @@ local spawn=workspace:FindFirstChild("SpawnLocation")
 if spawn then spawn.CFrame=CFrame.new(0,3,13.5) end
 
 
--- Standalone keycap captured from the donor keyboard.
-local KEYCAP_MESH_ID="rbxassetid://8837613273"
-local KEYCAP_SOURCE_SIZE=Vector3.new(3,1.368114709854126,3)
+-- Visual-only asset gallery test. No gameplay mechanics are intentionally added.
+local VISUAL_ASSETS={
+	{id=106424344571308,name="TestKeyboard",pos=Vector3.new(18,0,0)},
+}
 
-local function createStandaloneKeycap(holder)
-	local body=holder:FindFirstChild("KeycapCollision")
-	if not body then return end
-	for _,p in ipairs(holder:GetChildren()) do
-		if p:IsA("BasePart") and p~=body then p.Transparency=1 end
+
+local function applyImportedKeycapTemplate(assetRoot)
+	-- Find repeated, key-sized BaseParts inside the already-loaded keyboard asset.
+	-- Repetition is intentional: a keyboard normally contains many copies of one key shape.
+	local groups={}
+	for _,obj in ipairs(assetRoot:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local s=obj.Size
+			if s.X>.15 and s.Y>.08 and s.Z>.15 then
+				local a=math.floor(math.min(s.X,s.Z)*20+.5)/20
+				local b=math.floor(math.max(s.X,s.Z)*20+.5)/20
+				local h=math.floor(s.Y*20+.5)/20
+				local sig=string.format("%.2f/%.2f/%.2f",a,b,h)
+				groups[sig]=groups[sig] or {}
+				table.insert(groups[sig],obj)
+			end
+		end
 	end
-	body.Transparency=1
-	local visual=Instance.new("MeshPart")
-	visual.Name="ImportedKeycapVisual"
-	visual.MeshId=KEYCAP_MESH_ID
-	visual.Size=KEYCAP_SOURCE_SIZE
-	visual.Color=Color3.new(0.972549,0.972549,0.972549)
-	visual.Material=Enum.Material.SmoothPlastic
-	visual.Anchored=false
-	visual.CanCollide=false
-	visual.CanTouch=false
-	visual.CanQuery=false
-	visual.Massless=true
-	local scale=KEY/math.max(visual.Size.X,visual.Size.Z)
-	visual.Size=Vector3.new(visual.Size.X*scale,math.min(visual.Size.Y*scale,KEY_HEIGHT),visual.Size.Z*scale)
-	visual.CFrame=body.CFrame*CFrame.new(0,KEY_HEIGHT*.36,0)
-	visual.Parent=holder
-	local weld=Instance.new("WeldConstraint")
-	weld.Part0=body; weld.Part1=visual; weld.Parent=visual
-	local gui=Instance.new("SurfaceGui")
-	gui.Name="ImportedNumber"; gui.Face=Enum.NormalId.Top
-	gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud; gui.PixelsPerStud=50; gui.Parent=visual
-	local txt=Instance.new("TextLabel")
-	txt.Size=UDim2.fromScale(1,1); txt.BackgroundTransparency=1
-	txt.Text=holder.Name:sub(5); txt.TextColor3=Color3.fromRGB(25,25,25)
-	txt.TextScaled=true; txt.Font=Enum.Font.GothamBold; txt.Parent=gui
-	local pad=Instance.new("UIPadding")
-	pad.PaddingTop=UDim.new(.2,0); pad.PaddingBottom=UDim.new(.2,0)
-	pad.PaddingLeft=UDim.new(.2,0); pad.PaddingRight=UDim.new(.2,0); pad.Parent=txt
+	local best
+	for _,group in pairs(groups) do
+		if #group>=9 and (not best or #group>#best) then best=group end
+	end
+	if not best then
+		warn("[KeycapTemplate] no repeated 9+ part group found; procedural keypad preserved")
+		return false
+	end
+
+	local template=best[1]
+	print(("[KeycapTemplate] using %s %s repeated=%d"):format(template.ClassName,template.Name,#best))
+	for _,holder in ipairs(keypad:GetChildren()) do
+		if holder:IsA("Model") and holder.Name:match("^Key_") then
+			local body=holder:FindFirstChild("KeycapCollision")
+			local oldTop=holder:FindFirstChild("KeycapTop")
+			if body then
+				-- Keep the original collision/tween body as the mechanic.
+				-- Only replace its visible shell with one cloned asset key.
+				for _,p in ipairs(holder:GetChildren()) do
+					if p:IsA("BasePart") and p~=body then p.Transparency=1 end
+				end
+				body.Transparency=1
+
+				local visual=template:Clone()
+				visual.Name="ImportedKeycapVisual"
+				visual.Anchored=false
+				visual.CanCollide=false
+				visual.CanTouch=false
+				visual.CanQuery=false
+				visual.Massless=true
+
+				-- Normalize the source key to our 3x3 footprint while preserving its proportions.
+				local maxXZ=math.max(visual.Size.X,visual.Size.Z)
+				local scale=KEY/maxXZ
+				visual.Size=Vector3.new(visual.Size.X*scale,math.min(visual.Size.Y*scale,KEY_HEIGHT),visual.Size.Z*scale)
+				visual.CFrame=body.CFrame*CFrame.new(0,KEY_HEIGHT*.36,0)
+				visual.Parent=holder
+
+				-- Strip the source key's original legend (A, Q, etc.) before
+				-- drawing our own 1-9 label. Keep only geometry/material.
+				for _,d in ipairs(visual:GetDescendants()) do
+					if d:IsA("Script") or d:IsA("LocalScript")
+						or d:IsA("Decal") or d:IsA("Texture")
+						or d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
+						d:Destroy()
+					end
+				end
+				-- Some legacy keys store the printed character directly on a face.
+				pcall(function() visual.TopSurface=Enum.SurfaceType.Smooth end)
+				pcall(function() visual.BottomSurface=Enum.SurfaceType.Smooth end)
+				local weld=Instance.new("WeldConstraint")
+				weld.Part0=body
+				weld.Part1=visual
+				weld.Parent=visual
+
+				local gui=Instance.new("SurfaceGui")
+				gui.Name="ImportedNumber"
+				gui.Face=Enum.NormalId.Top
+				gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud
+				gui.PixelsPerStud=50
+				gui.Parent=visual
+				local txt=Instance.new("TextLabel")
+				txt.Size=UDim2.fromScale(1,1)
+				txt.BackgroundTransparency=1
+				txt.Text=holder.Name:sub(5)
+				txt.TextColor3=Color3.fromRGB(25,25,25)
+				txt.TextScaled=true
+				txt.Font=Enum.Font.GothamBold
+				txt.Parent=gui
+				local pad=Instance.new("UIPadding")
+				pad.PaddingTop=UDim.new(.2,0); pad.PaddingBottom=UDim.new(.2,0)
+				pad.PaddingLeft=UDim.new(.2,0); pad.PaddingRight=UDim.new(.2,0)
+				pad.Parent=txt
+			end
+		end
+	end
+	return true
 end
 
-for _,holder in ipairs(keypad:GetChildren()) do
-	if holder:IsA("Model") and holder.Name:match("^Key_") then createStandaloneKeycap(holder) end
+local function loadVisualAsset(spec)
+	local ok,container=pcall(function() return InsertService:LoadAsset(spec.id) end)
+	if not ok then
+		warn(("[VisualAssetTest] %s (%s) failed: %s"):format(spec.name,spec.id,tostring(container)))
+		return
+	end
+	local children=container:GetChildren()
+	if #children==0 then
+		warn(("[VisualAssetTest] %s (%s) returned empty"):format(spec.name,spec.id))
+		container:Destroy()
+		return
+	end
+	local root
+	if #children==1 then
+		root=children[1]; root.Parent=workspace; container:Destroy()
+	else
+		root=Instance.new("Model"); root.Parent=workspace
+		for _,child in ipairs(children) do child.Parent=root end
+		container:Destroy()
+	end
+	root.Name=spec.name.."_"..spec.id
+	if root:IsA("BasePart") then root.Anchored=true end
+	for _,obj in ipairs(root:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			obj.Anchored=true
+		end
+	end
+	if root:IsA("Model") then
+		local cf,size=root:GetBoundingBox()
+		local pivot=root:GetPivot()
+		local bottom=cf.Position.Y-size.Y/2
+		root:PivotTo(pivot+Vector3.new(spec.pos.X-pivot.Position.X,spec.pos.Y-bottom,spec.pos.Z-pivot.Position.Z))
+	elseif root:IsA("BasePart") then
+		root.Position=Vector3.new(spec.pos.X,spec.pos.Y+root.Size.Y/2,spec.pos.Z)
+	end
+	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
+	if spec.id==106424344571308 then
+		local cloned=applyImportedKeycapTemplate(root)
+		if cloned then
+			-- The 3x3 now owns independent cloned key geometry.
+			-- The source keyboard is only a temporary donor and can leave the map.
+			root:Destroy()
+			print("[KeycapTemplate] donor keyboard removed after independent clones were created")
+		end
+	end
+
 end
+
+task.spawn(function()
+	task.wait(1)
+	for _,spec in ipairs(VISUAL_ASSETS) do
+		loadVisualAsset(spec)
+		task.wait(.25)
+	end
+end)
