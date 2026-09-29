@@ -9,10 +9,9 @@ keyboard.Name="RetroKeyboard"
 keyboard.Parent=workspace
 
 local rows={
-	{"1","2","3","4","5","6","7","8","9","0"},
-	{"Q","W","E","R","T","Y","U","I","O","P"},
-	{"A","S","D","F","G","H","J","K","L"},
-	{"Z","X","C","V","B","N","M"},
+	{"1","2","3"},
+	{"4","5","6"},
+	{"7","8","9"},
 }
 local KEY_SIZE=Vector3.new(5.2,1.55,5.2)
 local GAP=.62
@@ -21,11 +20,11 @@ local PRESS_DEPTH=.72
 local ORIGIN_Y=2.15
 local states={}
 
-local maxColumns=10
+local maxColumns=3
 local base=Instance.new("Part")
 base.Name="KeyboardBase"
 base.Anchored=true
-base.Size=Vector3.new(maxColumns*PITCH+6,1.45,4*PITCH+6)
+base.Size=Vector3.new(maxColumns*PITCH+6,1.45,3*PITCH+6)
 base.Position=Vector3.new(0,.72,0)
 base.Material=Enum.Material.SmoothPlastic
 base.Color=Color3.fromRGB(190,184,158)
@@ -36,7 +35,7 @@ local well=Instance.new("Part")
 well.Name="KeyWell"
 well.Anchored=true
 well.CanCollide=false
-well.Size=Vector3.new(maxColumns*PITCH+2,.35,4*PITCH+2)
+well.Size=Vector3.new(maxColumns*PITCH+2,.35,3*PITCH+2)
 well.Position=Vector3.new(0,1.52,0)
 well.Material=Enum.Material.SmoothPlastic
 well.Color=Color3.fromRGB(126,122,105)
@@ -46,7 +45,7 @@ local front=Instance.new("Part")
 front.Name="FrontBezel"
 front.Anchored=true
 front.Size=Vector3.new(maxColumns*PITCH+6,1.25,3.2)
-front.Position=Vector3.new(0,1.05,(4*PITCH+6)/2)
+front.Position=Vector3.new(0,1.05,(3*PITCH+6)/2)
 front.Material=Enum.Material.SmoothPlastic
 front.Color=Color3.fromRGB(190,184,158)
 front.Parent=keyboard
@@ -55,7 +54,7 @@ local rear=Instance.new("Part")
 rear.Name="RearBezel"
 rear.Anchored=true
 rear.Size=Vector3.new(maxColumns*PITCH+6,2.1,3.2)
-rear.Position=Vector3.new(0,1.3,-(4*PITCH+6)/2)
+rear.Position=Vector3.new(0,1.3,-(3*PITCH+6)/2)
 rear.Material=Enum.Material.SmoothPlastic
 rear.Color=Color3.fromRGB(190,184,158)
 rear.Parent=keyboard
@@ -143,13 +142,13 @@ local function makeKey(label,x,z)
 end
 
 for rowIndex,row in ipairs(rows) do
-	local count=#row
-	local rowWidth=(count-1)*PITCH
-	local offset=(rowIndex==3 and PITCH*.35) or (rowIndex==4 and PITCH*1.05) or 0
-	local start=-rowWidth/2+offset
-	local z=(rowIndex-2.5)*PITCH
-	for i,label in ipairs(row) do makeKey(label,start+(i-1)*PITCH,z) end
+	local rowWidth=(#row-1)*PITCH
+	local startX=-rowWidth/2
+	local z=(rowIndex-2)*PITCH
+	for i,label in ipairs(row) do
+		makeKey(label,startX+(i-1)*PITCH,z)
+	end
 end
 
 local spawn=workspace:FindFirstChild("SpawnLocation")
-if spawn then spawn.CFrame=CFrame.new(0,4,23) end
+if spawn then spawn.CFrame=CFrame.new(0,4,15) end
