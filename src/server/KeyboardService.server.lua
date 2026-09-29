@@ -290,7 +290,6 @@ local VISUAL_ASSETS={
 	{id=6432306802,name="TestForest2",pos=Vector3.new(52,0,0)},
 	{id=3725991689,name="SakuraTree",pos=Vector3.new(64,0,0)},
 	{id=16014247305,name="SakuraTree2",pos=Vector3.new(76,0,0)},
-	{id=14810660479,name="BuffNoob",pos=Vector3.new(88,0,0)},
 }
 
 local function loadVisualAsset(spec)
@@ -544,10 +543,13 @@ local function attachVisualMorph(player,character)
 	weld.Part1=rigRoot
 	weld.Parent=rigRoot
 
-	-- Stable visual-only motion test. Keep the real character as controller/camera.
+	-- Lightweight procedural animation for this imported R15-style rig. It keeps
+	-- the player's real Humanoid as controller while posing the shell's Motor6Ds.
 	local motors={}
 	for _,joint in ipairs(rig:GetDescendants()) do
-		if joint:IsA("Motor6D") then motors[joint.Name]=joint end
+		if joint:IsA("Motor6D") then
+			motors[joint.Name]=joint
+		end
 	end
 	local baseTransform={}
 	for _,joint in pairs(motors) do baseTransform[joint]=joint.Transform end
@@ -563,9 +565,11 @@ local function attachVisualMorph(player,character)
 		t+=dt
 		local moving=realHumanoid.MoveDirection.Magnitude>.05
 		local state=realHumanoid:GetState()
-		local airborne=state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.Freefall
+		local airborne=state==Enum.HumanoidStateType.Jumping
+			or state==Enum.HumanoidStateType.Freefall
 		local swing=moving and math.sin(t*10)*math.rad(28) or 0
 		local bob=moving and math.sin(t*20)*math.rad(2) or 0
+
 		local function pose(name,cf)
 			local m=motors[name]
 			if m then m.Transform=baseTransform[m]*cf end
