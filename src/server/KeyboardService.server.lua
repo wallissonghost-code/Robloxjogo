@@ -600,4 +600,41 @@ end
 for _,player in ipairs(Players:GetPlayers()) do setupVisualMorph(player) end
 Players.PlayerAdded:Connect(setupVisualMorph)
 
--- Morph diagnostics removed after switching to the real R15 skeleton.\n
+-- Morph diagnostics removed after switching to the real R15 skeleton.
+
+-- Safe keyboard-asset probe. Console only: it does not parent the asset to Workspace
+-- and does not touch the keypad, morph, map, remotes or player UI.
+task.spawn(function()
+	task.wait(8)
+	local assetId=106424344571308
+	local ok,asset=pcall(function()
+		return InsertService:LoadAsset(assetId)
+	end)
+	if not ok then
+		warn("[KEYBOARD_PROBE] LoadAsset failed:",asset)
+		return
+	end
+
+	local models,parts,meshes=0,0,0
+	local rows={}
+	for _,obj in ipairs(asset:GetDescendants()) do
+		if obj:IsA("Model") then
+			models+=1
+		elseif obj:IsA("BasePart") then
+			parts+=1
+			if obj:IsA("MeshPart") then meshes+=1 end
+			if #rows<60 then
+				table.insert(rows,string.format(
+					"%02d | %s | %s | parent=%s | size=(%.3f, %.3f, %.3f)",
+					parts,obj.ClassName,obj.Name,
+					obj.Parent and obj.Parent.Name or "nil",
+					obj.Size.X,obj.Size.Y,obj.Size.Z
+				))
+			end
+		end
+	end
+	print(string.format("[KEYBOARD_PROBE] asset=%d models=%d parts=%d meshParts=%d",
+		assetId,models,parts,meshes))
+	for _,row in ipairs(rows) do print("[KEYBOARD_PROBE] "..row) end
+	asset:Destroy()
+end)\n
