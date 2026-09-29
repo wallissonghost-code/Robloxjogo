@@ -251,6 +251,30 @@ local function applyImportedKeycapTemplate(assetRoot)
 	end
 
 	local template=best[1]
+	-- One-run diagnostic: expose every property needed to reproduce this key
+	-- without loading the full donor keyboard in future revisions.
+	local details={
+		"class="..template.ClassName,
+		"name="..template.Name,
+		"size="..tostring(template.Size),
+		"color="..tostring(template.Color),
+		"material="..tostring(template.Material),
+	}
+	if template:IsA("MeshPart") then
+		table.insert(details,"meshId="..tostring(template.MeshId))
+		table.insert(details,"textureId="..tostring(template.TextureID))
+		table.insert(details,"meshSize="..tostring(template.MeshSize))
+	elseif template:IsA("Part") then
+		table.insert(details,"shape="..tostring(template.Shape))
+		local sm=template:FindFirstChildOfClass("SpecialMesh")
+		if sm then
+			table.insert(details,"specialMeshType="..tostring(sm.MeshType))
+			table.insert(details,"specialMeshId="..tostring(sm.MeshId))
+			table.insert(details,"specialTextureId="..tostring(sm.TextureId))
+			table.insert(details,"specialScale="..tostring(sm.Scale))
+		end
+	end
+	warn("[KEYCAP_CAPTURE] "..table.concat(details," | "))
 	print(("[KeycapTemplate] using %s %s repeated=%d"):format(template.ClassName,template.Name,#best))
 	for _,holder in ipairs(keypad:GetChildren()) do
 		if holder:IsA("Model") and holder.Name:match("^Key_") then
