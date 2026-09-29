@@ -55,35 +55,70 @@ local function makeKey(label,x,z,index)
 	holder.Name="Key_"..label
 	holder.Parent=keypad
 
-	local lower=Instance.new("Part")
-	lower.Name="Body"
-	lower.Anchored=true
-	lower.Size=Vector3.new(KEY,KEY_HEIGHT,KEY)
-	lower.Position=Vector3.new(x,Y,z)
-	lower.Material=Enum.Material.SmoothPlastic
-	lower.Color=Color3.fromRGB(224,224,218)
-	lower.TopSurface=Enum.SurfaceType.Smooth
-	lower.BottomSurface=Enum.SurfaceType.Smooth
-	lower:SetAttribute("Key",label)
-	lower.Parent=holder
+	local activeColor=ACTIVE_COLORS[index]
+	local baseColor=Color3.fromRGB(205,207,203)
+	local sideColor=Color3.fromRGB(218,220,216)
+	local topColor=Color3.fromRGB(239,240,236)
+	local pieces={}
 
-	local bevel=Instance.new("Part")
-	bevel.Name="Top"
-	bevel.Anchored=true
-	bevel.CanCollide=false
-	bevel.CanTouch=false
-	bevel.Size=Vector3.new(KEY*TOP_SCALE,.22,KEY*TOP_SCALE)
-	bevel.Position=Vector3.new(x,Y+KEY_HEIGHT/2+.08,z)
-	bevel.Material=Enum.Material.SmoothPlastic
-	bevel.Color=Color3.fromRGB(242,242,236)
-	bevel.TopSurface=Enum.SurfaceType.Smooth
-	bevel.Parent=holder
+	local body=Instance.new("Part")
+	body.Name="KeycapCollision"
+	body.Anchored=true
+	body.Size=Vector3.new(KEY,KEY_HEIGHT*.70,KEY)
+	body.Position=Vector3.new(x,Y-KEY_HEIGHT*.15,z)
+	body.Material=Enum.Material.SmoothPlastic
+	body.Color=baseColor
+	body.TopSurface=Enum.SurfaceType.Smooth
+	body.BottomSurface=Enum.SurfaceType.Smooth
+	body:SetAttribute("Key",label)
+	body.Parent=holder
+	table.insert(pieces,body)
+
+	local topSize=KEY*.78
+	local shoulderY=Y+KEY_HEIGHT*.31
+	local top=Instance.new("Part")
+	top.Name="KeycapTop"
+	top.Anchored=true
+	top.CanCollide=false
+	top.CanTouch=false
+	top.CanQuery=false
+	top.Size=Vector3.new(topSize,.24,topSize)
+	top.Position=Vector3.new(x,Y+KEY_HEIGHT*.52,z)
+	top.Material=Enum.Material.SmoothPlastic
+	top.Color=topColor
+	top.TopSurface=Enum.SurfaceType.Smooth
+	top.BottomSurface=Enum.SurfaceType.Smooth
+	top.Parent=holder
+	table.insert(pieces,top)
+
+	local slopeHeight=KEY_HEIGHT*.42
+	local inset=(KEY-topSize)/2
+	local function wedge(name,size,cf)
+		local w=Instance.new("WedgePart")
+		w.Name=name
+		w.Anchored=true
+		w.CanCollide=false
+		w.CanTouch=false
+		w.CanQuery=false
+		w.Size=size
+		w.CFrame=cf
+		w.Material=Enum.Material.SmoothPlastic
+		w.Color=sideColor
+		w.Parent=holder
+		table.insert(pieces,w)
+		return w
+	end
+
+	wedge("BevelFront",Vector3.new(topSize,slopeHeight,inset),CFrame.new(x,shoulderY,z-KEY/2+inset/2)*CFrame.Angles(0,0,0))
+	wedge("BevelBack",Vector3.new(topSize,slopeHeight,inset),CFrame.new(x,shoulderY,z+KEY/2-inset/2)*CFrame.Angles(0,math.pi,0))
+	wedge("BevelLeft",Vector3.new(topSize,slopeHeight,inset),CFrame.new(x-KEY/2+inset/2,shoulderY,z)*CFrame.Angles(0,math.pi/2,0))
+	wedge("BevelRight",Vector3.new(topSize,slopeHeight,inset),CFrame.new(x+KEY/2-inset/2,shoulderY,z)*CFrame.Angles(0,-math.pi/2,0))
 
 	local gui=Instance.new("SurfaceGui")
 	gui.Face=Enum.NormalId.Top
 	gui.SizingMode=Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud=45
-	gui.Parent=bevel
+	gui.Parent=top
 	local txt=Instance.new("TextLabel")
 	txt.Size=UDim2.fromScale(1,1)
 	txt.BackgroundTransparency=1
@@ -93,61 +128,79 @@ local function makeKey(label,x,z,index)
 	txt.Font=Enum.Font.GothamBold
 	txt.Parent=gui
 	local pad=Instance.new("UIPadding")
-	pad.PaddingTop=UDim.new(.22,0);pad.PaddingBottom=UDim.new(.22,0);pad.PaddingLeft=UDim.new(.22,0);pad.PaddingRight=UDim.new(.22,0)
+	pad.PaddingTop=UDim.new(.20,0);pad.PaddingBottom=UDim.new(.20,0);pad.PaddingLeft=UDim.new(.20,0);pad.PaddingRight=UDim.new(.20,0)
 	pad.Parent=txt
 
-	local upBody=lower.CFrame
-	local upTop=bevel.CFrame
-	local downBody=upBody*CFrame.new(0,-PRESS,0)
-	local downTop=upTop*CFrame.new(0,-PRESS,0)
+	local raised={}
+	local pressedTargets={}
+	for i,piece in ipairs(pieces) do
+		raised[i]=piece.CFrame
+		pressedTargets[i]=piece.CFrame*CFrame.new(0,-PRESS,0)
+	end
+
 	local occupants={}
 	local pressed=false
-	local activeColor=ACTIVE_COLORS[index]
+	local tweens={}
 	local pressSound=Instance.new("Sound")
 	pressSound.Name="KeyPressSound"
 	pressSound.SoundId="rbxasset://sounds/button.wav"
 	pressSound.Volume=.28
 	pressSound.PlaybackSpeed=.96+((index-1)%5)*.018
-	pressSound.Parent=lower
+	pressSound.Parent=body
+
+	local function move(targets,time,easing)
+		for _,t in ipairs(tweens) do t:Cancel() end
+		table.clear(tweens)
+		local info=TweenInfo.new(time,easing,Enum.EasingDirection.Out)
+		for i,piece in ipairs(pieces) do
+			local t=TweenService:Create(piece,info,{CFrame=targets[i]})
+			table.insert(tweens,t)
+			t:Play()
+		end
+	end
 
 	local function setPressed(value,player)
 		if pressed==value then return end
 		pressed=value
 		if value then
-			lower.Material=Enum.Material.Neon
-			bevel.Material=Enum.Material.Neon
-			lower.Color=activeColor
-			bevel.Color=activeColor
+			for _,piece in ipairs(pieces) do
+				piece.Material=Enum.Material.Neon
+				piece.Color=activeColor
+			end
+			txt.TextColor3=Color3.fromRGB(18,18,18)
 			pressSound.TimePosition=0
 			pressSound:Play()
-			TweenService:Create(lower,TweenInfo.new(.07,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=downBody}):Play()
-			TweenService:Create(bevel,TweenInfo.new(.07,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=downTop}):Play()
+			move(pressedTargets,.07,Enum.EasingStyle.Quad)
 			keypad:SetAttribute("LastKey",label)
-			lower:SetAttribute("LastPressedBy",player and player.UserId or 0)
+			body:SetAttribute("LastPressedBy",player and player.UserId or 0)
 		else
-			TweenService:Create(lower,TweenInfo.new(.14,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{CFrame=upBody}):Play()
-			TweenService:Create(bevel,TweenInfo.new(.14,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{CFrame=upTop}):Play()
-			lower.Material=Enum.Material.SmoothPlastic
-			bevel.Material=Enum.Material.SmoothPlastic
-			lower.Color=Color3.fromRGB(224,224,218)
-			bevel.Color=Color3.fromRGB(242,242,236)
+			body.Material=Enum.Material.SmoothPlastic
+			body.Color=baseColor
+			for _,piece in ipairs(pieces) do
+				if piece~=body then
+					piece.Material=Enum.Material.SmoothPlastic
+					piece.Color=piece==top and topColor or sideColor
+				end
+			end
+			txt.TextColor3=Color3.fromRGB(31,32,34)
+			move(raised,.14,Enum.EasingStyle.Back)
 		end
 	end
 
-	lower.Touched:Connect(function(hit)
+	body.Touched:Connect(function(hit)
 		local player,character=playerFromHit(hit)
 		if not player then return end
 		occupants[character]=true
 		setPressed(true,player)
 	end)
-	lower.TouchEnded:Connect(function(hit)
+	body.TouchEnded:Connect(function(hit)
 		local player,character=playerFromHit(hit)
 		if not player then return end
 		task.delay(.08,function()
 			local root=character and character:FindFirstChild("HumanoidRootPart")
 			if not root then occupants[character]=nil
 			else
-				local p=lower.CFrame:PointToObjectSpace(root.Position)
+				local p=body.CFrame:PointToObjectSpace(root.Position)
 				if math.abs(p.X)>KEY/2+.7 or math.abs(p.Z)>KEY/2+.7 then occupants[character]=nil end
 			end
 			if next(occupants)==nil then setPressed(false) end
