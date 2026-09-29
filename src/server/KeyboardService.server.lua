@@ -16,7 +16,7 @@ local GAP=0
 local PITCH=3.05 -- slight visual overlap to compensate imported mesh internal margins
 local KEY_HEIGHT=2.05
 local TOP_SCALE=.82
-local PRESS=1.30
+local PRESS=.20
 local Y=2.05
 local ACTIVE_COLORS={Color3.fromRGB(36,220,120),Color3.fromRGB(55,170,255),Color3.fromRGB(255,190,45),Color3.fromRGB(255,85,125),Color3.fromRGB(165,95,255),Color3.fromRGB(40,225,210),Color3.fromRGB(255,120,45),Color3.fromRGB(100,225,80),Color3.fromRGB(80,135,255)}
 
