@@ -536,69 +536,24 @@ local function attachVisualMorph(player,character)
 	weld.Part1=rigRoot
 	weld.Parent=rigRoot
 
-	-- Animate ONLY limb/torso Motor6Ds. Never touch RootJoint/rigRoot/weld/camera.
-	-- This deliberately preserves the confirmed-stable controller attachment above.
-	local animated={}
-	local allowed={
-		LeftShoulder=true,RightShoulder=true,LeftHip=true,RightHip=true,
-		LeftElbow=true,RightElbow=true,LeftKnee=true,RightKnee=true,
-		Waist=true,Neck=true,
-	}
+	-- Inspect the imported rig's REAL joint graph without changing any joint.
+	-- We map Motor6D Name + Part0 + Part1 so the next animation pass targets
+	-- the asset's actual limbs instead of assuming standard R15 joint names.
+	local jointLines={"JOINT MAP "..MORPH_ASSET_ID}
+	local jointCount=0
 	for _,joint in ipairs(rig:GetDescendants()) do
-		if joint:IsA("Motor6D") and allowed[joint.Name] then
-			animated[joint.Name]={motor=joint,base=joint.Transform}
+		if joint:IsA("Motor6D") then
+			jointCount+=1
+			local p0=joint.Part0 and joint.Part0.Name or "nil"
+			local p1=joint.Part1 and joint.Part1.Name or "nil"
+			table.insert(jointLines,string.format("%02d | %s | %s -> %s",jointCount,joint.Name,p0,p1))
 		end
 	end
+	table.insert(jointLines,2,"Motor6D total: "..jointCount)
+	local jointReport=table.concat(jointLines,"\n")
+	print("[VisualMorphJointMap]\n"..jointReport)
+	task.spawn(showMorphDiagnostic,player,jointReport)
 
-	local function setPose(name,cf)
-		local entry=animated[name]
-		if entry then entry.motor.Transform=entry.base*cf end
-	end
-	local function resetPose()
-		for _,entry in pairs(animated) do entry.motor.Transform=entry.base end
-	end
-
-	local runService=game:GetService("RunService")
-	local phase=0
-	local animConn
-	animConn=runService.Heartbeat:Connect(function(dt)
-		if not rig.Parent or player.Character~=character or realHumanoid.Health<=0 then
-			if animConn then animConn:Disconnect() end
-			return
-		end
-		phase+=dt
-		local state=realHumanoid:GetState()
-		local moving=realHumanoid.MoveDirection.Magnitude>.05
-
-		resetPose()
-		if state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.Freefall then
-			-- Air pose: visual joints only.
-			setPose("LeftShoulder",CFrame.Angles(math.rad(-25),0,math.rad(-8)))
-			setPose("RightShoulder",CFrame.Angles(math.rad(-25),0,math.rad(8)))
-			setPose("LeftHip",CFrame.Angles(math.rad(18),0,0))
-			setPose("RightHip",CFrame.Angles(math.rad(18),0,0))
-		elseif moving then
-			-- Natural alternating gait. Root remains completely untouched.
-			local s=math.sin(phase*9)
-			local arm=s*math.rad(34)
-			local leg=s*math.rad(28)
-			setPose("LeftShoulder",CFrame.Angles(arm,0,0))
-			setPose("RightShoulder",CFrame.Angles(-arm,0,0))
-			setPose("LeftHip",CFrame.Angles(-leg,0,0))
-			setPose("RightHip",CFrame.Angles(leg,0,0))
-			setPose("LeftElbow",CFrame.Angles(math.max(0,-s)*math.rad(16),0,0))
-			setPose("RightElbow",CFrame.Angles(math.max(0,s)*math.rad(16),0,0))
-			setPose("LeftKnee",CFrame.Angles(math.max(0,s)*math.rad(20),0,0))
-			setPose("RightKnee",CFrame.Angles(math.max(0,-s)*math.rad(20),0,0))
-			setPose("Waist",CFrame.Angles(0,-s*math.rad(4),0))
-		else
-			-- Tiny breathing motion while idle, again without root translation.
-			local breathe=math.sin(phase*2)*math.rad(1.5)
-			setPose("Waist",CFrame.Angles(breathe,0,0))
-			setPose("LeftShoulder",CFrame.Angles(0,0,-math.rad(2)))
-			setPose("RightShoulder",CFrame.Angles(0,0,math.rad(2)))
-		end
-	end)
 
 	-- The actual player character remains untouched, so Roblox's camera and controls
 	-- continue following the original Humanoid/HRP.
