@@ -287,6 +287,7 @@ local VISUAL_ASSETS={
 	{id=117859430905186,name="TestHumanoid",pos=Vector3.new(26,0,0)},
 	{id=113427265105121,name="TestPortalGun",pos=Vector3.new(34,0,0)},
 	{id=5352156968,name="TestPlayerRank",pos=Vector3.new(42,0,0)},
+	{id=6432306802,name="TestForest2",pos=Vector3.new(52,0,0)},
 }
 
 local function loadVisualAsset(spec)
@@ -381,10 +382,22 @@ local function morphPlayer(player,character)
 	status("4. LoadAsset OK")
 	local candidates=container:GetChildren()
 	local morph
-	for _,candidate in ipairs(candidates) do
-		if candidate:IsA("Model") and candidate:FindFirstChildOfClass("Humanoid") then
+	-- Asset 117859430905186 is an R15 rig without a Humanoid. Find the actual
+	-- character model by its rig parts instead of requiring Humanoid up front.
+	for _,candidate in ipairs(container:GetDescendants()) do
+		if candidate:IsA("Model")
+			and candidate:FindFirstChild("HumanoidRootPart")
+			and candidate:FindFirstChild("UpperTorso") then
 			morph=candidate
 			break
+		end
+	end
+	if not morph then
+		for _,candidate in ipairs(candidates) do
+			if candidate:IsA("Model") and candidate:FindFirstChild("HumanoidRootPart",true) then
+				morph=candidate
+				break
+			end
 		end
 	end
 	if not morph and #candidates==1 and candidates[1]:IsA("Model") then morph=candidates[1] end
