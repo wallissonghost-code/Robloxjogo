@@ -87,9 +87,9 @@ local deck=Instance.new("Part")
 deck.Name="KeypadDeck"
 deck.Anchored=true
 deck.Size=Vector3.new(PITCH*3+.35,1,PITCH*3+.35)
-deck.Position=Vector3.new(0,.5,0)
+deck.Position=Vector3.new(0,0.525,0)
 deck.Material=Enum.Material.SmoothPlastic
-deck.Color=Color3.fromRGB(49,51,55)
+deck.Color=Color3.fromRGB(205,207,203)
 deck.TopSurface=Enum.SurfaceType.Smooth
 deck.BottomSurface=Enum.SurfaceType.Smooth
 deck.Parent=keypad
@@ -99,9 +99,9 @@ rim.Name="InnerPlate"
 rim.Anchored=true
 rim.CanCollide=false
 rim.Size=Vector3.new(PITCH*3+.18,.18,PITCH*3+.18)
-rim.Position=Vector3.new(0,1.09,0)
+rim.Position=Vector3.new(0,1.015,0)
 rim.Material=Enum.Material.Metal
-rim.Color=Color3.fromRGB(82,85,89)
+rim.Color=Color3.fromRGB(205,207,203)
 rim.Parent=keypad
 
 local function playerFromHit(hit)
