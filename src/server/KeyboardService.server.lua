@@ -49,7 +49,7 @@ local function playerFromHit(hit)
 	if player then return player,character end
 end
 
-local function makeKey(label,x,z)
+local function makeKey(label,x,z,index)
 	local holder=Instance.new("Model")
 	holder.Name="Key_"..label
 	holder.Parent=keypad
