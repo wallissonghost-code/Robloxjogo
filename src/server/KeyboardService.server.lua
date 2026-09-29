@@ -531,14 +531,6 @@ local function attachVisualMorph(player,character)
 			-- Clone visual descendants from the imported body segment and weld them
 			-- to the corresponding REAL animated R15 body part.
 			local visual=src:Clone()
-			-- Black morph test: recolor only the cloned visual shell.
-			-- Movement, real R15 skeleton, Humanoid and weld logic stay untouched.
-			visual.Color=Color3.fromRGB(8,8,8)
-			for _,v in ipairs(visual:GetDescendants()) do
-				if v:IsA("BasePart") then
-					v.Color=Color3.fromRGB(8,8,8)
-				end
-			end
 			visual.Name="MorphVisual_"..partName
 			visual:SetAttribute("MorphVisual",true)
 			for _,d in ipairs(visual:GetDescendants()) do
@@ -549,7 +541,12 @@ local function attachVisualMorph(player,character)
 				end
 			end
 			visual.Anchored=false; visual.CanCollide=false; visual.CanTouch=false; visual.CanQuery=false; visual.Massless=true
-			visual.CFrame=dst.CFrame
+			-- Preserve the imported segment's authored offset/orientation relative
+			-- to its own R15 body part instead of forcing its center onto dst.
+			-- This is especially important for shoulders, forearms and hands.
+			local srcPartCF=src.CFrame
+			local authoredOffset=srcPartCF:ToObjectSpace(visual.CFrame)
+			visual.CFrame=dst.CFrame*authoredOffset
 			visual.Parent=dst
 			local weld=Instance.new("WeldConstraint")
 			weld.Part0=dst; weld.Part1=visual; weld.Parent=visual
