@@ -342,7 +342,7 @@ local function applyImportedKeycapTemplate(assetRoot)
 
 				-- Normalize the source key to our 3x3 footprint while preserving its proportions.
 				local maxXZ=math.max(visual.Size.X,visual.Size.Z)
-				local scale=(KEY*.94)/maxXZ
+				local scale=KEY/maxXZ
 				visual.Size=Vector3.new(visual.Size.X*scale,math.min(visual.Size.Y*scale,KEY_HEIGHT),visual.Size.Z*scale)
 				visual.CFrame=body.CFrame*CFrame.new(0,KEY_HEIGHT*.36,0)
 				visual.Parent=holder
