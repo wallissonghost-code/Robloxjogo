@@ -289,6 +289,7 @@ local VISUAL_ASSETS={
 	{id=5352156968,name="TestPlayerRank",pos=Vector3.new(42,0,0)},
 	{id=6432306802,name="TestForest2",pos=Vector3.new(52,0,0)},
 	{id=3725991689,name="SakuraTree",pos=Vector3.new(64,0,0)},
+	{id=16014247305,name="SakuraTree2",pos=Vector3.new(76,0,0)},
 }
 
 local function loadVisualAsset(spec)
