@@ -247,7 +247,7 @@ local function applyImportedKeycapTemplate(assetRoot)
 	end
 	if not best then
 		warn("[KeycapTemplate] no repeated 9+ part group found; procedural keypad preserved")
-		return
+		return false
 	end
 
 	local template=best[1]
@@ -317,6 +317,7 @@ local function applyImportedKeycapTemplate(assetRoot)
 			end
 		end
 	end
+	return true
 end
 
 local function loadVisualAsset(spec)
@@ -356,7 +357,13 @@ local function loadVisualAsset(spec)
 	end
 	print(("[VisualAssetTest] loaded %s (%s)"):format(spec.name,spec.id))
 	if spec.id==106424344571308 then
-		applyImportedKeycapTemplate(root)
+		local cloned=applyImportedKeycapTemplate(root)
+		if cloned then
+			-- The 3x3 now owns independent cloned key geometry.
+			-- The source keyboard is only a temporary donor and can leave the map.
+			root:Destroy()
+			print("[KeycapTemplate] donor keyboard removed after independent clones were created")
+		end
 	end
 
 end
