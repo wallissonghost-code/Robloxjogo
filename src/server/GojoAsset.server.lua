@@ -188,7 +188,7 @@ local function handPosition()
 	return gojoOrigin()
 end
 
-local function attackPlayer(player)
+local function attackPlayer(player,mode)
 	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
 	local root=character and character:FindFirstChild("HumanoidRootPart")
@@ -224,18 +224,32 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			task.wait(.04)
 		end
 
-		diag(player,"4 CORRIDA","iniciando PivotTo")
-		-- Move the anchored model toward the live player. PivotTo works even while parts are anchored.
-		for _=1,55 do
-			if not root.Parent or not gojo.Parent then break end
+		if mode=="teleport" then
+			diag(player,"4 TELEPORTE","Gojo aparecendo perto do player")
+			local target=root.Position
+			local forward=root.CFrame.LookVector
+			local side=root.CFrame.RightVector
+			local destination=target-forward*9+side*2
 			local current=gojo:GetPivot()
-			local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
-			if delta.Magnitude<=8 then break end
-			local step=math.min(1.15,math.max(0,delta.Magnitude-7.5))
-			local newPos=current.Position+delta.Unit*step
-			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(root.Position.X,newPos.Y,root.Position.Z)))
+			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
+			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
 			if blue.Parent then blue.Position=handPosition() end
-			task.wait(.03)
+			task.wait(.12)
+		else
+			diag(player,"4 CORRIDA 2X","perseguindo player")
+			-- 2x faster than the previous rush. Increase RUSH_SPEED_MULTIPLIER later if desired.
+			local RUSH_SPEED_MULTIPLIER=2
+			for _=1,55 do
+				if not root.Parent or not gojo.Parent then break end
+				local current=gojo:GetPivot()
+				local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
+				if delta.Magnitude<=8 then break end
+				local step=math.min(1.15*RUSH_SPEED_MULTIPLIER,math.max(0,delta.Magnitude-7.5))
+				local newPos=current.Position+delta.Unit*step
+				gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(root.Position.X,newPos.Y,root.Position.Z)))
+				if blue.Parent then blue.Position=handPosition() end
+				task.wait(.03)
+			end
 		end
 
 		diag(player,"5 IMPACTO","tentando empurrar")
@@ -243,7 +257,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			local gp2=gojo:GetPivot().Position
 			local away=Vector3.new(root.Position.X-gp2.X,0,root.Position.Z-gp2.Z)
 			if away.Magnitude>.01 then
-				root.AssemblyLinearVelocity=away.Unit*55+Vector3.new(0,12,0)
+				root.AssemblyLinearVelocity=away.Unit*385+Vector3.new(0,28,0)
 			end
 		end
 		if blue.Parent then
@@ -266,9 +280,10 @@ end
 
 startupStage="READY"
 serverReady=true
-pushRemote.OnServerEvent:Connect(function(player)
-	diag(player,"REMOTE OK","servidor recebeu clique")
-	task.spawn(attackPlayer,player)
+pushRemote.OnServerEvent:Connect(function(player,mode)
+	mode=(mode=="teleport") and "teleport" or "rush"
+	diag(player,"REMOTE OK","modo="..mode)
+	task.spawn(attackPlayer,player,mode)
 end)
 
 print("[Gojo] R6 Blue rush ready")
