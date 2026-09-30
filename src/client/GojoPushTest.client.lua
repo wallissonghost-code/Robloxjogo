@@ -37,12 +37,12 @@ local button=Instance.new("TextButton")
 button.Name="PushSphere"
 button.AnchorPoint=Vector2.new(1,1)
 button.Size=UDim2.fromOffset(180,56)
-button.Position=UDim2.new(1,-22,1,-24)
+button.Position=UDim2.new(1,-22,1,-92)
 button.BackgroundColor3=Color3.fromRGB(35,105,255)
 button.TextColor3=Color3.new(1,1,1)
 button.Font=Enum.Font.GothamBold
 button.TextSize=18
-button.Text="TESTAR BLUE"
+button.Text="BLUE CORRIDA 2X"
 button.AutoButtonColor=true
 button.Parent=gui
 
@@ -50,14 +50,33 @@ local corner=Instance.new("UICorner")
 corner.CornerRadius=UDim.new(0,14)
 corner.Parent=button
 
+local teleportButton=button:Clone()
+teleportButton.Name="TeleportBlue"
+teleportButton.Position=UDim2.new(1,-22,1,-24)
+teleportButton.Text="GOJO TELEPORTE"
+teleportButton.Parent=gui
+
 local busy=false
 button.Activated:Connect(function()
 	if busy then return end
 	busy=true
 	addDiag("CLIQUE LOCAL","botao acionado; enviando RemoteEvent")
-	remote:FireServer()
-	button.Text="BLUE!"
+	remote:FireServer("rush")
+	button.Text="CORRENDO!"
 	task.wait(.6)
-	button.Text="TESTAR BLUE"
+	button.Text="BLUE CORRIDA 2X"
 	busy=false
+end)
+
+
+local teleportBusy=false
+teleportButton.Activated:Connect(function()
+	if teleportBusy then return end
+	teleportBusy=true
+	addDiag("CLIQUE LOCAL","teleporte acionado; enviando RemoteEvent")
+	remote:FireServer("teleport")
+	teleportButton.Text="TELEPORTANDO!"
+	task.wait(.6)
+	teleportButton.Text="GOJO TELEPORTE"
+	teleportBusy=false
 end)
