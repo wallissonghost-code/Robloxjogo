@@ -139,9 +139,29 @@ end
 
 local rightShoulder=motor("Right Shoulder")
 local leftShoulder=motor("Left Shoulder")
+local rightHip=motor("Right Hip")
+local leftHip=motor("Left Hip")
+local rootJoint=motor("RootJoint")
 local rightBase=rightShoulder and rightShoulder.C0
 startupStage="MOTORS OK / ATTACK SETUP"
 local leftBase=leftShoulder and leftShoulder.C0
+
+local function resetPose()
+	resetPose()
+	if rightHip then rightHip.Transform=CFrame.new() end
+	if leftHip then leftHip.Transform=CFrame.new() end
+	if rootJoint then rootJoint.Transform=CFrame.new() end
+end
+
+local function runPose(phase)
+	local swing=math.sin(phase)
+	local bounce=math.abs(math.cos(phase*2))
+	if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(42*swing),0,math.rad(5)) end
+	if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-42*swing),0,math.rad(-5)) end
+	if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-38*swing),0,0) end
+	if leftHip then leftHip.Transform=CFrame.Angles(math.rad(38*swing),0,0) end
+	if rootJoint then rootJoint.Transform=CFrame.new(0,.07*bounce,0)*CFrame.Angles(math.rad(-9),0,0) end
+end
 
 local function tweenMotor(m,c0,t)
 	if not m then return end
@@ -212,6 +232,9 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		-- Pose both R6 shoulders directly. Transform is safer for a runtime pose.
 		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-95),0,math.rad(12)) end
 		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-35),0,math.rad(-10)) end
+		if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-12),0,0) end
+		if leftHip then leftHip.Transform=CFrame.Angles(math.rad(12),0,0) end
+		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-7),0,0) end
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
 		diag(player,"3 BLUE","criando esfera")
@@ -234,13 +257,19 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
 			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
 			if blue.Parent then blue.Position=handPosition() end
+			if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-25),0,0) end
+			if leftHip then leftHip.Transform=CFrame.Angles(math.rad(18),0,0) end
+			if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-14),0,0) end
 			task.wait(.12)
 		else
 			diag(player,"4 CORRIDA 2X","perseguindo player")
 			-- 2x faster than the previous rush. Increase RUSH_SPEED_MULTIPLIER later if desired.
 			local RUSH_SPEED_MULTIPLIER=2
+			local runPhase=0
 			for _=1,55 do
 				if not root.Parent or not gojo.Parent then break end
+				runPhase+=.72
+				runPose(runPhase)
 				local current=gojo:GetPivot()
 				local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
 				if delta.Magnitude<=8 then break end
