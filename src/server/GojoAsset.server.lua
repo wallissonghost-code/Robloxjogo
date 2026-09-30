@@ -2,6 +2,11 @@ local InsertService=game:GetService("InsertService")
 local Players=game:GetService("Players")
 local TweenService=game:GetService("TweenService")
 local Debris=game:GetService("Debris")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+
+local pushRemote=ReplicatedStorage:FindFirstChild("GojoPushTest") or Instance.new("RemoteEvent")
+pushRemote.Name="GojoPushTest"
+pushRemote.Parent=ReplicatedStorage
 
 local ASSET_ID=14034779103
 local NAME="ImportedGojo_"..ASSET_ID
@@ -100,7 +105,7 @@ local function nearestPlayer()
 	return best
 end
 
-local function fireSphere(player)
+local function fireSphere(player, shouldPush)
 	local character=player and player.Character
 	local root=character and character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
@@ -152,7 +157,13 @@ local function fireSphere(player)
 	local tween=TweenService:Create(ball,TweenInfo.new(travelTime,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Position=target})
 	tween:Play()
 	tween.Completed:Connect(function()
-		-- Visual only: no collision, damage, impulse or player movement.
+		-- Optional test push: only the button-triggered sphere applies a small impulse.
+		if shouldPush and root.Parent then
+			local flat=Vector3.new(direction.X,0,direction.Z)
+			if flat.Magnitude>.01 then
+				root:ApplyImpulse((flat.Unit*18+Vector3.new(0,3,0))*root.AssemblyMass)
+			end
+		end
 		if ball.Parent then
 			TweenService:Create(ball,TweenInfo.new(.18),{Transparency=1,Size=ball.Size*1.15}):Play()
 			Debris:AddItem(ball,.22)
@@ -160,6 +171,10 @@ local function fireSphere(player)
 	end)
 	Debris:AddItem(ball,3)
 end
+
+pushRemote.OnServerEvent:Connect(function(player)
+	fireSphere(player,true)
+end)
 
 -- Test behavior: Gojo periodically fires one visual sphere at the nearest player.
 -- The projectile deliberately has zero gameplay force.
