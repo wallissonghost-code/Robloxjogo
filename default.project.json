@@ -27,6 +27,15 @@
       "GojoAsset": {
         "$path": "src/server/GojoAsset.server.lua"
       }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "GojoPushTest": {
+          "$path": "src/client/GojoPushTest.client.lua"
+        }
+      }
     }
   }
 }
