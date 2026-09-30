@@ -23,12 +23,6 @@
           "Material": "Grass"
         }
       }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "KeyboardService": {
-        "$path": "src/server/KeyboardService.server.lua"
-      }
     }
   }
 }
