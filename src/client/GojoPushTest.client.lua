@@ -88,7 +88,7 @@ button.BackgroundColor3=Color3.fromRGB(35,105,255)
 button.TextColor3=Color3.new(1,1,1)
 button.Font=Enum.Font.GothamBold
 button.TextSize=18
-button.Text="BLUE ARREMESSAR"
+button.Text="BLUE CORRIDA 2X"
 button.AutoButtonColor=true
 button.Parent=gui
 
@@ -97,9 +97,9 @@ corner.CornerRadius=UDim.new(0,14)
 corner.Parent=button
 
 local teleportButton=button:Clone()
-teleportButton.Name="RedRush"
+teleportButton.Name="TeleportBlue"
 teleportButton.Position=UDim2.new(1,-22,1,-24)
-teleportButton.Text="RED CORRIDA"
+teleportButton.Text="GOJO TELEPORTE"
 teleportButton.Parent=gui
 
 local busy=false
@@ -107,24 +107,13 @@ button.Activated:Connect(function()
 	if busy then return end
 	busy=true
 	addDiag("CLIQUE LOCAL","botao acionado; enviando RemoteEvent")
-	remote:FireServer("blueThrow")
-	button.Text="LANCANDO!"
+	remote:FireServer("rush")
+	button.Text="CORRENDO!"
 	task.wait(.6)
-	button.Text="BLUE ARREMESSAR"
+	button.Text="BLUE CORRIDA 2X"
 	busy=false
 end)
 
-
-local redThrowButton=button:Clone()
-redThrowButton.Name="RedThrow"
-redThrowButton.Position=UDim2.new(1,-214,1,-24)
-redThrowButton.Text="RED ARREMESSAR"
-redThrowButton.BackgroundColor3=Color3.fromRGB(210,35,45)
-redThrowButton.Parent=gui
-redThrowButton.Activated:Connect(function()
-	addDiag("CLIQUE LOCAL","Red arremessado")
-	remote:FireServer("redThrow")
-end)
 
 local rigButton=button:Clone()
 rigButton.Name="RigDiagnostic"
@@ -160,9 +149,9 @@ teleportButton.Activated:Connect(function()
 	if teleportBusy then return end
 	teleportBusy=true
 	addDiag("CLIQUE LOCAL","teleporte acionado; enviando RemoteEvent")
-	remote:FireServer("redRush")
-	teleportButton.Text="RED RUSH!"
+	remote:FireServer("teleport")
+	teleportButton.Text="TELEPORTANDO!"
 	task.wait(.6)
-	teleportButton.Text="RED CORRIDA"
+	teleportButton.Text="GOJO TELEPORTE"
 	teleportBusy=false
 end)
