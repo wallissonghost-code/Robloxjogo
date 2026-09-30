@@ -412,8 +412,18 @@ local function comboPlayer(player)
 		local rs=red.Position
 		for i=1,24 do
 			if not pr.Parent then break end
-			red.Position=rs:Lerp(pr.Position+Vector3.new(0,1,0),i/24)
-			if aura and aura.Parent then aura.Position=red.Position end
+			local t=i/24
+			red.Position=rs:Lerp(pr.Position+Vector3.new(0,1,0),t)
+			local grow=math.clamp((t-.48)/.52,0,1)
+			local growSmooth=grow*grow*(3-2*grow)
+			local coreSize=1.35+(14.65*growSmooth)
+			red.Size=Vector3.new(coreSize,coreSize,coreSize)
+			if aura and aura.Parent then
+				aura.Position=red.Position
+				local auraSize=7+(17*growSmooth)
+				aura.Size=Vector3.new(auraSize,auraSize,auraSize)
+				aura.Transparency=.78-(.13*growSmooth)
+			end
 			task.wait(.02)
 		end
 
@@ -556,7 +566,18 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				local t=i/30
 				local smooth=1-(1-t)*(1-t)
 				blue.Position=startPos:Lerp(targetPos,smooth)
-				if redAura and redAura.Parent then redAura.Position=blue.Position end
+				-- Red becomes visually overwhelming as it closes in on the target.
+				-- Keep the core concentrated at launch, then swell to roughly 2-3x player height.
+				local grow=math.clamp((t-.48)/.52,0,1)
+				local growSmooth=grow*grow*(3-2*grow)
+				local coreSize=1.35+(14.65*growSmooth)
+				blue.Size=Vector3.new(coreSize,coreSize,coreSize)
+				if redAura and redAura.Parent then
+					redAura.Position=blue.Position
+					local auraSize=7+(17*growSmooth)
+					redAura.Size=Vector3.new(auraSize,auraSize,auraSize)
+					redAura.Transparency=.78-(.13*growSmooth)
+				end
 				task.wait(.022)
 			end
 			if blue and blue.Parent then
