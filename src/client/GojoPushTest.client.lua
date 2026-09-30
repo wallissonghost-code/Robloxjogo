@@ -115,6 +115,25 @@ button.Activated:Connect(function()
 end)
 
 
+local redButton=button:Clone()
+redButton.Name="RedThrow"
+redButton.Position=UDim2.new(1,-212,1,-92)
+redButton.BackgroundColor3=Color3.fromRGB(220,35,45)
+redButton.Text="RED ARREMESSAR"
+redButton.Parent=gui
+
+local redBusy=false
+redButton.Activated:Connect(function()
+	if redBusy then return end
+	redBusy=true
+	addDiag("CLIQUE LOCAL","Red arremessado")
+	remote:FireServer("redThrow")
+	redButton.Text="REPELINDO!"
+	task.wait(.7)
+	redButton.Text="RED ARREMESSAR"
+	redBusy=false
+end)
+
 local rigButton=button:Clone()
 rigButton.Name="RigDiagnostic"
 rigButton.Position=UDim2.new(0,22,1,-24)
