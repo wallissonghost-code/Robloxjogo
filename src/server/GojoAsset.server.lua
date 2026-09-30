@@ -161,7 +161,7 @@ local function fireSphere(player, shouldPush)
 		if shouldPush and root.Parent then
 			local flat=Vector3.new(direction.X,0,direction.Z)
 			if flat.Magnitude>.01 then
-				root:ApplyImpulse((flat.Unit*18+Vector3.new(0,3,0))*root.AssemblyMass)
+				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + flat.Unit*32 + Vector3.new(0,8,0)
 			end
 		end
 		if ball.Parent then
@@ -176,14 +176,4 @@ pushRemote.OnServerEvent:Connect(function(player)
 	fireSphere(player,true)
 end)
 
--- Test behavior: Gojo periodically fires one visual sphere at the nearest player.
--- The projectile deliberately has zero gameplay force.
-task.spawn(function()
-	while gojo.Parent do
-		task.wait(3)
-		local player=nearestPlayer()
-		if player then fireSphere(player) end
-	end
-end)
-
-print("[Gojo] loaded, proportional scale x2.5, visual sphere x2 enabled")
+print("[Gojo] loaded, scale x2.5; spheres fire only from test button")
