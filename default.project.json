@@ -10,7 +10,7 @@
           "Anchored": true,
           "Neutral": true,
           "Size": [12, 1, 12],
-          "Position": [0, 3, 18],
+          "Position": [0, 0.5, 18],
           "Duration": 0
         }
       },
