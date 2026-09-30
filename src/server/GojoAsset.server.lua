@@ -369,7 +369,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			task.wait(.12)
 		else
 			diag(player,"3 BLUE","criando esfera")
-			local blue=makeBlue(handPosition())
+			blue=makeBlue(handPosition())
 			for i=1,24 do
 				if not blue.Parent then break end
 				blue.Position=handPosition()
@@ -459,10 +459,28 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				if redAura and redAura.Parent then Debris:AddItem(redAura,.15) end
 			end
 		end
-		diag(player,"5 BLUE","finalizando atracao")
-		if blue.Parent then
-			TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(12,12,12),Transparency=1}):Play()
-			Debris:AddItem(blue,.22)
+		if mode=="blueThrow" and blue and blue.Parent then
+			diag(player,"5 BLUE IMPACT","esfera expandindo + puxao forte")
+			local impactPos=blue.Position
+			TweenService:Create(blue,TweenInfo.new(.20,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
+				Size=Vector3.new(22,22,22),
+				Transparency=.20
+			}):Play()
+			for _,p in ipairs(Players:GetPlayers()) do
+				local ch=p.Character
+				local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+				if pr and ph and ph.Health>0 then
+					local pull=impactPos-pr.Position
+					local dist=pull.Magnitude
+					if dist>1 and dist<42 then
+						pr.AssemblyLinearVelocity=pull.Unit*math.clamp(190+(42-dist)*5,190,380)
+					end
+				end
+			end
+			task.wait(.20)
+			TweenService:Create(blue,TweenInfo.new(.13),{Size=Vector3.new(30,30,30),Transparency=1}):Play()
+			Debris:AddItem(blue,.16)
 		end
 	end)
 
