@@ -43,6 +43,109 @@ else
 end
 gojo.Name=NAME
 
+-- Complete runtime rig diagnostic. Read-only: it does not change the Gojo.
+local function buildRigDiagnostic(instance)
+	local lines={}
+	local function add(k,v) table.insert(lines,k..": "..tostring(v)) end
+	local humanoid=instance:FindFirstChildOfClass("Humanoid") or instance:FindFirstChildWhichIsA("Humanoid",true)
+	local controller=instance:FindFirstChildOfClass("AnimationController") or instance:FindFirstChildWhichIsA("AnimationController",true)
+	local animator=instance:FindFirstChildWhichIsA("Animator",true)
+	local rootPart=instance:FindFirstChild("HumanoidRootPart",true)
+	local motors,welds,parts,attachments,scripts,animations=0,0,0,0,0,0
+	local motorNames={}
+	local bodyNames={}
+	for _,v in ipairs(instance:GetDescendants()) do
+		if v:IsA("Motor6D") then
+			motors+=1
+			if #motorNames<30 then table.insert(motorNames,v.Name.." ["..(v.Part0 and v.Part0.Name or "nil").." -> "..(v.Part1 and v.Part1.Name or "nil").."]") end
+		elseif v:IsA("Weld") or v:IsA("WeldConstraint") then welds+=1
+		elseif v:IsA("BasePart") then
+			parts+=1
+			if #bodyNames<40 then table.insert(bodyNames,v.Name) end
+		elseif v:IsA("Attachment") then attachments+=1
+		elseif v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then scripts+=1
+		elseif v:IsA("Animation") then animations+=1 end
+	end
+	add("Asset",ASSET_ID)
+	add("Root class",instance.ClassName)
+	add("Humanoid",humanoid and humanoid:GetFullName() or "NAO")
+	add("RigType",humanoid and humanoid.RigType.Name or "N/A")
+	add("Health",humanoid and (humanoid.Health.."/"..humanoid.MaxHealth) or "N/A")
+	add("AnimationController",controller and controller:GetFullName() or "NAO")
+	add("Animator",animator and animator:GetFullName() or "NAO")
+	add("HumanoidRootPart",rootPart and rootPart:GetFullName() or "NAO")
+	add("Motor6D",motors)
+	add("Weld/WeldConstraint",welds)
+	add("BaseParts",parts)
+	add("Attachments",attachments)
+	add("Animations embedded",animations)
+	add("Scripts embedded",scripts)
+	add("PrimaryPart",instance:IsA("Model") and (instance.PrimaryPart and instance.PrimaryPart.Name or "NAO") or "N/A")
+	add("Motor map",#motorNames>0 and table.concat(motorNames," | ") or "NENHUM")
+	add("Part names",#bodyNames>0 and table.concat(bodyNames,", ") or "NENHUMA")
+	return table.concat(lines,"\n")
+end
+
+local rigDiagnostic=buildRigDiagnostic(gojo)
+print("[GOJO RIG DIAGNOSTIC]\n"..rigDiagnostic)
+
+local function showRigDiagnostic(player)
+	local pg=player:WaitForChild("PlayerGui",10)
+	if not pg then return end
+	local oldGui=pg:FindFirstChild("GojoRigDiagnostic")
+	if oldGui then oldGui:Destroy() end
+	local gui=Instance.new("ScreenGui")
+	gui.Name="GojoRigDiagnostic"
+	gui.ResetOnSpawn=false
+	gui.DisplayOrder=999999
+	gui.Parent=pg
+	local frame=Instance.new("Frame")
+	frame.Size=UDim2.new(.94,0,.72,0)
+	frame.Position=UDim2.new(.03,0,.03,0)
+	frame.BackgroundColor3=Color3.fromRGB(12,14,18)
+	frame.BackgroundTransparency=.04
+	frame.Parent=gui
+	local corner=Instance.new("UICorner")
+	corner.CornerRadius=UDim.new(0,12)
+	corner.Parent=frame
+	local title=Instance.new("TextLabel")
+	title.Size=UDim2.new(1,-24,0,42)
+	title.Position=UDim2.new(0,12,0,8)
+	title.BackgroundTransparency=1
+	title.Text="GOJO — DIAGNOSTICO COMPLETO DO RIG"
+	title.TextColor3=Color3.new(1,1,1)
+	title.Font=Enum.Font.GothamBold
+	title.TextSize=18
+	title.TextXAlignment=Enum.TextXAlignment.Left
+	title.Parent=frame
+	local scroll=Instance.new("ScrollingFrame")
+	scroll.Size=UDim2.new(1,-24,1,-62)
+	scroll.Position=UDim2.new(0,12,0,52)
+	scroll.BackgroundTransparency=1
+	scroll.BorderSizePixel=0
+	scroll.ScrollBarThickness=7
+	scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
+	scroll.CanvasSize=UDim2.new()
+	scroll.Parent=frame
+	local label=Instance.new("TextLabel")
+	label.Size=UDim2.new(1,-12,0,0)
+	label.AutomaticSize=Enum.AutomaticSize.Y
+	label.BackgroundTransparency=1
+	label.Text=rigDiagnostic
+	label.TextWrapped=true
+	label.TextColor3=Color3.fromRGB(225,232,242)
+	label.Font=Enum.Font.Code
+	label.TextSize=14
+	label.TextXAlignment=Enum.TextXAlignment.Left
+	label.TextYAlignment=Enum.TextYAlignment.Top
+	label.Parent=scroll
+end
+
+Players.PlayerAdded:Connect(function(player)
+	task.delay(2,function() showRigDiagnostic(player) end)
+end)
+for _,player in ipairs(Players:GetPlayers()) do task.spawn(showRigDiagnostic,player) end
+
 -- Keep the imported character static and scale him proportionally to 2.5x.
 local function scaleGojo(instance)
 	local parts={}
