@@ -401,11 +401,14 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
 					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
 					if pr and ph and ph.Health>0 then
-						local pull=blue.Position-pr.Position
-						local dist=pull.Magnitude
-						if dist>2 and dist<48 then
-							local desired=pull.Unit*math.clamp(24+(48-dist)*1.15,24,72)
-							pr.AssemblyLinearVelocity=pr.AssemblyLinearVelocity:Lerp(desired,.22)
+						local delta=blue.Position-pr.Position
+						local horizontal=Vector3.new(delta.X,0,delta.Z)
+						local dist=horizontal.Magnitude
+						if dist>1.5 and dist<55 then
+							local speed=math.clamp(90+(55-dist)*2.4,90,210)
+							pr.AssemblyLinearVelocity=horizontal.Unit*speed
+						elseif dist<=1.5 then
+							pr.AssemblyLinearVelocity=Vector3.zero
 						end
 					end
 				end
@@ -462,24 +465,26 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		if mode=="blueThrow" and blue and blue.Parent then
 			diag(player,"5 BLUE IMPACT","esfera expandindo + puxao forte")
 			local impactPos=blue.Position
-			TweenService:Create(blue,TweenInfo.new(.20,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
-				Size=Vector3.new(22,22,22),
-				Transparency=.20
-			}):Play()
-			for _,p in ipairs(Players:GetPlayers()) do
-				local ch=p.Character
-				local pr=ch and ch:FindFirstChild("HumanoidRootPart")
-				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
-				if pr and ph and ph.Health>0 then
-					local pull=impactPos-pr.Position
-					local dist=pull.Magnitude
-					if dist>1 and dist<42 then
-						pr.AssemblyLinearVelocity=pull.Unit*math.clamp(190+(42-dist)*5,190,380)
+			-- Blue does not explode upward: it becomes a horizontal gravity lock.
+			for i=1,18 do
+				for _,p in ipairs(Players:GetPlayers()) do
+					local ch=p.Character
+					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+					if pr and ph and ph.Health>0 then
+						local delta=impactPos-pr.Position
+						local horizontal=Vector3.new(delta.X,0,delta.Z)
+						local dist=horizontal.Magnitude
+						if dist>1.5 and dist<48 then
+							pr.AssemblyLinearVelocity=horizontal.Unit*math.clamp(150+(48-dist)*3,150,290)
+						elseif dist<=1.5 then
+							pr.AssemblyLinearVelocity=Vector3.zero
+						end
 					end
 				end
+				task.wait(.035)
 			end
-			task.wait(.20)
-			TweenService:Create(blue,TweenInfo.new(.13),{Size=Vector3.new(30,30,30),Transparency=1}):Play()
+			TweenService:Create(blue,TweenInfo.new(.13),{Transparency=1}):Play()
 			Debris:AddItem(blue,.16)
 		end
 	end)
