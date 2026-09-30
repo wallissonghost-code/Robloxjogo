@@ -1,72 +1,61 @@
-local InsertService = game:GetService("InsertService")
+local InsertService=game:GetService("InsertService")
+local ASSET_ID=14034779103
+local NAME="ImportedGojo_"..ASSET_ID
+local POS=Vector3.new(0,0,3)
 
-local ASSET_ID = 14034779103
-local MODEL_NAME = "Gojo_" .. ASSET_ID
-local POSITION = Vector3.new(0, 0, 0)
+local old=workspace:FindFirstChild(NAME)
+if old then old:Destroy() end
 
-local old = workspace:FindFirstChild(MODEL_NAME)
-if old then
-	old:Destroy()
-end
-
-local ok, container = pcall(function()
+local ok,result=pcall(function()
 	return InsertService:LoadAsset(ASSET_ID)
 end)
 
 if not ok then
-	warn(("[GojoAsset] LoadAsset(%d) failed: %s"):format(ASSET_ID, tostring(container)))
+	warn("[GojoAsset] "..tostring(result))
 	return
 end
 
-local children = container:GetChildren()
-if #children == 0 then
-	warn(("[GojoAsset] Asset %d returned no objects"):format(ASSET_ID))
+local container=result
+local children=container:GetChildren()
+if #children==0 then
+	warn("[GojoAsset] Roblox returned 0 objects for "..ASSET_ID)
 	container:Destroy()
 	return
 end
 
 local root
-if #children == 1 then
-	root = children[1]
-	root.Parent = workspace
+if #children==1 then
+	root=children[1]
+	root.Parent=workspace
 	container:Destroy()
 else
-	root = Instance.new("Model")
-	root.Name = MODEL_NAME
-	root.Parent = workspace
-	for _, child in ipairs(children) do
-		child.Parent = root
+	root=Instance.new("Model")
+	root.Name=NAME
+	root.Parent=workspace
+	for _,v in ipairs(children) do
+		v.Parent=root
 	end
 	container:Destroy()
 end
 
-root.Name = MODEL_NAME
-
-local function prepare(instance)
-	if instance:IsA("BasePart") then
-		instance.Anchored = true
-	end
-	for _, descendant in ipairs(instance:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Anchored = true
-		end
-	end
+root.Name=NAME
+if root:IsA("BasePart") then root.Anchored=true end
+for _,v in ipairs(root:GetDescendants()) do
+	if v:IsA("BasePart") then v.Anchored=true end
 end
-
-prepare(root)
 
 if root:IsA("Model") then
-	local boxCFrame, boxSize = root:GetBoundingBox()
-	local pivot = root:GetPivot()
-	local bottomY = boxCFrame.Position.Y - boxSize.Y / 2
-	root:PivotTo(pivot + Vector3.new(
-		POSITION.X - pivot.Position.X,
-		POSITION.Y - bottomY,
-		POSITION.Z - pivot.Position.Z
+	local cf,size=root:GetBoundingBox()
+	local pivot=root:GetPivot()
+	local bottom=cf.Position.Y-size.Y/2
+	root:PivotTo(pivot+Vector3.new(
+		POS.X-pivot.Position.X,
+		POS.Y-bottom,
+		POS.Z-pivot.Position.Z
 	))
 elseif root:IsA("BasePart") then
-	root.Position = Vector3.new(POSITION.X, POSITION.Y + root.Size.Y / 2, POSITION.Z)
+	root.Position=Vector3.new(POS.X,POS.Y+root.Size.Y/2,POS.Z)
 end
 
-root:SetAttribute("SourceAssetId", ASSET_ID)
-print(("[GojoAsset] Loaded asset %d into Workspace"):format(ASSET_ID))
+root:SetAttribute("SourceAssetId",ASSET_ID)
+print("[GojoAsset] success "..ASSET_ID)
