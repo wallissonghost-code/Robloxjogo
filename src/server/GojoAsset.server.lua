@@ -15,6 +15,14 @@ local ASSET_ID=14034779103
 local NAME="ImportedGojo_"..ASSET_ID
 local POS=Vector3.new(0,0,3)
 
+local serverReady=false
+local startupError=nil
+pushRemote.OnServerEvent:Connect(function(player)
+	if not serverReady then
+		diagnosticRemote:FireClient(player,"REMOTE OK / SERVER NAO PRONTO",startupError or "Gojo ainda carregando")
+	end
+end)
+
 local old=workspace:FindFirstChild(NAME)
 if old then old:Destroy() end
 
@@ -22,6 +30,7 @@ local ok,container=pcall(function()
 	return InsertService:LoadAsset(ASSET_ID)
 end)
 if not ok then
+	startupError="LoadAsset falhou: "..tostring(container)
 	warn("[Gojo] LoadAsset failed:",container)
 	return
 end
@@ -29,6 +38,7 @@ end
 local children=container:GetChildren()
 if #children==0 then
 	warn("[Gojo] Asset returned 0 objects")
+	startupError="LoadAsset retornou 0 objetos"
 	container:Destroy()
 	return
 end
