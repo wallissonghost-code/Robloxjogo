@@ -171,58 +171,55 @@ local function attackPlayer(player)
 	if not root or not hum or hum.Health<=0 or not gojo:IsA("Model") then return end
 	attacking=true
 
-	-- Face the target and raise the right arm while the Blue charges.
-	local pivot=gojo:GetPivot()
-	local flatTarget=Vector3.new(root.Position.X,pivot.Position.Y,root.Position.Z)
-	if (flatTarget-pivot.Position).Magnitude>.1 then
-		gojo:PivotTo(CFrame.lookAt(pivot.Position,flatTarget))
-	end
-	if rightShoulder and rightBase then
-		tweenMotor(rightShoulder,rightBase*CFrame.Angles(math.rad(-80),0,math.rad(12)),.28)
-	end
-	if leftShoulder and leftBase then
-		tweenMotor(leftShoulder,leftBase*CFrame.Angles(math.rad(-20),0,math.rad(-8)),.28)
-	end
-
-	local blue=makeBlue(handPosition())
-	local chargeStart=os.clock()
-	while blue.Parent and os.clock()-chargeStart<.75 do
-		blue.Position=handPosition()
-		local a=math.clamp((os.clock()-chargeStart)/.75,0,1)
-		blue.Size=Vector3.new(1,1,1):Lerp(Vector3.new(7,7,7),a)
-		task.wait()
-	end
-
-	-- Rush toward the player's current position while keeping the Blue at the hand.
-	local rushStart=os.clock()
-	while gojo.Parent and root.Parent and os.clock()-rushStart<1.6 do
+	local okAttack,err=pcall(function()
+		-- Face player first.
 		local gp=gojo:GetPivot()
-		local delta=Vector3.new(root.Position.X-gp.Position.X,0,root.Position.Z-gp.Position.Z)
-		local distance=delta.Magnitude
-		if distance<=8 then break end
-		local step=math.min(distance-7,28*task.wait())
-		if step>0 and delta.Magnitude>0 then
-			local newPos=gp.Position+delta.Unit*step
+		local look=Vector3.new(root.Position.X,gp.Position.Y,root.Position.Z)
+		if (look-gp.Position).Magnitude>.1 then gojo:PivotTo(CFrame.lookAt(gp.Position,look)) end
+
+		-- Pose both R6 shoulders directly. Transform is safer for a runtime pose.
+		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-95),0,math.rad(12)) end
+		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-35),0,math.rad(-10)) end
+
+		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
+		local blue=makeBlue(handPosition())
+		for i=1,18 do
+			if not blue.Parent then break end
+			blue.Position=handPosition()
+			local size=1.2+(6.8*(i/18))
+			blue.Size=Vector3.new(size,size,size)
+			task.wait(.04)
+		end
+
+		-- Move the anchored model toward the live player. PivotTo works even while parts are anchored.
+		for _=1,55 do
+			if not root.Parent or not gojo.Parent then break end
+			local current=gojo:GetPivot()
+			local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
+			if delta.Magnitude<=8 then break end
+			local step=math.min(1.15,math.max(0,delta.Magnitude-7.5))
+			local newPos=current.Position+delta.Unit*step
 			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(root.Position.X,newPos.Y,root.Position.Z)))
+			if blue.Parent then blue.Position=handPosition() end
+			task.wait(.03)
 		end
-		if blue.Parent then blue.Position=handPosition() end
-	end
 
-	-- Contact blast: push away from Gojo.
-	if root.Parent then
-		local gp=gojo:GetPivot().Position
-		local away=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
-		if away.Magnitude>.01 then
-			root.AssemblyLinearVelocity=root.AssemblyLinearVelocity+away.Unit*48+Vector3.new(0,10,0)
+		if root.Parent then
+			local gp2=gojo:GetPivot().Position
+			local away=Vector3.new(root.Position.X-gp2.X,0,root.Position.Z-gp2.Z)
+			if away.Magnitude>.01 then
+				root.AssemblyLinearVelocity=away.Unit*55+Vector3.new(0,12,0)
+			end
 		end
-	end
-	if blue.Parent then
-		TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(11,11,11),Transparency=1}):Play()
-		Debris:AddItem(blue,.2)
-	end
+		if blue.Parent then
+			TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(12,12,12),Transparency=1}):Play()
+			Debris:AddItem(blue,.22)
+		end
+	end)
 
-	if rightShoulder and rightBase then tweenMotor(rightShoulder,rightBase,.3) end
-	if leftShoulder and leftBase then tweenMotor(leftShoulder,leftBase,.3) end
+	if rightShoulder then rightShoulder.Transform=CFrame.new() end
+	if leftShoulder then leftShoulder.Transform=CFrame.new() end
+	if not okAttack then warn("[Gojo Blue] attack failed:",err) end
 	task.wait(.35)
 	attacking=false
 end
