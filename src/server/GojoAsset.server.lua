@@ -423,19 +423,41 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				if redAura and redAura.Parent then redAura.Position=blue.Position end
 				task.wait(.022)
 			end
-			if root.Parent then
-				local away=root.Position-blue.Position
-				if away.Magnitude<14 then
-					local horizontal=Vector3.new(away.X,0,away.Z)
-					if horizontal.Magnitude>.01 then
-						root.AssemblyLinearVelocity=horizontal.Unit*420+Vector3.new(0,42,0)
+			if blue and blue.Parent then
+				diag(player,"5 RED IMPACT","explosao expansiva + repulsao")
+				local impactPos=blue.Position
+				-- Destructive-looking expansion: small concentrated core becomes a huge blast.
+				TweenService:Create(blue,TweenInfo.new(.18,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
+					Size=Vector3.new(24,24,24),
+					Transparency=.32
+				}):Play()
+				if redAura and redAura.Parent then
+					TweenService:Create(redAura,TweenInfo.new(.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
+						Size=Vector3.new(42,42,42),
+						Transparency=.9
+					}):Play()
+				end
+				-- Repel every living player in the blast radius once, hard.
+				for _,p in ipairs(Players:GetPlayers()) do
+					local ch=p.Character
+					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+					if pr and ph and ph.Health>0 then
+						local away=pr.Position-impactPos
+						local dist=away.Magnitude
+						if dist<34 then
+							local horizontal=Vector3.new(away.X,0,away.Z)
+							if horizontal.Magnitude<.1 then horizontal=Vector3.new(0,0,-1) end
+							local strength=math.clamp(560-dist*7,330,560)
+							pr.AssemblyLinearVelocity=horizontal.Unit*strength+Vector3.new(0,70,0)
+						end
 					end
 				end
+				task.wait(.20)
+				TweenService:Create(blue,TweenInfo.new(.12),{Size=Vector3.new(34,34,34),Transparency=1}):Play()
+				Debris:AddItem(blue,.15)
+				if redAura and redAura.Parent then Debris:AddItem(redAura,.15) end
 			end
-		end
-		if redAura and redAura.Parent then
-			TweenService:Create(redAura,TweenInfo.new(.14),{Size=Vector3.new(16,16,16),Transparency=1}):Play()
-			Debris:AddItem(redAura,.18)
 		end
 		diag(player,"5 BLUE","finalizando atracao")
 		if blue.Parent then
