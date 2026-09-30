@@ -386,6 +386,9 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 
 		if mode=="blueThrow" then
 			diag(player,"4 BLUE THROW","arremessando + atracao controlada")
+			if not blue or not blue.Parent then
+				error("Blue projectile ausente antes do arremesso")
+			end
 			local startPos=blue.Position
 			for i=1,36 do
 				if not blue.Parent or not root.Parent then break end
