@@ -134,6 +134,25 @@ redButton.Activated:Connect(function()
 	redBusy=false
 end)
 
+local comboButton=button:Clone()
+comboButton.Name="BlueRedCombo"
+comboButton.Position=UDim2.new(1,-212,1,-160)
+comboButton.BackgroundColor3=Color3.fromRGB(125,55,190)
+comboButton.Text="BLUE + RED"
+comboButton.Parent=gui
+
+local comboBusy=false
+comboButton.Activated:Connect(function()
+	if comboBusy then return end
+	comboBusy=true
+	addDiag("COMBO","Blue prende -> Red explode")
+	remote:FireServer("combo")
+	comboButton.Text="COMBO!"
+	task.wait(2.5)
+	comboButton.Text="BLUE + RED"
+	comboBusy=false
+end)
+
 local rigButton=button:Clone()
 rigButton.Name="RigDiagnostic"
 rigButton.Position=UDim2.new(0,22,1,-24)
