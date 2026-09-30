@@ -117,9 +117,9 @@ corner.CornerRadius=UDim.new(0,14)
 corner.Parent=button
 
 local teleportButton=button:Clone()
-teleportButton.Name="TeleportBlue"
+teleportButton.Name="RedTeleport"
 teleportButton.Position=UDim2.new(1,-12,1,-12)
-teleportButton.Text="GOJO TELEPORTE"
+teleportButton.Text="RED TELEPORTE"
 teleportButton.Parent=gui
 
 local busy=false
@@ -206,10 +206,10 @@ local teleportBusy=false
 teleportButton.Activated:Connect(function()
 	if teleportBusy then return end
 	teleportBusy=true
-	addDiag("CLIQUE LOCAL","teleporte acionado; enviando RemoteEvent")
-	remote:FireServer("teleport")
-	teleportButton.Text="TELEPORTANDO!"
+	addDiag("CLIQUE LOCAL","Red teleporte acionado")
+	remote:FireServer("redTeleport")
+	teleportButton.Text="RED!"
 	task.wait(.6)
-	teleportButton.Text="GOJO TELEPORTE"
+	teleportButton.Text="RED TELEPORTE"
 	teleportBusy=false
 end)
