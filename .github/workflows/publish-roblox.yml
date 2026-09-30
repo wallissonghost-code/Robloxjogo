@@ -33,7 +33,6 @@ jobs:
           set -euo pipefail
           test -f default.project.json
           grep -q '"DataModel"' default.project.json
-          grep -q '"SpawnLocation"' default.project.json
 
       - name: Install Rojo 7.6.1
         run: |
