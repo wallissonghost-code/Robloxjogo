@@ -326,17 +326,31 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-14),0,0) end
 			task.wait(.12)
 		else
-			diag(player,"4 CORRIDA R6","Humanoid MoveTo + passada")
-			local RUSH_SPEED_MULTIPLIER=2
+			diag(player,"4 CORRIDA R6","aceleracao suave + passada sincronizada")
+			local MAX_SPEED=68
+			local START_SPEED=16
 			local oldSpeed=humanoid and humanoid.WalkSpeed or 34
-			if humanoid then humanoid.WalkSpeed=34*RUSH_SPEED_MULTIPLIER end
 			local runPhase=0
-			for _=1,90 do
+			local runTime=0
+			for _=1,110 do
 				if not root.Parent or not gojo.Parent or not humanoid or humanoid.Health<=0 then break end
 				local gp=hrp and hrp.Position or gojo:GetPivot().Position
 				local delta=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
 				if delta.Magnitude<=8 then break end
-				runPhase+=.42
+
+				runTime+=.04
+				-- 0 -> 1 over roughly 0.45 s, with smoothstep instead of an instant launch.
+				local t=math.clamp(runTime/.45,0,1)
+				local smooth=t*t*(3-2*t)
+				local targetSpeed=START_SPEED+(MAX_SPEED-START_SPEED)*smooth
+				-- Ease down near the player so Gojo does not snap to a stop.
+				if delta.Magnitude<18 then
+					targetSpeed=math.max(14,targetSpeed*math.clamp((delta.Magnitude-7)/11,.25,1))
+				end
+				humanoid.WalkSpeed=targetSpeed
+
+				-- Cadence follows actual chase speed; first steps are smaller/slower.
+				runPhase+=.16+.30*(targetSpeed/MAX_SPEED)
 				runPose(runPhase)
 				humanoid:MoveTo(Vector3.new(root.Position.X,gp.Y,root.Position.Z))
 				if blue.Parent then blue.Position=handPosition() end
