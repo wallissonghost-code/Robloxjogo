@@ -93,6 +93,27 @@ elseif gojo:IsA("BasePart") then
 	gojo.Position=Vector3.new(POS.X,POS.Y+gojo.Size.Y/2,POS.Z)
 end
 gojo:SetAttribute("SourceAssetId",ASSET_ID)
+
+-- Convert the imported statue into a real R6 assembly after scaling/positioning.
+local humanoid=gojo:FindFirstChildOfClass("Humanoid")
+local hrp=gojo:FindFirstChild("HumanoidRootPart",true)
+if humanoid and hrp and hrp:IsA("BasePart") then
+	humanoid.PlatformStand=false
+	humanoid.AutoRotate=true
+	humanoid.WalkSpeed=34
+	humanoid.JumpPower=50
+	humanoid.HipHeight=0
+	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Anchored=false
+			v.Massless=(v~=hrp)
+			v.CanCollide=false
+		end
+	end
+	hrp.CanCollide=true
+	pcall(function() hrp:SetNetworkOwner(nil) end)
+end
 startupStage="POSITION OK / FUNCOES"
 
 local function gojoOrigin()
@@ -273,31 +294,34 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			local current=gojo:GetPivot()
 			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
 			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
+			if hrp then hrp.AssemblyLinearVelocity=Vector3.zero; hrp.AssemblyAngularVelocity=Vector3.zero end
 			if blue.Parent then blue.Position=handPosition() end
 			if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-25),0,0) end
 			if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
 			if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-14),0,0) end
 			task.wait(.12)
 		else
-			diag(player,"4 CORRIDA 2X","perseguindo player")
-			-- 2x faster than the previous rush. Increase RUSH_SPEED_MULTIPLIER later if desired.
+			diag(player,"4 CORRIDA R6","Humanoid MoveTo + passada")
 			local RUSH_SPEED_MULTIPLIER=2
+			local oldSpeed=humanoid and humanoid.WalkSpeed or 34
+			if humanoid then humanoid.WalkSpeed=34*RUSH_SPEED_MULTIPLIER end
 			local runPhase=0
-			for _=1,55 do
-				if not root.Parent or not gojo.Parent then break end
-				runPhase+=.95
-				runPose(runPhase)
-				local current=gojo:GetPivot()
-				local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
+			for _=1,90 do
+				if not root.Parent or not gojo.Parent or not humanoid or humanoid.Health<=0 then break end
+				local gp=hrp and hrp.Position or gojo:GetPivot().Position
+				local delta=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
 				if delta.Magnitude<=8 then break end
-				local step=math.min(1.15*RUSH_SPEED_MULTIPLIER,math.max(0,delta.Magnitude-7.5))
-				local newPos=current.Position+delta.Unit*step
-				gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(root.Position.X,newPos.Y,root.Position.Z)))
+				runPhase+=.72
+				runPose(runPhase)
+				humanoid:MoveTo(Vector3.new(root.Position.X,gp.Y,root.Position.Z))
 				if blue.Parent then blue.Position=handPosition() end
-				task.wait(.03)
+				task.wait(.04)
+			end
+			if humanoid then
+				humanoid:Move(Vector3.zero)
+				humanoid.WalkSpeed=oldSpeed
 			end
 		end
-
 		diag(player,"5 IMPACTO","tentando empurrar")
 		if root.Parent then
 			local gp2=gojo:GetPivot().Position
