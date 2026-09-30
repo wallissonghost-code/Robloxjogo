@@ -433,7 +433,7 @@ local function comboPlayer(player)
 		local impact=red.Position
 		TweenService:Create(red,TweenInfo.new(.18,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(24,24,24),Transparency=.32}):Play()
 		if aura and aura.Parent then
-			TweenService:Create(aura,TweenInfo.new(.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(42,42,42),Transparency=.9}):Play()
+			TweenService:Create(aura,TweenInfo.new(.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(58,58,58),Transparency=.9}):Play()
 		end
 		local away=pr.Position-impact
 		local horizontal=Vector3.new(away.X,0,away.Z)
@@ -441,7 +441,7 @@ local function comboPlayer(player)
 		pr.AssemblyLinearVelocity=horizontal.Unit*560+Vector3.new(0,55,0)
 		diag(player,"COMBO RED","lock quebrado + repulsao")
 		task.wait(.2)
-		TweenService:Create(red,TweenInfo.new(.12),{Size=Vector3.new(34,34,34),Transparency=1}):Play()
+		TweenService:Create(red,TweenInfo.new(.12),{Size=Vector3.new(50,50,50),Transparency=1}):Play()
 		Debris:AddItem(red,.15)
 		if aura then Debris:AddItem(aura,.15) end
 	end)
@@ -590,7 +590,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				}):Play()
 				if redAura and redAura.Parent then
 					TweenService:Create(redAura,TweenInfo.new(.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{
-						Size=Vector3.new(42,42,42),
+						Size=Vector3.new(58,58,58),
 						Transparency=.9
 					}):Play()
 				end
@@ -611,7 +611,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 					end
 				end
 				task.wait(.20)
-				TweenService:Create(blue,TweenInfo.new(.12),{Size=Vector3.new(34,34,34),Transparency=1}):Play()
+				TweenService:Create(blue,TweenInfo.new(.12),{Size=Vector3.new(50,50,50),Transparency=1}):Play()
 				Debris:AddItem(blue,.15)
 				if redAura and redAura.Parent then Debris:AddItem(redAura,.15) end
 			end
