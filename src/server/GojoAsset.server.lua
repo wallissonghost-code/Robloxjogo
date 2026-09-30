@@ -146,21 +146,30 @@ local rightBase=rightShoulder and rightShoulder.C0
 startupStage="MOTORS OK / ATTACK SETUP"
 local leftBase=leftShoulder and leftShoulder.C0
 
+local rightHipBase=rightHip and rightHip.C0
+local leftHipBase=leftHip and leftHip.C0
+local rootBase=rootJoint and rootJoint.C0
+
+local function setMotorOffset(m,base,offset)
+	if m and base then m.C0=base*offset end
+end
+
 local function resetPose()
-	resetPose()
-	if rightHip then rightHip.Transform=CFrame.new() end
-	if leftHip then leftHip.Transform=CFrame.new() end
-	if rootJoint then rootJoint.Transform=CFrame.new() end
+	if rightShoulder and rightBase then rightShoulder.C0=rightBase end
+	if leftShoulder and leftBase then leftShoulder.C0=leftBase end
+	if rightHip and rightHipBase then rightHip.C0=rightHipBase end
+	if leftHip and leftHipBase then leftHip.C0=leftHipBase end
+	if rootJoint and rootBase then rootJoint.C0=rootBase end
 end
 
 local function runPose(phase)
 	local swing=math.sin(phase)
 	local bounce=math.abs(math.cos(phase*2))
-	if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(78*swing),0,math.rad(5)) end
-	if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-78*swing),0,math.rad(-5)) end
-	if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-68*swing),0,0) end
-	if leftHip then leftHip.Transform=CFrame.Angles(math.rad(68*swing),0,0) end
-	if rootJoint then rootJoint.Transform=CFrame.new(0,.22*bounce,0)*CFrame.Angles(math.rad(-18),0,math.rad(4*swing)) end
+	if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(78*swing),0,math.rad(5)) end
+	if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-78*swing),0,math.rad(-5)) end
+	if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-68*swing),0,0) end
+	if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(68*swing),0,0) end
+	if rootJoint then rootJoint.C0=rootBase*CFrame.new(0,.22*bounce,0)*CFrame.Angles(math.rad(-18),0,math.rad(4*swing)) end
 end
 
 local function tweenMotor(m,c0,t)
@@ -230,19 +239,19 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 
 		diag(player,"2 BRACOS","wind-up exagerado")
 		-- Strong readable wind-up: open, pull back, then aim the Blue hand.
-		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(35),0,math.rad(70)) end
-		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-25),0,math.rad(-65)) end
-		if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-22),0,0) end
-		if leftHip then leftHip.Transform=CFrame.Angles(math.rad(18),0,0) end
-		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-16),math.rad(-10),0) end
+		if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(35),0,math.rad(70)) end
+		if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-25),0,math.rad(-65)) end
+		if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-22),0,0) end
+		if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
+		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-16),math.rad(-10),0) end
 		task.wait(.22)
-		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-120),0,math.rad(18)) end
-		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(20),0,math.rad(-18)) end
-		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-22),math.rad(8),0) end
+		if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(-120),0,math.rad(18)) end
+		if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(20),0,math.rad(-18)) end
+		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-22),math.rad(8),0) end
 		task.wait(.18)
-		if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-12),0,0) end
-		if leftHip then leftHip.Transform=CFrame.Angles(math.rad(12),0,0) end
-		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-7),0,0) end
+		if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-12),0,0) end
+		if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(12),0,0) end
+		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-7),0,0) end
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
 		diag(player,"3 BLUE","criando esfera")
@@ -265,9 +274,9 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
 			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
 			if blue.Parent then blue.Position=handPosition() end
-			if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-25),0,0) end
-			if leftHip then leftHip.Transform=CFrame.Angles(math.rad(18),0,0) end
-			if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-14),0,0) end
+			if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-25),0,0) end
+			if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
+			if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-14),0,0) end
 			task.wait(.12)
 		else
 			diag(player,"4 CORRIDA 2X","perseguindo player")
@@ -303,8 +312,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		end
 	end)
 
-	if rightShoulder then rightShoulder.Transform=CFrame.new() end
-	if leftShoulder then leftShoulder.Transform=CFrame.new() end
+	resetPose()
 	if not okAttack then
 		warn("[Gojo Blue] attack failed:",err)
 		diag(player,"ERRO LUA",err)
