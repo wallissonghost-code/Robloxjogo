@@ -43,109 +43,6 @@ else
 end
 gojo.Name=NAME
 
--- Complete runtime rig diagnostic. Read-only: it does not change the Gojo.
-local function buildRigDiagnostic(instance)
-	local lines={}
-	local function add(k,v) table.insert(lines,k..": "..tostring(v)) end
-	local humanoid=instance:FindFirstChildOfClass("Humanoid") or instance:FindFirstChildWhichIsA("Humanoid",true)
-	local controller=instance:FindFirstChildOfClass("AnimationController") or instance:FindFirstChildWhichIsA("AnimationController",true)
-	local animator=instance:FindFirstChildWhichIsA("Animator",true)
-	local rootPart=instance:FindFirstChild("HumanoidRootPart",true)
-	local motors,welds,parts,attachments,scripts,animations=0,0,0,0,0,0
-	local motorNames={}
-	local bodyNames={}
-	for _,v in ipairs(instance:GetDescendants()) do
-		if v:IsA("Motor6D") then
-			motors+=1
-			if #motorNames<30 then table.insert(motorNames,v.Name.." ["..(v.Part0 and v.Part0.Name or "nil").." -> "..(v.Part1 and v.Part1.Name or "nil").."]") end
-		elseif v:IsA("Weld") or v:IsA("WeldConstraint") then welds+=1
-		elseif v:IsA("BasePart") then
-			parts+=1
-			if #bodyNames<40 then table.insert(bodyNames,v.Name) end
-		elseif v:IsA("Attachment") then attachments+=1
-		elseif v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then scripts+=1
-		elseif v:IsA("Animation") then animations+=1 end
-	end
-	add("Asset",ASSET_ID)
-	add("Root class",instance.ClassName)
-	add("Humanoid",humanoid and humanoid:GetFullName() or "NAO")
-	add("RigType",humanoid and humanoid.RigType.Name or "N/A")
-	add("Health",humanoid and (humanoid.Health.."/"..humanoid.MaxHealth) or "N/A")
-	add("AnimationController",controller and controller:GetFullName() or "NAO")
-	add("Animator",animator and animator:GetFullName() or "NAO")
-	add("HumanoidRootPart",rootPart and rootPart:GetFullName() or "NAO")
-	add("Motor6D",motors)
-	add("Weld/WeldConstraint",welds)
-	add("BaseParts",parts)
-	add("Attachments",attachments)
-	add("Animations embedded",animations)
-	add("Scripts embedded",scripts)
-	add("PrimaryPart",instance:IsA("Model") and (instance.PrimaryPart and instance.PrimaryPart.Name or "NAO") or "N/A")
-	add("Motor map",#motorNames>0 and table.concat(motorNames," | ") or "NENHUM")
-	add("Part names",#bodyNames>0 and table.concat(bodyNames,", ") or "NENHUMA")
-	return table.concat(lines,"\n")
-end
-
-local rigDiagnostic=buildRigDiagnostic(gojo)
-print("[GOJO RIG DIAGNOSTIC]\n"..rigDiagnostic)
-
-local function showRigDiagnostic(player)
-	local pg=player:WaitForChild("PlayerGui",10)
-	if not pg then return end
-	local oldGui=pg:FindFirstChild("GojoRigDiagnostic")
-	if oldGui then oldGui:Destroy() end
-	local gui=Instance.new("ScreenGui")
-	gui.Name="GojoRigDiagnostic"
-	gui.ResetOnSpawn=false
-	gui.DisplayOrder=999999
-	gui.Parent=pg
-	local frame=Instance.new("Frame")
-	frame.Size=UDim2.new(.94,0,.72,0)
-	frame.Position=UDim2.new(.03,0,.03,0)
-	frame.BackgroundColor3=Color3.fromRGB(12,14,18)
-	frame.BackgroundTransparency=.04
-	frame.Parent=gui
-	local corner=Instance.new("UICorner")
-	corner.CornerRadius=UDim.new(0,12)
-	corner.Parent=frame
-	local title=Instance.new("TextLabel")
-	title.Size=UDim2.new(1,-24,0,42)
-	title.Position=UDim2.new(0,12,0,8)
-	title.BackgroundTransparency=1
-	title.Text="GOJO — DIAGNOSTICO COMPLETO DO RIG"
-	title.TextColor3=Color3.new(1,1,1)
-	title.Font=Enum.Font.GothamBold
-	title.TextSize=18
-	title.TextXAlignment=Enum.TextXAlignment.Left
-	title.Parent=frame
-	local scroll=Instance.new("ScrollingFrame")
-	scroll.Size=UDim2.new(1,-24,1,-62)
-	scroll.Position=UDim2.new(0,12,0,52)
-	scroll.BackgroundTransparency=1
-	scroll.BorderSizePixel=0
-	scroll.ScrollBarThickness=7
-	scroll.AutomaticCanvasSize=Enum.AutomaticSize.Y
-	scroll.CanvasSize=UDim2.new()
-	scroll.Parent=frame
-	local label=Instance.new("TextLabel")
-	label.Size=UDim2.new(1,-12,0,0)
-	label.AutomaticSize=Enum.AutomaticSize.Y
-	label.BackgroundTransparency=1
-	label.Text=rigDiagnostic
-	label.TextWrapped=true
-	label.TextColor3=Color3.fromRGB(225,232,242)
-	label.Font=Enum.Font.Code
-	label.TextSize=14
-	label.TextXAlignment=Enum.TextXAlignment.Left
-	label.TextYAlignment=Enum.TextYAlignment.Top
-	label.Parent=scroll
-end
-
-Players.PlayerAdded:Connect(function(player)
-	task.delay(2,function() showRigDiagnostic(player) end)
-end)
-for _,player in ipairs(Players:GetPlayers()) do task.spawn(showRigDiagnostic,player) end
-
 -- Keep the imported character static and scale him proportionally to 2.5x.
 local function scaleGojo(instance)
 	local parts={}
@@ -208,71 +105,126 @@ local function nearestPlayer()
 	return best
 end
 
-local function fireSphere(player, shouldPush)
-	local character=player and player.Character
-	local root=character and character:FindFirstChild("HumanoidRootPart")
-	if not root then return end
+local attacking=false
 
-	local origin=gojoOrigin()
-	local target=root.Position
-	local direction=target-origin
-	if direction.Magnitude<.01 then return end
+local function motor(name)
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("Motor6D") and v.Name==name then return v end
+	end
+end
 
-	-- 2x the LiveParkour impact sphere presentation.
-	local radius=5
+local rightShoulder=motor("Right Shoulder")
+local leftShoulder=motor("Left Shoulder")
+local rightBase=rightShoulder and rightShoulder.C0
+local leftBase=leftShoulder and leftShoulder.C0
+
+local function tweenMotor(m,c0,t)
+	if not m then return end
+	TweenService:Create(m,TweenInfo.new(t,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{C0=c0}):Play()
+end
+
+local function makeBlue(position)
 	local ball=Instance.new("Part")
-	ball.Name="GojoImpactSphere"
+	ball.Name="GojoBlue"
 	ball.Shape=Enum.PartType.Ball
-	ball.Size=Vector3.new(radius*2,radius*2,radius*2)
+	ball.Size=Vector3.new(1.2,1.2,1.2)
 	ball.Material=Enum.Material.Neon
-	ball.Color=Color3.fromRGB(75,145,255)
-	ball.Transparency=.12
+	ball.Color=Color3.fromRGB(55,135,255)
+	ball.Transparency=.08
 	ball.Anchored=true
 	ball.CanCollide=false
 	ball.CanTouch=false
 	ball.CanQuery=false
-	ball.Position=origin
+	ball.Position=position
 	ball.Parent=workspace
-
 	local light=Instance.new("PointLight")
 	light.Color=ball.Color
-	light.Brightness=6
-	light.Range=30
+	light.Brightness=7
+	light.Range=32
 	light.Parent=ball
+	local att=Instance.new("Attachment"); att.Parent=ball
+	local p=Instance.new("ParticleEmitter")
+	p.Color=ColorSequence.new(Color3.new(1,1,1),ball.Color)
+	p.LightEmission=1
+	p.Rate=150
+	p.Lifetime=NumberRange.new(.2,.45)
+	p.Speed=NumberRange.new(2,6)
+	p.SpreadAngle=Vector2.new(180,180)
+	p.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.8),NumberSequenceKeypoint.new(1,0)})
+	p.Parent=att
+	return ball
+end
 
-	local attachment=Instance.new("Attachment")
-	attachment.Parent=ball
-	local particles=Instance.new("ParticleEmitter")
-	particles.Color=ColorSequence.new(ball.Color:Lerp(Color3.new(1,1,1),.55),ball.Color)
-	particles.LightEmission=1
-	particles.Rate=120
-	particles.Lifetime=NumberRange.new(.25,.5)
-	particles.Speed=NumberRange.new(1,4)
-	particles.SpreadAngle=Vector2.new(180,180)
-	particles.Size=NumberSequence.new({
-		NumberSequenceKeypoint.new(0,.9),
-		NumberSequenceKeypoint.new(1,0),
-	})
-	particles.Parent=attachment
+local function handPosition()
+	local hand=gojo:FindFirstChild("Right Arm",true)
+	if hand and hand:IsA("BasePart") then
+		return hand.Position-hand.CFrame.UpVector*(hand.Size.Y*.55)
+	end
+	return gojoOrigin()
+end
 
-	local distance=direction.Magnitude
-	local travelTime=math.clamp(distance/42,.25,1.4)
-	local tween=TweenService:Create(ball,TweenInfo.new(travelTime,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Position=target})
-	tween:Play()
-	tween.Completed:Connect(function()
-		-- Optional test push: only the button-triggered sphere applies a small impulse.
-		if shouldPush and root.Parent then
-			local flat=Vector3.new(direction.X,0,direction.Z)
-			if flat.Magnitude>.01 then
-				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + flat.Unit*32 + Vector3.new(0,8,0)
-			end
+local function attackPlayer(player)
+	if attacking then return end
+	local character=player and player.Character
+	local root=character and character:FindFirstChild("HumanoidRootPart")
+	local hum=character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not hum or hum.Health<=0 or not gojo:IsA("Model") then return end
+	attacking=true
+
+	-- Face the target and raise the right arm while the Blue charges.
+	local pivot=gojo:GetPivot()
+	local flatTarget=Vector3.new(root.Position.X,pivot.Position.Y,root.Position.Z)
+	if (flatTarget-pivot.Position).Magnitude>.1 then
+		gojo:PivotTo(CFrame.lookAt(pivot.Position,flatTarget))
+	end
+	if rightShoulder and rightBase then
+		tweenMotor(rightShoulder,rightBase*CFrame.Angles(math.rad(-80),0,math.rad(12)),.28)
+	end
+	if leftShoulder and leftBase then
+		tweenMotor(leftShoulder,leftBase*CFrame.Angles(math.rad(-20),0,math.rad(-8)),.28)
+	end
+
+	local blue=makeBlue(handPosition())
+	local chargeStart=os.clock()
+	while blue.Parent and os.clock()-chargeStart<.75 do
+		blue.Position=handPosition()
+		local a=math.clamp((os.clock()-chargeStart)/.75,0,1)
+		blue.Size=Vector3.new(1,1,1):Lerp(Vector3.new(7,7,7),a)
+		task.wait()
+	end
+
+	-- Rush toward the player's current position while keeping the Blue at the hand.
+	local rushStart=os.clock()
+	while gojo.Parent and root.Parent and os.clock()-rushStart<1.6 do
+		local gp=gojo:GetPivot()
+		local delta=Vector3.new(root.Position.X-gp.Position.X,0,root.Position.Z-gp.Position.Z)
+		local distance=delta.Magnitude
+		if distance<=8 then break end
+		local step=math.min(distance-7,28*task.wait())
+		if step>0 and delta.Magnitude>0 then
+			local newPos=gp.Position+delta.Unit*step
+			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(root.Position.X,newPos.Y,root.Position.Z)))
 		end
-		if ball.Parent then
-			TweenService:Create(ball,TweenInfo.new(.18),{Transparency=1,Size=ball.Size*1.15}):Play()
-			Debris:AddItem(ball,.22)
+		if blue.Parent then blue.Position=handPosition() end
+	end
+
+	-- Contact blast: push away from Gojo.
+	if root.Parent then
+		local gp=gojo:GetPivot().Position
+		local away=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
+		if away.Magnitude>.01 then
+			root.AssemblyLinearVelocity=root.AssemblyLinearVelocity+away.Unit*48+Vector3.new(0,10,0)
 		end
-	end)
-	Debris:AddItem(ball,3)
+	end
+	if blue.Parent then
+		TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(11,11,11),Transparency=1}):Play()
+		Debris:AddItem(blue,.2)
+	end
+
+	if rightShoulder and rightBase then tweenMotor(rightShoulder,rightBase,.3) end
+	if leftShoulder and leftBase then tweenMotor(leftShoulder,leftBase,.3) end
+	task.wait(.35)
+	attacking=false
 end
 
 pushRemote.OnServerEvent:Connect(function(player)
