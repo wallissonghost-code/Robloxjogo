@@ -257,6 +257,51 @@ local function makeBlue(position)
 	return ball
 end
 
+local function makeRed(position)
+	local core=Instance.new("Part")
+	core.Name="GojoRed"
+	core.Shape=Enum.PartType.Ball
+	core.Size=Vector3.new(1.35,1.35,1.35)
+	core.Material=Enum.Material.Neon
+	core.Color=Color3.fromRGB(255,35,45)
+	core.Transparency=.02
+	core.Anchored=true
+	core.CanCollide=false
+	core.CanTouch=false
+	core.CanQuery=false
+	core.Position=position
+	core.Parent=workspace
+	local light=Instance.new("PointLight")
+	light.Color=core.Color
+	light.Brightness=12
+	light.Range=45
+	light.Parent=core
+	local aura=Instance.new("Part")
+	aura.Name="RedAura"
+	aura.Shape=Enum.PartType.Ball
+	aura.Size=Vector3.new(7,7,7)
+	aura.Material=Enum.Material.Neon
+	aura.Color=Color3.fromRGB(255,55,65)
+	aura.Transparency=.78
+	aura.Anchored=true
+	aura.CanCollide=false
+	aura.CanTouch=false
+	aura.CanQuery=false
+	aura.Position=position
+	aura.Parent=workspace
+	local att=Instance.new("Attachment"); att.Parent=core
+	local particles=Instance.new("ParticleEmitter")
+	particles.Color=ColorSequence.new(Color3.fromRGB(255,220,220),core.Color)
+	particles.LightEmission=1
+	particles.Rate=190
+	particles.Lifetime=NumberRange.new(.15,.35)
+	particles.Speed=NumberRange.new(5,12)
+	particles.SpreadAngle=Vector2.new(180,180)
+	particles.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,1.3),NumberSequenceKeypoint.new(1,0)})
+	particles.Parent=att
+	return core,aura
+end
+
 local function handPosition()
 	local hand=gojo:FindFirstChild("Right Arm",true)
 	if hand and hand:IsA("BasePart") then
@@ -278,6 +323,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 	attacking=true
 
 	diag(player,"ATAQUE","iniciando")
+	if mode=="redThrow" then diag(player,"ATAQUE","Red arremessado") end
 	local okAttack,err=pcall(function()
 		diag(player,"1 FACE","virando para o player")
 		-- Face player first.
@@ -305,18 +351,38 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		task.wait(.12)
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
-		diag(player,"3 BLUE","criando esfera")
-		local blue=makeBlue(handPosition())
-		for i=1,24 do
-			if not blue.Parent then break end
-			blue.Position=handPosition()
-			local t=i/24
-			local smooth=t*t*(3-2*t)
-			local size=1.2+(6.8*smooth)
-			blue.Size=Vector3.new(size,size,size)
-			task.wait(.03)
+		local blue
+		local redAura
+		if mode=="redThrow" then
+			diag(player,"3 RED","nucleo concentrado + aura")
+			blue,redAura=makeRed(handPosition())
+			for i=1,16 do
+				if not blue.Parent then break end
+				blue.Position=handPosition()
+				if redAura and redAura.Parent then
+					redAura.Position=blue.Position
+					local pulse=7+math.sin(i*.9)*1.4
+					redAura.Size=Vector3.new(pulse,pulse,pulse)
+				end
+				task.wait(.03)
+			end
+			task.wait(.12)
+		else
+			diag(player,"3 BLUE","criando esfera")
+			local blue=makeBlue(handPosition())
+			for i=1,24 do
+				if not blue.Parent then break end
+				blue.Position=handPosition()
+				local t=i/24
+				local smooth=t*t*(3-2*t)
+				local size=1.2+(6.8*smooth)
+				blue.Size=Vector3.new(size,size,size)
+				task.wait(.03)
+			end
+			task.wait(.18)
+	
+	
 		end
-		task.wait(.18)
 
 		if mode=="blueThrow" then
 			diag(player,"4 BLUE THROW","arremessando + atracao controlada")
@@ -342,6 +408,31 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				end
 				task.wait(.025)
 			end
+		elseif mode=="redThrow" then
+			diag(player,"4 RED THROW","arremessando")
+			local startPos=blue.Position
+			for i=1,30 do
+				if not blue.Parent or not root.Parent then break end
+				local targetPos=root.Position+Vector3.new(0,2,0)
+				local t=i/30
+				local smooth=1-(1-t)*(1-t)
+				blue.Position=startPos:Lerp(targetPos,smooth)
+				if redAura and redAura.Parent then redAura.Position=blue.Position end
+				task.wait(.022)
+			end
+			if root.Parent then
+				local away=root.Position-blue.Position
+				if away.Magnitude<14 then
+					local horizontal=Vector3.new(away.X,0,away.Z)
+					if horizontal.Magnitude>.01 then
+						root.AssemblyLinearVelocity=horizontal.Unit*420+Vector3.new(0,42,0)
+					end
+				end
+			end
+		end
+		if redAura and redAura.Parent then
+			TweenService:Create(redAura,TweenInfo.new(.14),{Size=Vector3.new(16,16,16),Transparency=1}):Play()
+			Debris:AddItem(redAura,.18)
 		end
 		diag(player,"5 BLUE","finalizando atracao")
 		if blue.Parent then
@@ -439,7 +530,7 @@ pushRemote.OnServerEvent:Connect(function(player,mode)
 		task.spawn(testLegs,player)
 		return
 	end
-	if mode~="blueThrow" then mode="blueThrow" end
+	if mode~="blueThrow" and mode~="redThrow" then mode="blueThrow" end
 	diag(player,"REMOTE OK","modo="..mode)
 	task.spawn(attackPlayer,player,mode)
 end)
