@@ -452,6 +452,66 @@ local function comboPlayer(player)
 	attacking=false
 end
 
+local function redTeleportPlayer(player)
+	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
+	local ch=player and player.Character
+	local hum=ch and ch:FindFirstChildOfClass("Humanoid")
+	local root=ch and ch:FindFirstChild("HumanoidRootPart")
+	if not root or not hum or hum.Health<=0 then return end
+	attacking=true
+	local okRed,err=pcall(function()
+		diag(player,"RED TELEPORTE","aproximando Gojo")
+		local targetPos=root.Position-root.CFrame.LookVector*7
+		local gp=gojo:GetPivot()
+		gojo:PivotTo(CFrame.lookAt(Vector3.new(targetPos.X,gp.Position.Y,targetPos.Z),Vector3.new(root.Position.X,gp.Position.Y,root.Position.Z)))
+		task.wait(.12)
+
+		-- Preserve the confirmed casting motion, but generate Red.
+		if leftShoulder and leftBase then leftShoulder.C0=leftBase end
+		if rightHip and rightHipBase then rightHip.C0=rightHipBase end
+		if leftHip and leftHipBase then leftHip.C0=leftHipBase end
+		if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-3),0,0) end
+		if rightShoulder and rightBase then
+			rightShoulder.C0=rightBase*CFrame.Angles(math.rad(18),0,math.rad(18))
+			task.wait(.12)
+			local tw=TweenService:Create(rightShoulder,TweenInfo.new(.24,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{C0=rightBase*CFrame.Angles(math.rad(-72),0,math.rad(6))})
+			tw:Play(); tw.Completed:Wait()
+		end
+
+		local red,aura=makeRed(handPosition())
+		for i=1,12 do
+			local t=i/12
+			local s=1.35+14.65*t*t
+			red.Position=handPosition()
+			red.Size=Vector3.new(s,s,s)
+			if aura and aura.Parent then
+				aura.Position=red.Position
+				local as=7+17*t*t
+				aura.Size=Vector3.new(as,as,as)
+			end
+			task.wait(.025)
+		end
+		local impact=root.Position+Vector3.new(0,1,0)
+		red.Position=impact
+		if aura and aura.Parent then aura.Position=impact end
+		TweenService:Create(red,TweenInfo.new(.18,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(24,24,24),Transparency=.32}):Play()
+		if aura and aura.Parent then TweenService:Create(aura,TweenInfo.new(.22),{Size=Vector3.new(58,58,58),Transparency=.9}):Play() end
+		local away=root.Position-gojo:GetPivot().Position
+		local horizontal=Vector3.new(away.X,0,away.Z)
+		if horizontal.Magnitude<.1 then horizontal=gojo:GetPivot().LookVector end
+		root.AssemblyLinearVelocity=horizontal.Unit*560+Vector3.new(0,55,0)
+		task.wait(.2)
+		TweenService:Create(red,TweenInfo.new(.12),{Size=Vector3.new(50,50,50),Transparency=1}):Play()
+		Debris:AddItem(red,.15)
+		if aura then Debris:AddItem(aura,.15) end
+		diag(player,"RED TELEPORTE","repulsao concluida")
+	end)
+	resetPose()
+	if not okRed then diag(player,"ERRO RED TELEPORTE",err); warn("[Gojo Red Teleport]",err) end
+	task.wait(.35)
+	attacking=false
+end
+
 local function attackPlayer(player,mode)
 	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
@@ -813,6 +873,11 @@ pushRemote.OnServerEvent:Connect(function(player,mode)
 	if mode=="combo" then
 		diag(player,"REMOTE OK","modo=combo")
 		task.spawn(comboPlayer,player)
+		return
+	end
+	if mode=="redTeleport" then
+		diag(player,"REMOTE OK","modo=redTeleport")
+		task.spawn(redTeleportPlayer,player)
 		return
 	end
 	if mode~="blueThrow" and mode~="redThrow" then mode="blueThrow" end
