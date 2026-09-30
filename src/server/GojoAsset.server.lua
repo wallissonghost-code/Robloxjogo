@@ -5,6 +5,9 @@ local Debris=game:GetService("Debris")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local pushRemote=ReplicatedStorage:FindFirstChild("GojoPushTest") or Instance.new("RemoteEvent")
+local diagnosticRemote=ReplicatedStorage:FindFirstChild("GojoDiagnostic") or Instance.new("RemoteEvent")
+diagnosticRemote.Name="GojoDiagnostic"
+diagnosticRemote.Parent=ReplicatedStorage
 pushRemote.Name="GojoPushTest"
 pushRemote.Parent=ReplicatedStorage
 
@@ -106,6 +109,10 @@ local function nearestPlayer()
 end
 
 local attacking=false
+local function diag(player,step,message)
+	print("[GojoDiag]",step,message or "")
+	if player then diagnosticRemote:FireClient(player,step,tostring(message or "")) end
+end
 
 local function motor(name)
 	for _,v in ipairs(gojo:GetDescendants()) do
@@ -164,24 +171,32 @@ local function handPosition()
 end
 
 local function attackPlayer(player)
-	if attacking then return end
+	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
 	local root=character and character:FindFirstChild("HumanoidRootPart")
 	local hum=character and character:FindFirstChildOfClass("Humanoid")
-	if not root or not hum or hum.Health<=0 or not gojo:IsA("Model") then return end
+	if not root or not hum or hum.Health<=0 or not gojo:IsA("Model") then
+	diag(player,"ALVO INVALIDO","root="..tostring(root~=nil).." humanoid="..tostring(hum~=nil).." health="..tostring(hum and hum.Health).." gojoModel="..tostring(gojo:IsA("Model")))
+	return
+end
+diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShoulder~=nil).."/"..tostring(leftShoulder~=nil))
 	attacking=true
 
+	diag(player,"ATAQUE","iniciando")
 	local okAttack,err=pcall(function()
+		diag(player,"1 FACE","virando para o player")
 		-- Face player first.
 		local gp=gojo:GetPivot()
 		local look=Vector3.new(root.Position.X,gp.Position.Y,root.Position.Z)
 		if (look-gp.Position).Magnitude>.1 then gojo:PivotTo(CFrame.lookAt(gp.Position,look)) end
 
+		diag(player,"2 BRACOS","aplicando pose R6")
 		-- Pose both R6 shoulders directly. Transform is safer for a runtime pose.
 		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-95),0,math.rad(12)) end
 		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-35),0,math.rad(-10)) end
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
+		diag(player,"3 BLUE","criando esfera")
 		local blue=makeBlue(handPosition())
 		for i=1,18 do
 			if not blue.Parent then break end
@@ -191,6 +206,7 @@ local function attackPlayer(player)
 			task.wait(.04)
 		end
 
+		diag(player,"4 CORRIDA","iniciando PivotTo")
 		-- Move the anchored model toward the live player. PivotTo works even while parts are anchored.
 		for _=1,55 do
 			if not root.Parent or not gojo.Parent then break end
@@ -204,6 +220,7 @@ local function attackPlayer(player)
 			task.wait(.03)
 		end
 
+		diag(player,"5 IMPACTO","tentando empurrar")
 		if root.Parent then
 			local gp2=gojo:GetPivot().Position
 			local away=Vector3.new(root.Position.X-gp2.X,0,root.Position.Z-gp2.Z)
@@ -219,7 +236,12 @@ local function attackPlayer(player)
 
 	if rightShoulder then rightShoulder.Transform=CFrame.new() end
 	if leftShoulder then leftShoulder.Transform=CFrame.new() end
-	if not okAttack then warn("[Gojo Blue] attack failed:",err) end
+	if not okAttack then
+		warn("[Gojo Blue] attack failed:",err)
+		diag(player,"ERRO LUA",err)
+	else
+		diag(player,"CONCLUIDO","ataque terminou sem erro Lua")
+	end
 	task.wait(.35)
 	attacking=false
 end
