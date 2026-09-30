@@ -323,9 +323,35 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 	attacking=false
 end
 
+local function testLegs(player)
+	if attacking then diag(player,"BLOQUEADO","ataque em andamento"); return end
+	attacking=true
+	diag(player,"TESTE PERNAS","alternando pernas R6 lentamente")
+	local okLegs,err=pcall(function()
+		resetPose()
+		for cycle=1,6 do
+			-- Hold each extreme long enough to be unmistakable.
+			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-75),0,0) end
+			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(75),0,0) end
+			task.wait(.55)
+			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(75),0,0) end
+			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(-75),0,0) end
+			task.wait(.55)
+		end
+	end)
+	resetPose()
+	if not okLegs then diag(player,"ERRO PERNAS",err) else diag(player,"TESTE PERNAS","concluido") end
+	attacking=false
+end
+
 startupStage="READY"
 serverReady=true
 pushRemote.OnServerEvent:Connect(function(player,mode)
+	if mode=="legs" then
+		diag(player,"REMOTE OK","modo=legs")
+		task.spawn(testLegs,player)
+		return
+	end
 	mode=(mode=="teleport") and "teleport" or "rush"
 	diag(player,"REMOTE OK","modo="..mode)
 	task.spawn(attackPlayer,player,mode)
