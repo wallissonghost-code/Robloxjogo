@@ -318,65 +318,31 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		end
 		task.wait(.18)
 
-		if mode=="teleport" then
-			diag(player,"4 TELEPORTE","Gojo aparecendo perto do player")
-			local target=root.Position
-			local forward=root.CFrame.LookVector
-			local side=root.CFrame.RightVector
-			local destination=target-forward*9+side*2
-			local current=gojo:GetPivot()
-			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
-			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
-			if hrp then hrp.AssemblyLinearVelocity=Vector3.zero; hrp.AssemblyAngularVelocity=Vector3.zero end
-			if blue.Parent then blue.Position=handPosition() end
-			if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-25),0,0) end
-			if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
-			if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-14),0,0) end
-			task.wait(.12)
-		else
-			diag(player,"4 CORRIDA R6","aceleracao suave + passada sincronizada")
-			local MAX_SPEED=68
-			local START_SPEED=16
-			local oldSpeed=humanoid and humanoid.WalkSpeed or 34
-			local runPhase=0
-			local runTime=0
-			for _=1,110 do
-				if not root.Parent or not gojo.Parent or not humanoid or humanoid.Health<=0 then break end
-				local gp=hrp and hrp.Position or gojo:GetPivot().Position
-				local delta=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
-				if delta.Magnitude<=8 then break end
-
-				runTime+=.04
-				-- 0 -> 1 over roughly 0.45 s, with smoothstep instead of an instant launch.
-				local t=math.clamp(runTime/.45,0,1)
-				local smooth=t*t*(3-2*t)
-				local targetSpeed=START_SPEED+(MAX_SPEED-START_SPEED)*smooth
-				-- Ease down near the player so Gojo does not snap to a stop.
-				if delta.Magnitude<18 then
-					targetSpeed=math.max(14,targetSpeed*math.clamp((delta.Magnitude-7)/11,.25,1))
+		if mode=="blueThrow" then
+			diag(player,"4 BLUE THROW","arremessando + atracao controlada")
+			local startPos=blue.Position
+			for i=1,36 do
+				if not blue.Parent or not root.Parent then break end
+				local targetPos=root.Position+Vector3.new(0,2,0)
+				local t=i/36
+				local smooth=1-(1-t)*(1-t)
+				blue.Position=startPos:Lerp(targetPos,smooth)
+				for _,p in ipairs(Players:GetPlayers()) do
+					local ch=p.Character
+					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+					if pr and ph and ph.Health>0 then
+						local pull=blue.Position-pr.Position
+						local dist=pull.Magnitude
+						if dist>2 and dist<48 then
+							local desired=pull.Unit*math.clamp(24+(48-dist)*1.15,24,72)
+							pr.AssemblyLinearVelocity=pr.AssemblyLinearVelocity:Lerp(desired,.22)
+						end
+					end
 				end
-				humanoid.WalkSpeed=targetSpeed
-
-				-- Cadence follows actual chase speed; first steps are smaller/slower.
-				runPhase+=.16+.30*(targetSpeed/MAX_SPEED)
-				runPose(runPhase)
-				humanoid:MoveTo(Vector3.new(root.Position.X,gp.Y,root.Position.Z))
-				if blue.Parent then blue.Position=handPosition() end
-				task.wait(.04)
+				task.wait(.025)
 			end
-			if humanoid then
-				humanoid:Move(Vector3.zero)
-				humanoid.WalkSpeed=oldSpeed
-			end
-		end
-		diag(player,"5 IMPACTO","tentando empurrar")
-		if root.Parent then
-			local gp2=gojo:GetPivot().Position
-			local away=Vector3.new(root.Position.X-gp2.X,0,root.Position.Z-gp2.Z)
-			if away.Magnitude>.01 then
-				root.AssemblyLinearVelocity=away.Unit*385+Vector3.new(0,28,0)
-			end
-		end
+		diag(player,"5 BLUE","finalizando atracao")
 		if blue.Parent then
 			TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(12,12,12),Transparency=1}):Play()
 			Debris:AddItem(blue,.22)
@@ -472,7 +438,7 @@ pushRemote.OnServerEvent:Connect(function(player,mode)
 		task.spawn(testLegs,player)
 		return
 	end
-	mode=(mode=="teleport") and "teleport" or "rush"
+	if mode~="blueThrow" then mode="blueThrow" end
 	diag(player,"REMOTE OK","modo="..mode)
 	task.spawn(attackPlayer,player,mode)
 end)
