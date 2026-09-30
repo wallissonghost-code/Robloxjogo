@@ -156,11 +156,11 @@ end
 local function runPose(phase)
 	local swing=math.sin(phase)
 	local bounce=math.abs(math.cos(phase*2))
-	if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(42*swing),0,math.rad(5)) end
-	if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-42*swing),0,math.rad(-5)) end
-	if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-38*swing),0,0) end
-	if leftHip then leftHip.Transform=CFrame.Angles(math.rad(38*swing),0,0) end
-	if rootJoint then rootJoint.Transform=CFrame.new(0,.07*bounce,0)*CFrame.Angles(math.rad(-9),0,0) end
+	if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(78*swing),0,math.rad(5)) end
+	if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-78*swing),0,math.rad(-5)) end
+	if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-68*swing),0,0) end
+	if leftHip then leftHip.Transform=CFrame.Angles(math.rad(68*swing),0,0) end
+	if rootJoint then rootJoint.Transform=CFrame.new(0,.22*bounce,0)*CFrame.Angles(math.rad(-18),0,math.rad(4*swing)) end
 end
 
 local function tweenMotor(m,c0,t)
@@ -228,10 +228,18 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		local look=Vector3.new(root.Position.X,gp.Position.Y,root.Position.Z)
 		if (look-gp.Position).Magnitude>.1 then gojo:PivotTo(CFrame.lookAt(gp.Position,look)) end
 
-		diag(player,"2 BRACOS","aplicando pose R6")
-		-- Pose both R6 shoulders directly. Transform is safer for a runtime pose.
-		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-95),0,math.rad(12)) end
-		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-35),0,math.rad(-10)) end
+		diag(player,"2 BRACOS","wind-up exagerado")
+		-- Strong readable wind-up: open, pull back, then aim the Blue hand.
+		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(35),0,math.rad(70)) end
+		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(-25),0,math.rad(-65)) end
+		if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-22),0,0) end
+		if leftHip then leftHip.Transform=CFrame.Angles(math.rad(18),0,0) end
+		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-16),math.rad(-10),0) end
+		task.wait(.22)
+		if rightShoulder then rightShoulder.Transform=CFrame.Angles(math.rad(-120),0,math.rad(18)) end
+		if leftShoulder then leftShoulder.Transform=CFrame.Angles(math.rad(20),0,math.rad(-18)) end
+		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-22),math.rad(8),0) end
+		task.wait(.18)
 		if rightHip then rightHip.Transform=CFrame.Angles(math.rad(-12),0,0) end
 		if leftHip then leftHip.Transform=CFrame.Angles(math.rad(12),0,0) end
 		if rootJoint then rootJoint.Transform=CFrame.Angles(math.rad(-7),0,0) end
@@ -268,7 +276,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			local runPhase=0
 			for _=1,55 do
 				if not root.Parent or not gojo.Parent then break end
-				runPhase+=.72
+				runPhase+=.95
 				runPose(runPhase)
 				local current=gojo:GetPivot()
 				local delta=Vector3.new(root.Position.X-current.Position.X,0,root.Position.Z-current.Position.Z)
