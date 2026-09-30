@@ -17,15 +17,17 @@ local POS=Vector3.new(0,0,3)
 
 local serverReady=false
 local startupError=nil
+local startupStage="BOOT"
 pushRemote.OnServerEvent:Connect(function(player)
 	if not serverReady then
-		diagnosticRemote:FireClient(player,"REMOTE OK / SERVER NAO PRONTO",startupError or "Gojo ainda carregando")
+		diagnosticRemote:FireClient(player,"REMOTE OK / SERVER NAO PRONTO",(startupError or "travou na etapa: "..startupStage))
 	end
 end)
 
 local old=workspace:FindFirstChild(NAME)
 if old then old:Destroy() end
 
+startupStage="LOADASSET"
 local ok,container=pcall(function()
 	return InsertService:LoadAsset(ASSET_ID)
 end)
@@ -35,6 +37,7 @@ if not ok then
 	return
 end
 
+startupStage="LOADASSET OK / CHILDREN"
 local children=container:GetChildren()
 if #children==0 then
 	warn("[Gojo] Asset returned 0 objects")
@@ -55,6 +58,7 @@ else
 	container:Destroy()
 end
 gojo.Name=NAME
+startupStage="MODELO OK / SCALE"
 
 -- Keep the imported character static and scale him proportionally to 2.5x.
 local function scaleGojo(instance)
@@ -77,6 +81,7 @@ local function scaleGojo(instance)
 end
 
 scaleGojo(gojo)
+startupStage="SCALE OK / POSITION"
 
 -- Put the scaled Gojo back on the floor.
 if gojo:IsA("Model") then
@@ -88,6 +93,7 @@ elseif gojo:IsA("BasePart") then
 	gojo.Position=Vector3.new(POS.X,POS.Y+gojo.Size.Y/2,POS.Z)
 end
 gojo:SetAttribute("SourceAssetId",ASSET_ID)
+startupStage="POSITION OK / FUNCOES"
 
 local function gojoOrigin()
 	if gojo:IsA("Model") then
@@ -118,6 +124,7 @@ local function nearestPlayer()
 	return best
 end
 
+startupStage="FUNCOES BASE OK / MOTORS"
 local attacking=false
 local function diag(player,step,message)
 	print("[GojoDiag]",step,message or "")
@@ -133,6 +140,7 @@ end
 local rightShoulder=motor("Right Shoulder")
 local leftShoulder=motor("Left Shoulder")
 local rightBase=rightShoulder and rightShoulder.C0
+startupStage="MOTORS OK / ATTACK SETUP"
 local leftBase=leftShoulder and leftShoulder.C0
 
 local function tweenMotor(m,c0,t)
