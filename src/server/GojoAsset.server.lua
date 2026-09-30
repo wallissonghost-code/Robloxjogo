@@ -200,11 +200,12 @@ end
 local function runPose(phase)
 	local swing=math.sin(phase)
 	local bounce=math.abs(math.cos(phase*2))
-	if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(78*swing),0,math.rad(5)) end
-	if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-78*swing),0,math.rad(-5)) end
-	if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-68*swing),0,0) end
-	if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(68*swing),0,0) end
-	if rootJoint then rootJoint.C0=rootBase*CFrame.new(0,.22*bounce,0)*CFrame.Angles(math.rad(-18),0,math.rad(4*swing)) end
+	-- Natural R6 gait: moderate opposite arm/leg swing, slight lean and tiny bounce.
+	if rightShoulder and rightBase then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(26*swing),0,math.rad(2)) end
+	if leftShoulder and leftBase then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-26*swing),0,math.rad(-2)) end
+	if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-32*swing),0,0) end
+	if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(32*swing),0,0) end
+	if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.new(0,.055*bounce,0)*CFrame.Angles(math.rad(-6),0,math.rad(1.5*swing)) end
 end
 
 local function tweenMotor(m,c0,t)
@@ -296,7 +297,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 			blue.Position=handPosition()
 			local size=1.2+(6.8*(i/18))
 			blue.Size=Vector3.new(size,size,size)
-			task.wait(.04)
+			task.wait(.03)
 		end
 
 		if mode=="teleport" then
@@ -325,7 +326,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				local gp=hrp and hrp.Position or gojo:GetPivot().Position
 				local delta=Vector3.new(root.Position.X-gp.X,0,root.Position.Z-gp.Z)
 				if delta.Magnitude<=8 then break end
-				runPhase+=.72
+				runPhase+=.42
 				runPose(runPhase)
 				humanoid:MoveTo(Vector3.new(root.Position.X,gp.Y,root.Position.Z))
 				if blue.Parent then blue.Position=handPosition() end
