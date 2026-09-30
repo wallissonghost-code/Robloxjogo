@@ -88,7 +88,7 @@ button.BackgroundColor3=Color3.fromRGB(35,105,255)
 button.TextColor3=Color3.new(1,1,1)
 button.Font=Enum.Font.GothamBold
 button.TextSize=18
-button.Text="BLUE CORRIDA 2X"
+button.Text="BLUE ARREMESSAR"
 button.AutoButtonColor=true
 button.Parent=gui
 
@@ -107,10 +107,10 @@ button.Activated:Connect(function()
 	if busy then return end
 	busy=true
 	addDiag("CLIQUE LOCAL","botao acionado; enviando RemoteEvent")
-	remote:FireServer("rush")
-	button.Text="CORRENDO!"
+	remote:FireServer("blueThrow")
+	button.Text="ARREMESSANDO!"
 	task.wait(.6)
-	button.Text="BLUE CORRIDA 2X"
+	button.Text="BLUE ARREMESSAR"
 	busy=false
 end)
 
