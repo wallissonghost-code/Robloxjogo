@@ -197,14 +197,24 @@ local function resetPose()
 	if rootJoint and rootBase then rootJoint.C0=rootBase end
 end
 
+local function setLegSwing(joint,base,angle)
+	if not joint or not base then return end
+	-- Imported rig uses an unusual hip basis. Rotate the joint attachment in torso space
+	-- around torso RightVector, which is the physical hinge axis for forward/back leg swing.
+	local torso=joint.Part0
+	if not torso then return end
+	local worldAxis=torso.CFrame.RightVector
+	local localAxis=base:VectorToObjectSpace(torso.CFrame:VectorToObjectSpace(worldAxis))
+	joint.C0=base*CFrame.fromAxisAngle(localAxis,angle)
+end
+
 local function runPose(phase)
 	local swing=math.sin(phase)
 	local bounce=math.abs(math.cos(phase*2))
-	-- Natural R6 gait: moderate opposite arm/leg swing, slight lean and tiny bounce.
 	if rightShoulder and rightBase then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(26*swing),0,math.rad(2)) end
 	if leftShoulder and leftBase then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-26*swing),0,math.rad(-2)) end
-	if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(-32*swing)) end
-	if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(32*swing)) end
+	setLegSwing(rightHip,rightHipBase,math.rad(32*swing))
+	setLegSwing(leftHip,leftHipBase,math.rad(-32*swing))
 	if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.new(0,.055*bounce,0)*CFrame.Angles(math.rad(-6),0,math.rad(1.5*swing)) end
 end
 
@@ -415,11 +425,11 @@ local function testLegs(player)
 		resetPose()
 		for cycle=1,6 do
 			-- Hold each extreme long enough to be unmistakable.
-			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(-75)) end
-			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(75)) end
+			setLegSwing(rightHip,rightHipBase,math.rad(75))
+			setLegSwing(leftHip,leftHipBase,math.rad(-75))
 			task.wait(.55)
-			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(75)) end
-			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(-75)) end
+			setLegSwing(rightHip,rightHipBase,math.rad(-75))
+			setLegSwing(leftHip,leftHipBase,math.rad(75))
 			task.wait(.55)
 		end
 	end)
