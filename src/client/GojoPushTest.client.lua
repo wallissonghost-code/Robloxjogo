@@ -18,7 +18,7 @@ button.BackgroundColor3=Color3.fromRGB(35,105,255)
 button.TextColor3=Color3.new(1,1,1)
 button.Font=Enum.Font.GothamBold
 button.TextSize=18
-button.Text="TESTAR EMPURRAO"
+button.Text="TESTAR BLUE"
 button.AutoButtonColor=true
 button.Parent=gui
 
@@ -31,8 +31,8 @@ button.Activated:Connect(function()
 	if busy then return end
 	busy=true
 	remote:FireServer()
-	button.Text="ESFERA!"
+	button.Text="BLUE!"
 	task.wait(.6)
-	button.Text="TESTAR EMPURRAO"
+	button.Text="TESTAR BLUE"
 	busy=false
 end)
