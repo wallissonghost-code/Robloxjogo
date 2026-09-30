@@ -310,6 +310,138 @@ local function handPosition()
 	return gojoOrigin()
 end
 
+local function clearBlueLock(player)
+	local ch=player and player.Character
+	local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+	local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+	if pr then
+		local align=pr:FindFirstChild("BlueGravityHold")
+		local orient=pr:FindFirstChild("BlueNoSpin")
+		local att=pr:FindFirstChild("BlueLockAttachment")
+		if align then align:Destroy() end
+		if orient then orient:Destroy() end
+		if att then att:Destroy() end
+		pr.AssemblyLinearVelocity=Vector3.zero
+		pr.AssemblyAngularVelocity=Vector3.zero
+	end
+	local target=workspace:FindFirstChild("BlueGravityTarget_"..tostring(player.UserId))
+	if target then target:Destroy() end
+	if ph then
+		local walk=ph:GetAttribute("BlueSavedWalkSpeed")
+		local jump=ph:GetAttribute("BlueSavedJumpPower")
+		if walk then ph.WalkSpeed=walk end
+		if jump then ph.JumpPower=jump end
+		ph.AutoRotate=true
+		ph.PlatformStand=false
+	end
+end
+
+local function comboPlayer(player)
+	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
+	local ch=player and player.Character
+	local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+	local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+	if not pr or not ph or ph.Health<=0 then return end
+	attacking=true
+	local okCombo,err=pcall(function()
+		diag(player,"COMBO","BLUE -> LOCK -> RED")
+		local gp=gojo:GetPivot()
+		local look=Vector3.new(pr.Position.X,gp.Position.Y,pr.Position.Z)
+		if (look-gp.Position).Magnitude>.1 then gojo:PivotTo(CFrame.lookAt(gp.Position,look)) end
+
+		-- Confirmed casting pose.
+		if leftShoulder and leftBase then leftShoulder.C0=leftBase end
+		if rightHip and rightHipBase then rightHip.C0=rightHipBase end
+		if leftHip and leftHipBase then leftHip.C0=leftHipBase end
+		if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-3),0,0) end
+		if rightShoulder and rightBase then
+			rightShoulder.C0=rightBase*CFrame.Angles(math.rad(18),0,math.rad(18))
+			task.wait(.18)
+			local target=rightBase*CFrame.Angles(math.rad(-72),0,math.rad(6))
+			local tw=TweenService:Create(rightShoulder,TweenInfo.new(.32,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{C0=target})
+			tw:Play(); tw.Completed:Wait()
+		end
+
+		local blue=makeBlue(handPosition())
+		for i=1,18 do
+			blue.Position=handPosition()
+			local size=1.2+4.2*(i/18)
+			blue.Size=Vector3.new(size,size,size)
+			task.wait(.025)
+		end
+		local start=blue.Position
+		for i=1,28 do
+			if not pr.Parent then break end
+			blue.Position=start:Lerp(pr.Position+Vector3.new(0,2,0),i/28)
+			task.wait(.022)
+		end
+
+		-- Lock only the selected player, low and stable.
+		ph:SetAttribute("BlueSavedWalkSpeed",ph.WalkSpeed)
+		ph:SetAttribute("BlueSavedJumpPower",ph.JumpPower)
+		ph.WalkSpeed=0; ph.JumpPower=0; ph.AutoRotate=false; ph.PlatformStand=true
+		local rootAtt=Instance.new("Attachment"); rootAtt.Name="BlueLockAttachment"; rootAtt.Parent=pr
+		local target=Instance.new("Part")
+		target.Name="BlueGravityTarget_"..tostring(player.UserId)
+		target.Size=Vector3.new(.5,.5,.5); target.Transparency=1; target.Anchored=true
+		target.CanCollide=false; target.CanTouch=false; target.CanQuery=false
+		target.Position=Vector3.new(blue.Position.X,math.min(blue.Position.Y,pr.Position.Y+4),blue.Position.Z)
+		target.Parent=workspace
+		local targetAtt=Instance.new("Attachment"); targetAtt.Parent=target
+		local align=Instance.new("AlignPosition"); align.Name="BlueGravityHold"
+		align.Attachment0=rootAtt; align.Attachment1=targetAtt; align.MaxForce=100000
+		align.MaxVelocity=18; align.Responsiveness=12; align.Parent=pr
+		local orient=Instance.new("AlignOrientation"); orient.Name="BlueNoSpin"
+		orient.Attachment0=rootAtt; orient.Mode=Enum.OrientationAlignmentMode.OneAttachment
+		orient.CFrame=pr.CFrame.Rotation; orient.MaxTorque=100000; orient.Responsiveness=20; orient.Parent=pr
+		pr.AssemblyLinearVelocity=Vector3.zero; pr.AssemblyAngularVelocity=Vector3.zero
+		diag(player,"COMBO BLUE","alvo preso")
+		task.wait(.75)
+
+		-- Red forms while Blue is still holding the target.
+		local red,aura=makeRed(handPosition())
+		for i=1,14 do
+			red.Position=handPosition()
+			if aura and aura.Parent then
+				aura.Position=red.Position
+				local pulse=7+math.sin(i*.9)*1.4
+				aura.Size=Vector3.new(pulse,pulse,pulse)
+			end
+			task.wait(.03)
+		end
+		local rs=red.Position
+		for i=1,24 do
+			if not pr.Parent then break end
+			red.Position=rs:Lerp(pr.Position+Vector3.new(0,1,0),i/24)
+			if aura and aura.Parent then aura.Position=red.Position end
+			task.wait(.02)
+		end
+
+		-- Red explicitly breaks Blue before applying repulsion.
+		clearBlueLock(player)
+		if blue and blue.Parent then blue:Destroy() end
+		local impact=red.Position
+		TweenService:Create(red,TweenInfo.new(.18,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(24,24,24),Transparency=.32}):Play()
+		if aura and aura.Parent then
+			TweenService:Create(aura,TweenInfo.new(.22,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Size=Vector3.new(42,42,42),Transparency=.9}):Play()
+		end
+		local away=pr.Position-impact
+		local horizontal=Vector3.new(away.X,0,away.Z)
+		if horizontal.Magnitude<.1 then horizontal=gojo:GetPivot().LookVector end
+		pr.AssemblyLinearVelocity=horizontal.Unit*560+Vector3.new(0,55,0)
+		diag(player,"COMBO RED","lock quebrado + repulsao")
+		task.wait(.2)
+		TweenService:Create(red,TweenInfo.new(.12),{Size=Vector3.new(34,34,34),Transparency=1}):Play()
+		Debris:AddItem(red,.15)
+		if aura then Debris:AddItem(aura,.15) end
+	end)
+	clearBlueLock(player)
+	resetPose()
+	if not okCombo then diag(player,"ERRO COMBO",err); warn("[Gojo Combo]",err) end
+	task.wait(.35)
+	attacking=false
+end
+
 local function attackPlayer(player,mode)
 	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
@@ -655,6 +787,11 @@ pushRemote.OnServerEvent:Connect(function(player,mode)
 	if mode=="legs" then
 		diag(player,"REMOTE OK","modo=legs")
 		task.spawn(testLegs,player)
+		return
+	end
+	if mode=="combo" then
+		diag(player,"REMOTE OK","modo=combo")
+		task.spawn(comboPlayer,player)
 		return
 	end
 	if mode~="blueThrow" and mode~="redThrow" then mode="blueThrow" end
