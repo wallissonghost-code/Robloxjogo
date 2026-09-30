@@ -342,6 +342,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 				end
 				task.wait(.025)
 			end
+		end
 		diag(player,"5 BLUE","finalizando atracao")
 		if blue.Parent then
 			TweenService:Create(blue,TweenInfo.new(.16),{Size=Vector3.new(12,12,12),Transparency=1}):Play()
