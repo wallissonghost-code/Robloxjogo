@@ -26,6 +26,9 @@
       "$className": "ServerScriptService",
       "GojoAsset": {
         "$path": "src/server/GojoAsset.server.lua"
+      },
+      "UpdateRelay": {
+        "$path": "src/server/UpdateRelay.server.lua"
       }
     },
     "StarterPlayer": {
