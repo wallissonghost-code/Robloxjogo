@@ -38,9 +38,8 @@ else
 end
 gojo.Name=NAME
 
--- Keep the imported character static and make him 3x taller.
--- X/Z stay unchanged so this is specifically a height increase.
-local function scaleHeight(instance)
+-- Keep the imported character static and scale him proportionally to 2.5x.
+local function scaleGojo(instance)
 	local parts={}
 	if instance:IsA("BasePart") then table.insert(parts,instance) end
 	for _,v in ipairs(instance:GetDescendants()) do
@@ -54,12 +53,12 @@ local function scaleHeight(instance)
 		local localCF=pivot:ToObjectSpace(part.CFrame)
 		local p=localCF.Position
 		local rotation=localCF-p
-		part.Size=Vector3.new(part.Size.X,part.Size.Y*3,part.Size.Z)
-		part.CFrame=pivot*CFrame.new(p.X,p.Y*3,p.Z)*rotation
+		part.Size=part.Size*2.5
+		part.CFrame=pivot*CFrame.new(p*2.5)*rotation
 	end
 end
 
-scaleHeight(gojo)
+scaleGojo(gojo)
 
 -- Put the scaled Gojo back on the floor.
 if gojo:IsA("Model") then
@@ -172,4 +171,4 @@ task.spawn(function()
 	end
 end)
 
-print("[Gojo] loaded, height x3, visual sphere x2 enabled")
+print("[Gojo] loaded, proportional scale x2.5, visual sphere x2 enabled")
