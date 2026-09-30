@@ -204,7 +204,7 @@ local function runPose(phase)
 	if rightShoulder and rightBase then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(26*swing),0,math.rad(2)) end
 	if leftShoulder and leftBase then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-26*swing),0,math.rad(-2)) end
 	if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(-32*swing)) end
-	if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(32*swing)) end
+	if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(-32*swing)) end
 	if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.new(0,.055*bounce,0)*CFrame.Angles(math.rad(-6),0,math.rad(1.5*swing)) end
 end
 
@@ -416,10 +416,10 @@ local function testLegs(player)
 		for cycle=1,6 do
 			-- Hold each extreme long enough to be unmistakable.
 			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(-75)) end
-			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(75)) end
+			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(-75)) end
 			task.wait(.55)
 			if rightHip and rightHipBase then rightHip.C0=rightHipBase*CFrame.Angles(0,0,math.rad(75)) end
-			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(-75)) end
+			if leftHip and leftHipBase then leftHip.C0=leftHipBase*CFrame.Angles(0,0,math.rad(75)) end
 			task.wait(.55)
 		end
 	end)
