@@ -78,6 +78,20 @@ local function scaleGojo(instance)
 		part.Size=part.Size*2.5
 		part.CFrame=pivot*CFrame.new(p*2.5)*rotation
 	end
+
+	-- Parts alone are not enough: once the R6 is unanchored, Motor6D/Weld
+	-- offsets become authoritative. Scale their positional offsets too.
+	local function scaleJointCF(cf)
+		local p=cf.Position
+		local rotation=cf-p
+		return CFrame.new(p*2.5)*rotation
+	end
+	for _,joint in ipairs(instance:GetDescendants()) do
+		if joint:IsA("Motor6D") or joint:IsA("Weld") then
+			joint.C0=scaleJointCF(joint.C0)
+			joint.C1=scaleJointCF(joint.C1)
+		end
+	end
 end
 
 scaleGojo(gojo)
