@@ -265,7 +265,8 @@ local function handPosition()
 	return gojoOrigin()
 end
 
-local function attackPlayer(player,mode)\n\tlocal isRed=(mode=="redThrow" or mode=="redRush")
+local function attackPlayer(player,mode)
+	local isRed=(mode=="redThrow" or mode=="redRush")
 	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
 	local root=character and character:FindFirstChild("HumanoidRootPart")
