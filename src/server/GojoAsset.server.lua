@@ -285,32 +285,38 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		local look=Vector3.new(root.Position.X,gp.Position.Y,root.Position.Z)
 		if (look-gp.Position).Magnitude>.1 then gojo:PivotTo(CFrame.lookAt(gp.Position,look)) end
 
-		diag(player,"2 BRACOS","wind-up exagerado")
-		-- Strong readable wind-up: open, pull back, then aim the Blue hand.
-		if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(35),0,math.rad(70)) end
-		if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-25),0,math.rad(-65)) end
-		if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-22),0,0) end
-		if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
-		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-16),math.rad(-10),0) end
-		task.wait(.22)
-		if rightShoulder then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(-120),0,math.rad(18)) end
-		if leftShoulder then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(20),0,math.rad(-18)) end
-		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-22),math.rad(8),0) end
-		task.wait(.18)
-		if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-12),0,0) end
-		if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(12),0,0) end
-		if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-7),0,0) end
+		diag(player,"2 BRACOS","conjuracao Blue limpa")
+		-- Clean test pose: lower body and left arm stay neutral.
+		-- Only the right arm performs the Blue casting motion.
+		if leftShoulder and leftBase then leftShoulder.C0=leftBase end
+		if rightHip and rightHipBase then rightHip.C0=rightHipBase end
+		if leftHip and leftHipBase then leftHip.C0=leftHipBase end
+		if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-3),0,0) end
+		if rightShoulder and rightBase then
+			-- Pull the casting arm back, then smoothly extend it.
+			rightShoulder.C0=rightBase*CFrame.Angles(math.rad(18),0,math.rad(18))
+			task.wait(.18)
+			local from=rightShoulder.C0
+			local target=rightBase*CFrame.Angles(math.rad(-72),0,math.rad(6))
+			local tw=TweenService:Create(rightShoulder,TweenInfo.new(.32,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{C0=target})
+			tw:Play()
+			tw.Completed:Wait()
+		end
+		task.wait(.12)
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
 		diag(player,"3 BLUE","criando esfera")
 		local blue=makeBlue(handPosition())
-		for i=1,18 do
+		for i=1,24 do
 			if not blue.Parent then break end
 			blue.Position=handPosition()
-			local size=1.2+(6.8*(i/18))
+			local t=i/24
+			local smooth=t*t*(3-2*t)
+			local size=1.2+(6.8*smooth)
 			blue.Size=Vector3.new(size,size,size)
 			task.wait(.03)
 		end
+		task.wait(.18)
 
 		if mode=="teleport" then
 			diag(player,"4 TELEPORTE","Gojo aparecendo perto do player")
