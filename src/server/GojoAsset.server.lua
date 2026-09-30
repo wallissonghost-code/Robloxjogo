@@ -1,183 +1,175 @@
 local InsertService=game:GetService("InsertService")
-local MarketplaceService=game:GetService("MarketplaceService")
 local Players=game:GetService("Players")
+local TweenService=game:GetService("TweenService")
+local Debris=game:GetService("Debris")
 
 local ASSET_ID=14034779103
 local NAME="ImportedGojo_"..ASSET_ID
 local POS=Vector3.new(0,0,3)
 
-local report={}
-local status="TESTANDO..."
-
-local function add(title,value)
-	table.insert(report,title..": "..tostring(value))
-end
-
-local function reportText()
-	return table.concat(report,"\n")
-end
-
-local function show(player)
-	local pg=player:WaitForChild("PlayerGui",10)
-	if not pg then return end
-	local old=pg:FindFirstChild("GojoAssetDiagnostic")
-	if old then old:Destroy() end
-
-	local gui=Instance.new("ScreenGui")
-	gui.Name="GojoAssetDiagnostic"
-	gui.ResetOnSpawn=false
-	gui.DisplayOrder=999999
-	gui.Parent=pg
-
-	local frame=Instance.new("Frame")
-	frame.Size=UDim2.new(.92,0,0,360)
-	frame.Position=UDim2.new(.04,0,0,16)
-	frame.BackgroundColor3=Color3.fromRGB(15,17,21)
-	frame.BackgroundTransparency=.04
-	frame.Parent=gui
-	local corner=Instance.new("UICorner")
-	corner.CornerRadius=UDim.new(0,12)
-	corner.Parent=frame
-
-	local label=Instance.new("TextLabel")
-	label.Name="Report"
-	label.Size=UDim2.new(1,-24,1,-24)
-	label.Position=UDim2.new(0,12,0,12)
-	label.BackgroundTransparency=1
-	label.TextWrapped=true
-	label.TextXAlignment=Enum.TextXAlignment.Left
-	label.TextYAlignment=Enum.TextYAlignment.Top
-	label.Font=Enum.Font.Code
-	label.TextSize=14
-	label.TextColor3=Color3.new(1,1,1)
-	label.Text="GOJO DIAGNOSTIC "..ASSET_ID.."\nSTATUS: "..status.."\n\n"..reportText()
-	label.Parent=frame
-end
-
-local function broadcast()
-	for _,p in ipairs(Players:GetPlayers()) do task.spawn(show,p) end
-end
-
-Players.PlayerAdded:Connect(function(p)
-	task.wait(2)
-	show(p)
-end)
-
-add("PlaceId",game.PlaceId)
-add("GameId/UniverseId",game.GameId)
-add("CreatorId",game.CreatorId)
-add("CreatorType",game.CreatorType.Name)
-
-local infoOk,info=pcall(function()
-	return MarketplaceService:GetProductInfo(ASSET_ID,Enum.InfoType.Asset)
-end)
-if infoOk and type(info)=="table" then
-	add("Marketplace lookup","OK")
-	add("Name",info.Name or "?")
-	add("AssetTypeId",info.AssetTypeId or "?")
-	add("IsPublicDomain",info.IsPublicDomain)
-	add("IsForSale",info.IsForSale)
-	add("SaleLocationType",info.SaleLocationType or "?")
-	if type(info.Creator)=="table" then
-		add("Asset Creator",info.Creator.Name or "?")
-		add("Asset CreatorId",info.Creator.CreatorTargetId or info.Creator.Id or "?")
-		add("Asset CreatorType",info.Creator.CreatorType or "?")
-	end
-else
-	add("Marketplace lookup","FALHOU")
-	add("Marketplace error",info)
-end
-
 local old=workspace:FindFirstChild(NAME)
 if old then old:Destroy() end
 
-local started=os.clock()
-local ok,result=pcall(function()
+local ok,container=pcall(function()
 	return InsertService:LoadAsset(ASSET_ID)
 end)
-add("LoadAsset time",string.format("%.3fs",os.clock()-started))
-
 if not ok then
-	status="FALHOU NO LOADASSET"
-	add("LoadAsset result","ERRO")
-	add("Error raw",result)
-	local lower=string.lower(tostring(result))
-	if string.find(lower,"not authorized",1,true) or string.find(lower,"not permitted",1,true) or string.find(lower,"permission",1,true) then
-		add("Classificacao","PERMISSAO/AUTORIZACAO DO ASSET")
-		add("Leitura","O Roblox bloqueou o asset antes de devolver o modelo; nao e erro de posicionamento.")
-	elseif string.find(lower,"asset",1,true) and string.find(lower,"not found",1,true) then
-		add("Classificacao","ASSET NAO ENCONTRADO/INDISPONIVEL")
-	else
-		add("Classificacao","ERRO DE LOADASSET NAO CLASSIFICADO")
-	end
-	warn("[GojoAssetDiagnostic]\n"..reportText())
-	broadcast()
+	warn("[Gojo] LoadAsset failed:",container)
 	return
 end
 
-local container=result
-add("LoadAsset result","OK")
-add("Returned class",container.ClassName)
 local children=container:GetChildren()
-add("Top-level objects",#children)
-
 if #children==0 then
-	status="VAZIO"
-	add("Classificacao","ROBLOX DEVOLVEU CONTAINER SEM OBJETOS")
+	warn("[Gojo] Asset returned 0 objects")
 	container:Destroy()
-	broadcast()
 	return
 end
 
-for i,child in ipairs(children) do
-	if i<=8 then add("Child "..i,child.ClassName.." / "..child.Name) end
-end
-
-local root
+local gojo
 if #children==1 then
-	root=children[1]
-	root.Parent=workspace
+	gojo=children[1]
+	gojo.Parent=workspace
 	container:Destroy()
 else
-	root=Instance.new("Model")
-	root.Name=NAME
-	root.Parent=workspace
-	for _,v in ipairs(children) do v.Parent=root end
+	gojo=Instance.new("Model")
+	for _,child in ipairs(children) do child.Parent=gojo end
+	gojo.Parent=workspace
 	container:Destroy()
 end
+gojo.Name=NAME
 
-root.Name=NAME
-local partCount=0
-local scriptCount=0
-if root:IsA("BasePart") then
-	root.Anchored=true
-	partCount+=1
-end
-for _,v in ipairs(root:GetDescendants()) do
-	if v:IsA("BasePart") then
-		v.Anchored=true
-		partCount+=1
-	elseif v:IsA("Script") or v:IsA("LocalScript") or v:IsA("ModuleScript") then
-		scriptCount+=1
+-- Keep the imported character static and make him 3x taller.
+-- X/Z stay unchanged so this is specifically a height increase.
+local function scaleHeight(instance)
+	local parts={}
+	if instance:IsA("BasePart") then table.insert(parts,instance) end
+	for _,v in ipairs(instance:GetDescendants()) do
+		if v:IsA("BasePart") then table.insert(parts,v) end
+	end
+	if #parts==0 then return end
+
+	local pivot=instance:IsA("Model") and instance:GetPivot() or instance.CFrame
+	for _,part in ipairs(parts) do
+		part.Anchored=true
+		local localCF=pivot:ToObjectSpace(part.CFrame)
+		local p=localCF.Position
+		local rotation=localCF-p
+		part.Size=Vector3.new(part.Size.X,part.Size.Y*3,part.Size.Z)
+		part.CFrame=pivot*CFrame.new(p.X,p.Y*3,p.Z)*rotation
 	end
 end
-add("BaseParts",partCount)
-add("Scripts inside asset",scriptCount)
 
-if root:IsA("Model") then
-	local cf,size=root:GetBoundingBox()
-	add("Bounding size",tostring(size))
-	local pivot=root:GetPivot()
+scaleHeight(gojo)
+
+-- Put the scaled Gojo back on the floor.
+if gojo:IsA("Model") then
+	local cf,size=gojo:GetBoundingBox()
+	local pivot=gojo:GetPivot()
 	local bottom=cf.Position.Y-size.Y/2
-	root:PivotTo(pivot+Vector3.new(POS.X-pivot.Position.X,POS.Y-bottom,POS.Z-pivot.Position.Z))
-elseif root:IsA("BasePart") then
-	add("Part size",tostring(root.Size))
-	root.Position=Vector3.new(POS.X,POS.Y+root.Size.Y/2,POS.Z)
+	gojo:PivotTo(pivot+Vector3.new(POS.X-pivot.Position.X,POS.Y-bottom,POS.Z-pivot.Position.Z))
+elseif gojo:IsA("BasePart") then
+	gojo.Position=Vector3.new(POS.X,POS.Y+gojo.Size.Y/2,POS.Z)
+end
+gojo:SetAttribute("SourceAssetId",ASSET_ID)
+
+local function gojoOrigin()
+	if gojo:IsA("Model") then
+		local cf,size=gojo:GetBoundingBox()
+		-- Fire roughly from the upper torso/hand zone.
+		return cf.Position+Vector3.new(0,size.Y*.18,0)
+	elseif gojo:IsA("BasePart") then
+		return gojo.Position+Vector3.new(0,gojo.Size.Y*.2,0)
+	end
+	return POS+Vector3.new(0,8,0)
 end
 
-root:SetAttribute("SourceAssetId",ASSET_ID)
-status="CARREGOU"
-add("Workspace path",root:GetFullName())
-add("Classificacao","LOADASSET FUNCIONOU E O OBJETO FOI INSERIDO")
-print("[GojoAssetDiagnostic]\n"..reportText())
-broadcast()
+local function nearestPlayer()
+	local origin=gojoOrigin()
+	local best,bestDistance
+	for _,player in ipairs(Players:GetPlayers()) do
+		local character=player.Character
+		local humanoid=character and character:FindFirstChildOfClass("Humanoid")
+		local root=character and character:FindFirstChild("HumanoidRootPart")
+		if humanoid and humanoid.Health>0 and root then
+			local distance=(root.Position-origin).Magnitude
+			if not bestDistance or distance<bestDistance then
+				best=player
+				bestDistance=distance
+			end
+		end
+	end
+	return best
+end
+
+local function fireSphere(player)
+	local character=player and player.Character
+	local root=character and character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local origin=gojoOrigin()
+	local target=root.Position
+	local direction=target-origin
+	if direction.Magnitude<.01 then return end
+
+	-- 2x the LiveParkour impact sphere presentation.
+	local radius=5
+	local ball=Instance.new("Part")
+	ball.Name="GojoImpactSphere"
+	ball.Shape=Enum.PartType.Ball
+	ball.Size=Vector3.new(radius*2,radius*2,radius*2)
+	ball.Material=Enum.Material.Neon
+	ball.Color=Color3.fromRGB(75,145,255)
+	ball.Transparency=.12
+	ball.Anchored=true
+	ball.CanCollide=false
+	ball.CanTouch=false
+	ball.CanQuery=false
+	ball.Position=origin
+	ball.Parent=workspace
+
+	local light=Instance.new("PointLight")
+	light.Color=ball.Color
+	light.Brightness=6
+	light.Range=30
+	light.Parent=ball
+
+	local attachment=Instance.new("Attachment")
+	attachment.Parent=ball
+	local particles=Instance.new("ParticleEmitter")
+	particles.Color=ColorSequence.new(ball.Color:Lerp(Color3.new(1,1,1),.55),ball.Color)
+	particles.LightEmission=1
+	particles.Rate=120
+	particles.Lifetime=NumberRange.new(.25,.5)
+	particles.Speed=NumberRange.new(1,4)
+	particles.SpreadAngle=Vector2.new(180,180)
+	particles.Size=NumberSequence.new({
+		NumberSequenceKeypoint.new(0,.9),
+		NumberSequenceKeypoint.new(1,0),
+	})
+	particles.Parent=attachment
+
+	local distance=direction.Magnitude
+	local travelTime=math.clamp(distance/42,.25,1.4)
+	local tween=TweenService:Create(ball,TweenInfo.new(travelTime,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Position=target})
+	tween:Play()
+	tween.Completed:Connect(function()
+		-- Visual only: no collision, damage, impulse or player movement.
+		if ball.Parent then
+			TweenService:Create(ball,TweenInfo.new(.18),{Transparency=1,Size=ball.Size*1.15}):Play()
+			Debris:AddItem(ball,.22)
+		end
+	end)
+	Debris:AddItem(ball,3)
+end
+
+-- Test behavior: Gojo periodically fires one visual sphere at the nearest player.
+-- The projectile deliberately has zero gameplay force.
+task.spawn(function()
+	while gojo.Parent do
+		task.wait(3)
+		local player=nearestPlayer()
+		if player then fireSphere(player) end
+	end
+end)
+
+print("[Gojo] loaded, height x3, visual sphere x2 enabled")
