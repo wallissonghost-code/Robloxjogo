@@ -266,7 +266,6 @@ local function handPosition()
 end
 
 local function attackPlayer(player,mode)
-	local isRed=(mode=="redThrow" or mode=="redRush")
 	if attacking then diag(player,"BLOQUEADO","attacking=true"); return end
 	local character=player and player.Character
 	local root=character and character:FindFirstChild("HumanoidRootPart")
@@ -307,7 +306,7 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 
 		-- Blue is intentionally spawned above/in front of Gojo so the test is unmistakable.
 		diag(player,"3 BLUE","criando esfera")
-		local blue=makeBlue(handPosition())\n\t\tif isRed then\n\t\t\tblue.Name="GojoRed"; blue.Color=Color3.fromRGB(255,35,45); blue.Size=Vector3.new(1.1,1.1,1.1)\n\t\t\tlocal l=blue:FindFirstChildOfClass("PointLight"); if l then l.Color=blue.Color; l.Brightness=12; l.Range=42 end\n\t\tend
+		local blue=makeBlue(handPosition())
 		for i=1,24 do
 			if not blue.Parent then break end
 			blue.Position=handPosition()
@@ -319,35 +318,21 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		end
 		task.wait(.18)
 
-		if mode=="blueThrow" or mode=="redThrow" then
-			diag(player,"4 PROJETIL",isRed and "RED arremessado" or "BLUE arremessado + atracao")
-			local startPos=blue.Position
-			local targetPos=root.Position+Vector3.new(0,2,0)
-			for i=1,30 do
-				if not blue.Parent then break end
-				local t=i/30
-				blue.Position=startPos:Lerp(targetPos,1-(1-t)*(1-t))
-				if not isRed then
-					for _,p in ipairs(Players:GetPlayers()) do
-						local ch=p.Character
-						local pr=ch and ch:FindFirstChild("HumanoidRootPart")
-						local ph=ch and ch:FindFirstChildOfClass("Humanoid")
-						if pr and ph and ph.Health>0 then
-							local d=blue.Position-pr.Position
-							if d.Magnitude>2 and d.Magnitude<42 then
-								pr.AssemblyLinearVelocity=pr.AssemblyLinearVelocity+d.Unit*18
-							end
-						end
-					end
-				end
-				task.wait(.025)
-			end
-			if root.Parent then
-				local v=isRed and (root.Position-blue.Position) or (blue.Position-root.Position)
-				if v.Magnitude>.01 then
-					root.AssemblyLinearVelocity=v.Unit*(isRed and 385 or 115)+Vector3.new(0,isRed and 28 or 8,0)
-				end
-			end
+		if mode=="teleport" then
+			diag(player,"4 TELEPORTE","Gojo aparecendo perto do player")
+			local target=root.Position
+			local forward=root.CFrame.LookVector
+			local side=root.CFrame.RightVector
+			local destination=target-forward*9+side*2
+			local current=gojo:GetPivot()
+			local newPos=Vector3.new(destination.X,current.Position.Y,destination.Z)
+			gojo:PivotTo(CFrame.lookAt(newPos,Vector3.new(target.X,newPos.Y,target.Z)))
+			if hrp then hrp.AssemblyLinearVelocity=Vector3.zero; hrp.AssemblyAngularVelocity=Vector3.zero end
+			if blue.Parent then blue.Position=handPosition() end
+			if rightHip then rightHip.C0=rightHipBase*CFrame.Angles(math.rad(-25),0,0) end
+			if leftHip then leftHip.C0=leftHipBase*CFrame.Angles(math.rad(18),0,0) end
+			if rootJoint then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-14),0,0) end
+			task.wait(.12)
 		else
 			diag(player,"4 CORRIDA R6","aceleracao suave + passada sincronizada")
 			local MAX_SPEED=68
@@ -487,7 +472,7 @@ pushRemote.OnServerEvent:Connect(function(player,mode)
 		task.spawn(testLegs,player)
 		return
 	end
-	if mode~="blueThrow" and mode~="redThrow" and mode~="redRush" then mode="blueThrow" end
+	mode=(mode=="teleport") and "teleport" or "rush"
 	diag(player,"REMOTE OK","modo="..mode)
 	task.spawn(attackPlayer,player,mode)
 end)
