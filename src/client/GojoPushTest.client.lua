@@ -13,8 +13,8 @@ gui.Parent=player:WaitForChild("PlayerGui")
 
 local diag=Instance.new("TextLabel")
 diag.Name="Diagnostic"
-diag.Size=UDim2.new(.94,0,0,190)
-diag.Position=UDim2.new(.03,0,.05,0)
+diag.Size=UDim2.new(.58,0,0,112)
+diag.Position=UDim2.new(.02,0,.025,0)
 diag.BackgroundColor3=Color3.fromRGB(10,12,16)
 diag.BackgroundTransparency=.08
 diag.TextColor3=Color3.new(1,1,1)
@@ -22,14 +22,14 @@ diag.TextWrapped=true
 diag.TextXAlignment=Enum.TextXAlignment.Left
 diag.TextYAlignment=Enum.TextYAlignment.Top
 diag.Font=Enum.Font.Code
-diag.TextSize=14
+diag.TextSize=10
 diag.Text="GOJO DIAGNOSTICO\nAguardando clique..."
 diag.Parent=gui
 local dc=Instance.new("UICorner"); dc.CornerRadius=UDim.new(0,10); dc.Parent=diag
 local history={}
 local function addDiag(step,message)
 	table.insert(history,os.date("%H:%M:%S").."  "..step.."  "..message)
-	while #history>8 do table.remove(history,1) end
+	while #history>4 do table.remove(history,1) end
 	diag.Text="GOJO DIAGNOSTICO\n"..table.concat(history,"\n")
 end
 local fullFrame=Instance.new("ScrollingFrame")
@@ -82,12 +82,12 @@ end)
 local button=Instance.new("TextButton")
 button.Name="PushSphere"
 button.AnchorPoint=Vector2.new(1,1)
-button.Size=UDim2.fromOffset(180,56)
-button.Position=UDim2.new(1,-22,1,-92)
+button.Size=UDim2.fromOffset(128,40)
+button.Position=UDim2.new(1,-12,1,-58)
 button.BackgroundColor3=Color3.fromRGB(35,105,255)
 button.TextColor3=Color3.new(1,1,1)
 button.Font=Enum.Font.GothamBold
-button.TextSize=18
+button.TextSize=12
 button.Text="BLUE ARREMESSAR"
 button.AutoButtonColor=true
 button.Parent=gui
@@ -98,7 +98,7 @@ corner.Parent=button
 
 local teleportButton=button:Clone()
 teleportButton.Name="TeleportBlue"
-teleportButton.Position=UDim2.new(1,-22,1,-24)
+teleportButton.Position=UDim2.new(1,-12,1,-12)
 teleportButton.Text="GOJO TELEPORTE"
 teleportButton.Parent=gui
 
@@ -117,7 +117,7 @@ end)
 
 local redButton=button:Clone()
 redButton.Name="RedThrow"
-redButton.Position=UDim2.new(1,-212,1,-92)
+redButton.Position=UDim2.new(1,-148,1,-58)
 redButton.BackgroundColor3=Color3.fromRGB(220,35,45)
 redButton.Text="RED ARREMESSAR"
 redButton.Parent=gui
@@ -136,7 +136,7 @@ end)
 
 local comboButton=button:Clone()
 comboButton.Name="BlueRedCombo"
-comboButton.Position=UDim2.new(1,-212,1,-160)
+comboButton.Position=UDim2.new(1,-148,1,-106)
 comboButton.BackgroundColor3=Color3.fromRGB(125,55,190)
 comboButton.Text="BLUE + RED"
 comboButton.Parent=gui
@@ -155,7 +155,7 @@ end)
 
 local rigButton=button:Clone()
 rigButton.Name="RigDiagnostic"
-rigButton.Position=UDim2.new(0,22,1,-24)
+rigButton.Position=UDim2.new(0,12,1,-12)
 rigButton.AnchorPoint=Vector2.new(0,1)
 rigButton.Text="DIAGNOSTICO GERAL"
 rigButton.Parent=gui
@@ -166,7 +166,7 @@ end)
 
 local legsButton=button:Clone()
 legsButton.Name="LegsTest"
-legsButton.Position=UDim2.new(1,-22,1,-160)
+legsButton.Position=UDim2.new(1,-12,1,-106)
 legsButton.Text="TESTAR PERNAS"
 legsButton.Parent=gui
 
