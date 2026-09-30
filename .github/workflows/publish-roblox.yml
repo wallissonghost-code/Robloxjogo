@@ -73,6 +73,25 @@ jobs:
             sleep 180
           done
 
+      - name: Announce update to live servers
+        if: success()
+        env:
+          ROBLOX_API_KEY: ${{ secrets.MUSEU_EMPIRE_API_KEY }}
+        run: |
+          set -euo pipefail
+          TOPIC="Robloxjogo_Update_v1"
+          BUILD="${GITHUB_SHA}"
+          URL="https://apis.roblox.com/messaging-service/v1/universes/${ROBLOX_UNIVERSE_ID}/topics/${TOPIC}"
+          BODY=$(printf '{"message":"%s"}' "$BUILD")
+          HTTP_CODE=$(curl --silent --show-error --location --output /tmp/msg-response --write-out "%{http_code}" --request POST "$URL" --header "x-api-key: ${ROBLOX_API_KEY}" --header "Content-Type: application/json" --data "$BODY")
+          echo "MessagingService announce: HTTP ${HTTP_CODE}"
+          cat /tmp/msg-response || true
+          echo
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Update published, but live-server reconnect announcement failed."
+            exit 1
+          fi
+
       - name: Upload recovery artifact
         uses: actions/upload-artifact@v4
         with:
