@@ -323,6 +323,51 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 	attacking=false
 end
 
+local function sendRigDiagnostic(player)
+	local lines={}
+	local function add(x) table.insert(lines,tostring(x)) end
+	local hum=gojo:FindFirstChildOfClass("Humanoid")
+	local animator=hum and hum:FindFirstChildOfClass("Animator")
+	local motors,welds,parts,attachments=0,0,0,0
+	add("=== GOJO RIG DIAGNOSTICO ===")
+	add("Asset: "..ASSET_ID)
+	add("Classe raiz: "..gojo.ClassName)
+	add("Humanoid: "..tostring(hum~=nil))
+	add("RigType: "..tostring(hum and hum.RigType or "N/A"))
+	add("Animator: "..tostring(animator~=nil))
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("Motor6D") then motors+=1
+		elseif v:IsA("Weld") or v:IsA("WeldConstraint") then welds+=1
+		elseif v:IsA("BasePart") then parts+=1
+		elseif v:IsA("Attachment") then attachments+=1 end
+	end
+	add("Parts: "..parts.." | Motor6D: "..motors.." | Welds: "..welds.." | Attach: "..attachments)
+	add("")
+	add("--- MOTOR6D ---")
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("Motor6D") then
+			add(v.Name.." | "..(v.Part0 and v.Part0.Name or "nil").." -> "..(v.Part1 and v.Part1.Name or "nil"))
+		end
+	end
+	add("")
+	add("--- WELDS / CONSTRAINTS ---")
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("Weld") then
+			add("Weld "..v.Name.." | "..(v.Part0 and v.Part0.Name or "nil").." -> "..(v.Part1 and v.Part1.Name or "nil"))
+		elseif v:IsA("WeldConstraint") then
+			add("Constraint "..v.Name.." | "..(v.Part0 and v.Part0.Name or "nil").." <-> "..(v.Part1 and v.Part1.Name or "nil"))
+		end
+	end
+	add("")
+	add("--- PARTES VISUAIS ---")
+	for _,v in ipairs(gojo:GetDescendants()) do
+		if v:IsA("BasePart") then
+			add(v.Name.." ["..v.ClassName.."] A="..tostring(v.Anchored).." C="..tostring(v.CanCollide).." size="..string.format("%.1f,%.1f,%.1f",v.Size.X,v.Size.Y,v.Size.Z))
+		end
+	end
+	diagnosticRemote:FireClient(player,"RIG_FULL",table.concat(lines,"\n"))
+end
+
 local function testLegs(player)
 	if attacking then diag(player,"BLOQUEADO","ataque em andamento"); return end
 	attacking=true
@@ -347,6 +392,10 @@ end
 startupStage="READY"
 serverReady=true
 pushRemote.OnServerEvent:Connect(function(player,mode)
+	if mode=="diagnostic" then
+		sendRigDiagnostic(player)
+		return
+	end
 	if mode=="legs" then
 		diag(player,"REMOTE OK","modo=legs")
 		task.spawn(testLegs,player)
