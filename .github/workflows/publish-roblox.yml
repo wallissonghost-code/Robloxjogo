@@ -1,4 +1,4 @@
-name: Publish Roblox game
+name: Publish Roblox game\n# republish trigger: 2026-09-29 gojo server fix
 
 on:
   push:
