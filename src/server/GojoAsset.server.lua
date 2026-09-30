@@ -210,12 +210,14 @@ end
 
 local function runPose(phase)
 	local swing=math.sin(phase)
-	local bounce=math.abs(math.cos(phase*2))
-	if rightShoulder and rightBase then rightShoulder.C0=rightBase*CFrame.Angles(math.rad(26*swing),0,math.rad(2)) end
-	if leftShoulder and leftBase then leftShoulder.C0=leftBase*CFrame.Angles(math.rad(-26*swing),0,math.rad(-2)) end
-	setLegSwing(rightHip,rightHipBase,math.rad(32*swing))
-	setLegSwing(leftHip,leftHipBase,math.rad(-32*swing))
-	if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.new(0,.055*bounce,0)*CFrame.Angles(math.rad(-6),0,math.rad(1.5*swing)) end
+	-- Keep the proven hip-axis solution, but remove all lateral/bounce motion.
+	-- Legs alternate only forward/back. Arms stay neutral for now so we can
+	-- validate a clean lower-body run before adding arm swing back.
+	setLegSwing(rightHip,rightHipBase,math.rad(24*swing))
+	setLegSwing(leftHip,leftHipBase,math.rad(-24*swing))
+	if rightShoulder and rightBase then rightShoulder.C0=rightBase end
+	if leftShoulder and leftBase then leftShoulder.C0=leftBase end
+	if rootJoint and rootBase then rootJoint.C0=rootBase*CFrame.Angles(math.rad(-3),0,0) end
 end
 
 local function tweenMotor(m,c0,t)
