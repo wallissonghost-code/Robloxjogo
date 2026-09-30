@@ -406,9 +406,10 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 						local dist=horizontal.Magnitude
 						if dist>1.5 and dist<55 then
 							local speed=math.clamp(90+(55-dist)*2.4,90,210)
-							pr.AssemblyLinearVelocity=horizontal.Unit*speed
+							local currentY=pr.AssemblyLinearVelocity.Y
+							pr.AssemblyLinearVelocity=Vector3.new(horizontal.Unit.X*speed,math.max(currentY,42),horizontal.Unit.Z*speed)
 						elseif dist<=1.5 then
-							pr.AssemblyLinearVelocity=Vector3.zero
+							pr.AssemblyLinearVelocity=Vector3.new(0,42,0)
 						end
 					end
 				end
@@ -465,24 +466,33 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		if mode=="blueThrow" and blue and blue.Parent then
 			diag(player,"5 BLUE IMPACT","esfera expandindo + puxao forte")
 			local impactPos=blue.Position
-			-- Blue does not explode upward: it becomes a horizontal gravity lock.
-			for i=1,18 do
+			-- Blue holds the target in the air for a short gravity-lock effect.
+			for i=1,75 do
 				for _,p in ipairs(Players:GetPlayers()) do
 					local ch=p.Character
-					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
 					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
 					if pr and ph and ph.Health>0 then
 						local delta=impactPos-pr.Position
 						local horizontal=Vector3.new(delta.X,0,delta.Z)
 						local dist=horizontal.Magnitude
-						if dist>1.5 and dist<48 then
-							pr.AssemblyLinearVelocity=horizontal.Unit*math.clamp(150+(48-dist)*3,150,290)
-						elseif dist<=1.5 then
-							pr.AssemblyLinearVelocity=Vector3.zero
+						if dist<52 then
+							ph.WalkSpeed=0
+							ph.JumpPower=0
+							pr.AssemblyLinearVelocity=Vector3.new(horizontal.X*3,42,horizontal.Z*3)
+							pr.AssemblyAngularVelocity=Vector3.zero
 						end
 					end
 				end
-				task.wait(.035)
+				task.wait(.04)
+			end
+			for _,p in ipairs(Players:GetPlayers()) do
+				local ch=p.Character
+				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+				if ph and ph.Health>0 then
+					ph.WalkSpeed=16
+					ph.JumpPower=50
+				end
 			end
 			TweenService:Create(blue,TweenInfo.new(.13),{Transparency=1}):Play()
 			Debris:AddItem(blue,.16)
