@@ -32,6 +32,26 @@ local function addDiag(step,message)
 	while #history>4 do table.remove(history,1) end
 	diag.Text="GOJO DIAGNOSTICO\n"..table.concat(history,"\n")
 end
+local diagToggle=Instance.new("TextButton")
+diagToggle.Name="DiagnosticToggle"
+diagToggle.Size=UDim2.fromOffset(82,28)
+diagToggle.Position=UDim2.new(.02,0,.025,116)
+diagToggle.BackgroundColor3=Color3.fromRGB(25,28,34)
+diagToggle.TextColor3=Color3.new(1,1,1)
+diagToggle.Font=Enum.Font.GothamBold
+diagToggle.TextSize=10
+diagToggle.Text="OCULTAR DIAG"
+diagToggle.Parent=gui
+local dtc=Instance.new("UICorner"); dtc.CornerRadius=UDim.new(0,8); dtc.Parent=diagToggle
+
+local diagVisible=true
+diagToggle.Activated:Connect(function()
+	diagVisible=not diagVisible
+	diag.Visible=diagVisible
+	diagToggle.Text=diagVisible and "OCULTAR DIAG" or "MOSTRAR DIAG"
+	diagToggle.Position=diagVisible and UDim2.new(.02,0,.025,116) or UDim2.new(.02,0,.025,0)
+end)
+
 local fullFrame=Instance.new("ScrollingFrame")
 fullFrame.Name="FullRigDiagnostic"
 fullFrame.Size=UDim2.new(.94,0,.82,0)
