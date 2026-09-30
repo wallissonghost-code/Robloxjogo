@@ -264,8 +264,11 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 	attacking=false
 end
 
+startupStage="READY"
+serverReady=true
 pushRemote.OnServerEvent:Connect(function(player)
-	fireSphere(player,true)
+	diag(player,"REMOTE OK","servidor recebeu clique")
+	task.spawn(attackPlayer,player)
 end)
 
-print("[Gojo] loaded, scale x2.5; spheres fire only from test button")
+print("[Gojo] R6 Blue rush ready")
