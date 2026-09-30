@@ -466,8 +466,10 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		if mode=="blueThrow" and blue and blue.Parent then
 			diag(player,"5 BLUE IMPACT","esfera expandindo + puxao forte")
 			local impactPos=blue.Position
-			-- Blue gently suspends the player near the sphere. No launch, no spin.
+			-- Blue suspension: use constraints instead of repeatedly writing CFrame.
+			-- This avoids camera jitter and keeps the player only a few studs off the ground.
 			local locked={}
+			local holdY=impactPos.Y
 			for _,p in ipairs(Players:GetPlayers()) do
 				local ch=p.Character
 				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
@@ -476,53 +478,89 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 					local delta=impactPos-pr.Position
 					local horizontal=Vector3.new(delta.X,0,delta.Z)
 					if horizontal.Magnitude<52 then
-						locked[p]={
+						local state={
 							walk=ph.WalkSpeed,
 							jump=ph.JumpPower,
 							autoRotate=ph.AutoRotate,
-							wasPlatformStand=ph.PlatformStand,
-							startY=pr.Position.Y,
-							rotation=pr.CFrame - pr.Position
+							platformStand=ph.PlatformStand,
+							root=pr
 						}
+						locked[p]=state
+
+						-- Never lift the player more than ~6 studs from their current ground level.
+						holdY=math.min(holdY,pr.Position.Y+6)
+						local target=Instance.new("Part")
+						target.Name="BlueGravityTarget"
+						target.Size=Vector3.new(.5,.5,.5)
+						target.Transparency=1
+						target.Anchored=true
+						target.CanCollide=false
+						target.CanTouch=false
+						target.CanQuery=false
+						target.Position=Vector3.new(impactPos.X,holdY,impactPos.Z)
+						target.Parent=workspace
+						state.target=target
+
+						local rootAtt=Instance.new("Attachment")
+						rootAtt.Name="BlueLockAttachment"
+						rootAtt.Parent=pr
+
+						local targetAtt=Instance.new("Attachment")
+						targetAtt.Name="BlueTargetAttachment"
+						targetAtt.Parent=target
+
+						local align=Instance.new("AlignPosition")
+						align.Name="BlueGravityHold"
+						align.Attachment0=rootAtt
+						align.Attachment1=targetAtt
+						align.MaxForce=100000
+						align.MaxVelocity=35
+						align.Responsiveness=18
+						align.RigidityEnabled=false
+						align.Parent=pr
+
+						local orient=Instance.new("AlignOrientation")
+						orient.Name="BlueNoSpin"
+						orient.Attachment0=rootAtt
+						orient.Mode=Enum.OrientationAlignmentMode.OneAttachment
+						orient.CFrame=pr.CFrame.Rotation
+						orient.MaxTorque=100000
+						orient.Responsiveness=25
+						orient.RigidityEnabled=false
+						orient.Parent=pr
+
 						ph.WalkSpeed=0
 						ph.JumpPower=0
 						ph.AutoRotate=false
 						ph.PlatformStand=true
-					end
-				end
-			end
-			for i=1,75 do
-				for p,state in pairs(locked) do
-					local ch=p.Character
-					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
-					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
-					if pr and ph and ph.Health>0 then
-						-- Stay close to Blue's height, but never more than ~2x the
-						-- character's original height above where they started.
-						local maxLift=math.max(4,ph.HipHeight*2.5)
-						local desiredY=math.min(impactPos.Y,state.startY+maxLift)
-						local current=pr.Position
-						local nextPos=Vector3.new(current.X,current.Y+(desiredY-current.Y)*.18,current.Z)
-						pr.CFrame=CFrame.new(nextPos)*state.rotation
 						pr.AssemblyLinearVelocity=Vector3.zero
 						pr.AssemblyAngularVelocity=Vector3.zero
 					end
 				end
-				task.wait(.04)
 			end
+
+			task.wait(3)
+
 			for p,state in pairs(locked) do
 				local ch=p.Character
 				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
-				local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+				local pr=state.root
+				if state.target then state.target:Destroy() end
+				if pr then
+					local align=pr:FindFirstChild("BlueGravityHold")
+					local orient=pr:FindFirstChild("BlueNoSpin")
+					local att=pr:FindFirstChild("BlueLockAttachment")
+					if align then align:Destroy() end
+					if orient then orient:Destroy() end
+					if att then att:Destroy() end
+					pr.AssemblyLinearVelocity=Vector3.zero
+					pr.AssemblyAngularVelocity=Vector3.zero
+				end
 				if ph and ph.Health>0 then
 					ph.WalkSpeed=state.walk
 					ph.JumpPower=state.jump
 					ph.AutoRotate=state.autoRotate
-					ph.PlatformStand=state.wasPlatformStand
-				end
-				if pr then
-					pr.AssemblyLinearVelocity=Vector3.zero
-					pr.AssemblyAngularVelocity=Vector3.zero
+					ph.PlatformStand=state.platformStand
 				end
 			end
 			TweenService:Create(blue,TweenInfo.new(.13),{Transparency=1}):Play()
