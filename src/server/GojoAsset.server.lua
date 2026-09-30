@@ -466,32 +466,63 @@ diag(player,"ALVO OK","player="..player.Name.." motors R/L="..tostring(rightShou
 		if mode=="blueThrow" and blue and blue.Parent then
 			diag(player,"5 BLUE IMPACT","esfera expandindo + puxao forte")
 			local impactPos=blue.Position
-			-- Blue holds the target in the air for a short gravity-lock effect.
+			-- Blue gently suspends the player near the sphere. No launch, no spin.
+			local locked={}
+			for _,p in ipairs(Players:GetPlayers()) do
+				local ch=p.Character
+				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+				local pr=ch and ch:FindFirstChild("HumanoidRootPart")
+				if pr and ph and ph.Health>0 then
+					local delta=impactPos-pr.Position
+					local horizontal=Vector3.new(delta.X,0,delta.Z)
+					if horizontal.Magnitude<52 then
+						locked[p]={
+							walk=ph.WalkSpeed,
+							jump=ph.JumpPower,
+							autoRotate=ph.AutoRotate,
+							wasPlatformStand=ph.PlatformStand,
+							startY=pr.Position.Y,
+							rotation=pr.CFrame - pr.Position
+						}
+						ph.WalkSpeed=0
+						ph.JumpPower=0
+						ph.AutoRotate=false
+						ph.PlatformStand=true
+					end
+				end
+			end
 			for i=1,75 do
-				for _,p in ipairs(Players:GetPlayers()) do
+				for p,state in pairs(locked) do
 					local ch=p.Character
 					local ph=ch and ch:FindFirstChildOfClass("Humanoid")
 					local pr=ch and ch:FindFirstChild("HumanoidRootPart")
 					if pr and ph and ph.Health>0 then
-						local delta=impactPos-pr.Position
-						local horizontal=Vector3.new(delta.X,0,delta.Z)
-						local dist=horizontal.Magnitude
-						if dist<52 then
-							ph.WalkSpeed=0
-							ph.JumpPower=0
-							pr.AssemblyLinearVelocity=Vector3.new(horizontal.X*3,42,horizontal.Z*3)
-							pr.AssemblyAngularVelocity=Vector3.zero
-						end
+						-- Stay close to Blue's height, but never more than ~2x the
+						-- character's original height above where they started.
+						local maxLift=math.max(4,ph.HipHeight*2.5)
+						local desiredY=math.min(impactPos.Y,state.startY+maxLift)
+						local current=pr.Position
+						local nextPos=Vector3.new(current.X,current.Y+(desiredY-current.Y)*.18,current.Z)
+						pr.CFrame=CFrame.new(nextPos)*state.rotation
+						pr.AssemblyLinearVelocity=Vector3.zero
+						pr.AssemblyAngularVelocity=Vector3.zero
 					end
 				end
 				task.wait(.04)
 			end
-			for _,p in ipairs(Players:GetPlayers()) do
+			for p,state in pairs(locked) do
 				local ch=p.Character
 				local ph=ch and ch:FindFirstChildOfClass("Humanoid")
+				local pr=ch and ch:FindFirstChild("HumanoidRootPart")
 				if ph and ph.Health>0 then
-					ph.WalkSpeed=16
-					ph.JumpPower=50
+					ph.WalkSpeed=state.walk
+					ph.JumpPower=state.jump
+					ph.AutoRotate=state.autoRotate
+					ph.PlatformStand=state.wasPlatformStand
+				end
+				if pr then
+					pr.AssemblyLinearVelocity=Vector3.zero
+					pr.AssemblyAngularVelocity=Vector3.zero
 				end
 			end
 			TweenService:Create(blue,TweenInfo.new(.13),{Transparency=1}):Play()
