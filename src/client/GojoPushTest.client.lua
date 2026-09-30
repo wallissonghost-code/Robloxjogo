@@ -32,7 +32,53 @@ local function addDiag(step,message)
 	while #history>8 do table.remove(history,1) end
 	diag.Text="GOJO DIAGNOSTICO\n"..table.concat(history,"\n")
 end
-diagnosticRemote.OnClientEvent:Connect(addDiag)
+local fullFrame=Instance.new("ScrollingFrame")
+fullFrame.Name="FullRigDiagnostic"
+fullFrame.Size=UDim2.new(.94,0,.82,0)
+fullFrame.Position=UDim2.new(.03,0,.03,0)
+fullFrame.BackgroundColor3=Color3.fromRGB(7,9,12)
+fullFrame.BackgroundTransparency=.03
+fullFrame.BorderSizePixel=0
+fullFrame.Visible=false
+fullFrame.AutomaticCanvasSize=Enum.AutomaticSize.Y
+fullFrame.CanvasSize=UDim2.new()
+fullFrame.ScrollBarThickness=8
+fullFrame.ZIndex=20
+fullFrame.Parent=gui
+local fc=Instance.new("UICorner"); fc.CornerRadius=UDim.new(0,12); fc.Parent=fullFrame
+local fullText=Instance.new("TextLabel")
+fullText.Size=UDim2.new(1,-24,0,0)
+fullText.Position=UDim2.fromOffset(12,12)
+fullText.AutomaticSize=Enum.AutomaticSize.Y
+fullText.BackgroundTransparency=1
+fullText.TextColor3=Color3.new(1,1,1)
+fullText.Font=Enum.Font.Code
+fullText.TextSize=13
+fullText.TextXAlignment=Enum.TextXAlignment.Left
+fullText.TextYAlignment=Enum.TextYAlignment.Top
+fullText.TextWrapped=false
+fullText.ZIndex=21
+fullText.Parent=fullFrame
+local close=Instance.new("TextButton")
+close.Size=UDim2.fromOffset(90,38)
+close.Position=UDim2.new(1,-14,0,10)
+close.AnchorPoint=Vector2.new(1,0)
+close.Text="FECHAR"
+close.Font=Enum.Font.GothamBold
+close.TextSize=14
+close.ZIndex=22
+close.Parent=fullFrame
+close.Activated:Connect(function() fullFrame.Visible=false end)
+
+diagnosticRemote.OnClientEvent:Connect(function(step,message)
+	if step=="RIG_FULL" then
+		fullText.Text=message
+		fullFrame.CanvasPosition=Vector2.zero
+		fullFrame.Visible=true
+	else
+		addDiag(step,message)
+	end
+end)
 local button=Instance.new("TextButton")
 button.Name="PushSphere"
 button.AnchorPoint=Vector2.new(1,1)
@@ -68,6 +114,17 @@ button.Activated:Connect(function()
 	busy=false
 end)
 
+
+local rigButton=button:Clone()
+rigButton.Name="RigDiagnostic"
+rigButton.Position=UDim2.new(0,22,1,-24)
+rigButton.AnchorPoint=Vector2.new(0,1)
+rigButton.Text="DIAGNOSTICO GERAL"
+rigButton.Parent=gui
+rigButton.Activated:Connect(function()
+	addDiag("DIAGNOSTICO","solicitando mapa completo do rig")
+	remote:FireServer("diagnostic")
+end)
 
 local legsButton=button:Clone()
 legsButton.Name="LegsTest"
