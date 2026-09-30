@@ -21,6 +21,12 @@
           "Material": "Grass"
         }
       }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "GojoAsset": {
+        "$path": "src/server/GojoAsset.server.lua"
+      }
     }
   }
 }
