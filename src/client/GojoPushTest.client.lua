@@ -69,6 +69,24 @@ button.Activated:Connect(function()
 end)
 
 
+local legsButton=button:Clone()
+legsButton.Name="LegsTest"
+legsButton.Position=UDim2.new(1,-22,1,-160)
+legsButton.Text="TESTAR PERNAS"
+legsButton.Parent=gui
+
+local legsBusy=false
+legsButton.Activated:Connect(function()
+	if legsBusy then return end
+	legsBusy=true
+	addDiag("CLIQUE LOCAL","teste isolado das pernas")
+	remote:FireServer("legs")
+	legsButton.Text="MEXENDO..."
+	task.wait(6.8)
+	legsButton.Text="TESTAR PERNAS"
+	legsBusy=false
+end)
+
 local teleportBusy=false
 teleportButton.Activated:Connect(function()
 	if teleportBusy then return end
