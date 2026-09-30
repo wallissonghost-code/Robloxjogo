@@ -4,22 +4,20 @@
     "$className": "DataModel",
     "Workspace": {
       "$className": "Workspace",
-      "SpawnLocation": {
-        "$className": "SpawnLocation",
-        "$properties": {
-          "Anchored": true,
-          "Neutral": true,
-          "Size": [12, 1, 12],
-          "Position": [0, 0.5, 18],
-          "Duration": 0
-        }
-      },
       "Baseplate": {
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [256, 1, 256],
-          "Position": [0, 0, 0],
+          "Size": [
+            256,
+            1,
+            256
+          ],
+          "Position": [
+            0,
+            0,
+            0
+          ],
           "Material": "Grass"
         }
       }
