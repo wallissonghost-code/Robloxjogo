@@ -13,8 +13,8 @@ gui.Parent=player:WaitForChild("PlayerGui")
 
 local diag=Instance.new("TextLabel")
 diag.Name="Diagnostic"
-diag.Size=UDim2.new(.58,0,0,112)
-diag.Position=UDim2.new(.02,0,.025,0)
+diag.Size=UDim2.fromOffset(310,72)
+diag.Position=UDim2.new(.02,0,.13,0)
 diag.BackgroundColor3=Color3.fromRGB(10,12,16)
 diag.BackgroundTransparency=.08
 diag.TextColor3=Color3.new(1,1,1)
@@ -22,20 +22,20 @@ diag.TextWrapped=true
 diag.TextXAlignment=Enum.TextXAlignment.Left
 diag.TextYAlignment=Enum.TextYAlignment.Top
 diag.Font=Enum.Font.Code
-diag.TextSize=10
+diag.TextSize=9
 diag.Text="GOJO DIAGNOSTICO\nAguardando clique..."
 diag.Parent=gui
 local dc=Instance.new("UICorner"); dc.CornerRadius=UDim.new(0,10); dc.Parent=diag
 local history={}
 local function addDiag(step,message)
 	table.insert(history,os.date("%H:%M:%S").."  "..step.."  "..message)
-	while #history>4 do table.remove(history,1) end
+	while #history>2 do table.remove(history,1) end
 	diag.Text="GOJO DIAGNOSTICO\n"..table.concat(history,"\n")
 end
 local diagToggle=Instance.new("TextButton")
 diagToggle.Name="DiagnosticToggle"
 diagToggle.Size=UDim2.fromOffset(82,28)
-diagToggle.Position=UDim2.new(.02,0,.025,116)
+diagToggle.Position=UDim2.new(.02,316,.13,0)
 diagToggle.BackgroundColor3=Color3.fromRGB(25,28,34)
 diagToggle.TextColor3=Color3.new(1,1,1)
 diagToggle.Font=Enum.Font.GothamBold
