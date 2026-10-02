@@ -8,16 +8,8 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [
-            256,
-            1,
-            256
-          ],
-          "Position": [
-            0,
-            0,
-            0
-          ],
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
           "Material": "Grass"
         }
       }
@@ -29,6 +21,9 @@
       },
       "UpdateRelay": {
         "$path": "src/server/UpdateRelay.server.lua"
+      },
+      "CowMorph": {
+        "$path": "src/server/CowMorph.server.lua"
       }
     },
     "StarterPlayer": {
@@ -37,6 +32,9 @@
         "$className": "StarterPlayerScripts",
         "GojoPushTest": {
           "$path": "src/client/GojoPushTest.client.lua"
+        },
+        "CowMorphButton": {
+          "$path": "src/client/CowMorphButton.client.lua"
         }
       }
     }
