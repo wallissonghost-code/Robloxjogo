@@ -95,7 +95,7 @@ local function morphCow(player)
 
 	local visual=unwrapAsset(container)
 	visual.Name="CowMorph_"..player.UserId
-	visual.Parent=character
+	visual.Parent=workspace
 	local parts=getParts(visual)
 	if #parts==0 then
 		visual:Destroy()
@@ -155,8 +155,12 @@ local function morphCow(player)
 		end
 	end
 
+	-- Hide only the original avatar. The cow lives in Workspace, so it remains visible.
 	setCharacterVisible(character,false)
 	hrp.Transparency=1
+	for _,part in ipairs(parts) do
+		part.Transparency=math.min(part.Transparency,0)
+	end
 	states[player]={character=character,visual=visual}
 	remote:FireClient(player,"ON",("Vaca ativa | parts=%d | root=%s"):format(#parts,visualRoot.Name))
 end
