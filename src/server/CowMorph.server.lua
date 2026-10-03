@@ -282,7 +282,6 @@ local function morphCow(player)
 	local walkConnection=setupCowWalk(player,visual,humanoid)
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | escala %.1f%% | parts=%d"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,scaleFactor*100,#parts))
-	remote:FireClient(player,"RIG",cowRigReport(visual))
 end
 
 remote.OnServerEvent:Connect(function(player,action)
