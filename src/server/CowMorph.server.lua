@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cowwalk-custom-joints"
+local COW_BUILD="2026-10-02-cow-part-map"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -93,6 +93,41 @@ local function chooseRoot(root,parts)
 			or parts[1]
 	end
 	return root:IsA("BasePart") and root or parts[1]
+end
+
+local DEBUG_PART_COLORS={
+	Color3.fromRGB(255,70,70),Color3.fromRGB(70,140,255),Color3.fromRGB(70,255,120),
+	Color3.fromRGB(255,220,60),Color3.fromRGB(210,80,255),Color3.fromRGB(255,130,40),
+	Color3.fromRGB(40,240,240),Color3.fromRGB(255,80,180),Color3.fromRGB(150,255,60),
+	Color3.fromRGB(120,100,255),Color3.fromRGB(255,170,190),Color3.fromRGB(80,200,160)
+}
+
+local function applyPartMap(visual)
+	local list=getParts(visual)
+	table.sort(list,function(a,b) return a.Name<b.Name end)
+	for i,part in ipairs(list) do
+		if part.Name~="RootPart" then
+			part.Color=DEBUG_PART_COLORS[((i-1)%#DEBUG_PART_COLORS)+1]
+			part.Material=Enum.Material.SmoothPlastic
+			local tag=Instance.new("BillboardGui")
+			tag.Name="CowPartTag"
+			tag.Size=UDim2.fromOffset(150,30)
+			tag.StudsOffset=Vector3.new(0,math.max(.5,part.Size.Y/2+.25),0)
+			tag.AlwaysOnTop=true
+			tag.MaxDistance=35
+			tag.Parent=part
+			local label=Instance.new("TextLabel")
+			label.Size=UDim2.fromScale(1,1)
+			label.BackgroundColor3=Color3.fromRGB(0,0,0)
+			label.BackgroundTransparency=.25
+			label.TextColor3=Color3.new(1,1,1)
+			label.TextStrokeTransparency=.3
+			label.Font=Enum.Font.Code
+			label.TextSize=11
+			label.Text=part.Name
+			label.Parent=tag
+		end
+	end
 end
 
 local function findMotorForPart(visual,partName)
@@ -303,7 +338,9 @@ local function morphCow(player)
 	for _,part in ipairs(parts) do
 		part.Transparency=math.min(part.Transparency,0)
 	end
-	local walkConnection,legMap=setupCowWalk(player,visual,humanoid,visualRoot)
+	applyPartMap(visual)
+	local walkConnection=nil
+	local legMap="MAPA DE PECAS ATIVO"
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
