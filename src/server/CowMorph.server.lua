@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-number-filter-1"
+local COW_BUILD="2026-10-02-cow-number-selector"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -105,15 +105,14 @@ local function applyNumberMap(visual)
 		if a.Name==b.Name then return a:GetFullName()<b:GetFullName() end
 		return a.Name<b.Name
 	end)
-	local hiddenNumbers={[5]=true,[7]=true,[12]=true,[24]=true,[25]=true,[26]=true,[27]=true,[28]=true,[30]=true}
 	for i,part in ipairs(filtered) do
-		if hiddenNumbers[i] then continue end
 		local tag=Instance.new("BillboardGui")
-		tag.Name="CowNumberTag"
+		tag.Name="CowNumberTag_"..i
 		tag.Size=UDim2.fromOffset(16,14)
 		tag.StudsOffset=Vector3.new(0,math.max(.2,part.Size.Y*.25),0)
 		tag.AlwaysOnTop=true
 		tag.MaxDistance=28
+		tag.Enabled=false
 		tag.Parent=part
 		local label=Instance.new("TextLabel")
 		label.Size=UDim2.fromScale(1,1)
@@ -127,6 +126,17 @@ local function applyNumberMap(visual)
 		label.Parent=tag
 	end
 	return #filtered
+end
+
+local function setNumberVisible(visual,number,visible)
+	local wanted="CowNumberTag_"..tostring(number)
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("BillboardGui") and obj.Name==wanted then
+			obj.Enabled=visible==true
+			return true
+		end
+	end
+	return false
 end
 
 local function findMotorForPart(visual,partName)
@@ -353,6 +363,18 @@ local function morphCow(player)
 end
 
 remote.OnServerEvent:Connect(function(player,action,part)
+	if action=="number" then
+		local state=states[player]
+		if not state or not state.visual then return end
+		local number=tonumber(part)
+		if not number then return end
+		local enabled=state.numberEnabled or {}
+		state.numberEnabled=enabled
+		enabled[number]=not enabled[number]
+		setNumberVisible(state.visual,number,enabled[number])
+		remote:FireClient(player,"NUMBER",number,enabled[number])
+		return
+	end
 	if action=="inspect" then
 		local state=states[player]
 		if not state or not state.visual or typeof(part)~="Instance" or not part:IsA("BasePart") or not part:IsDescendantOf(state.visual) then return end
