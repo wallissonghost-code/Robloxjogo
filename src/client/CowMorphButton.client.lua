@@ -97,7 +97,10 @@ end)
 
 remote.OnClientEvent:Connect(function(state,message)
 	busy=false
-	if state=="RIG" then
+	if state=="STATUS" then
+		status.Text="VACA: "..tostring(message)
+		return
+	elseif state=="RIG" then
 		rigText.Text=tostring(message)
 		rigFrame.Visible=true
 		return
