@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-number-map"
+local COW_BUILD="2026-10-02-cow-number-map-safe"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -106,7 +106,6 @@ local function applyNumberMap(visual)
 		return a.Name<b.Name
 	end)
 	for i,part in ipairs(filtered) do
-		part:SetAttribute("CowMapNumber",i)
 		local tag=Instance.new("BillboardGui")
 		tag.Name="CowNumberTag"
 		tag.Size=UDim2.fromOffset(34,26)
@@ -337,10 +336,17 @@ local function morphCow(player)
 	for _,part in ipairs(parts) do
 		part.Transparency=math.min(part.Transparency,0)
 	end
-	local mapCount=applyNumberMap(visual)
 	local walkConnection=nil
-	local legMap="MAPA NUMERADO 1-"..mapCount
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
+	-- Debug labels are optional: never let them break a successful morph.
+	local mapCount=0
+	local mapOk,mapResult=pcall(function() return applyNumberMap(visual) end)
+	if mapOk then
+		mapCount=mapResult
+	else
+		warn("[CowMorph] number map failed: "..tostring(mapResult))
+	end
+	local legMap=mapOk and ("MAPA NUMERADO 1-"..mapCount) or "MAPA FALHOU - MORPH OK"
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
 
