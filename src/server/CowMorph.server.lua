@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-custom-c0-rig-2"
+local COW_BUILD="2026-10-03-cow-leg-groups-3"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -148,83 +148,118 @@ local function findMotorForPart(visual,partName)
 end
 
 local function setupCowWalk(player,visual,humanoid,visualRoot)
-	-- Replace ONLY the four imported leg joints with joints we own.
-	-- The rest of the cow keeps its original rig untouched.
+	-- The cow asset is a star rig: leg decorations/hooves are separate RootPart children.
+	-- Build four complete leg groups (long leg + nearby small meshes) and animate carriers.
 	local legNames={
 		["Cube.017"]=true,["Cube.018"]=true,
 		["Pintar marron.002"]=true,["Pintar marron.003"]=true,
 	}
-	local legs={}
-	for _,part in ipairs(getParts(visual)) do
-		if legNames[part.Name] then
-			-- Remove every rigid/joint connection that directly controls this leg.
-			for _,j in ipairs(visual:GetDescendants()) do
-				if (j:IsA("Motor6D") or j:IsA("Weld")) and (j.Part0==part or j.Part1==part) then
-					j:Destroy()
-				elseif j:IsA("WeldConstraint") and (j.Part0==part or j.Part1==part) then
-					j:Destroy()
-				end
+	local hoofNames={
+		["M.B.L.F."]=true,["M.B.R.F"]=true,["M.F.L.F"]=true,["M.F.R.F"]=true,
+	}
+	local longLegs,hooves={},{}
+	for _,p in ipairs(getParts(visual)) do
+		if legNames[p.Name] then table.insert(longLegs,p) end
+		if hoofNames[p.Name] then table.insert(hooves,p) end
+	end
+	if #longLegs~=4 then return nil,"LONG LEGS="..#longLegs.."/4" end
+
+	-- Pair each hoof to the closest long leg before changing any joints.
+	local hoofFor={}
+	for _,hoof in ipairs(hooves) do
+		local best,bestD=nil,math.huge
+		for _,leg in ipairs(longLegs) do
+			local d=(hoof.Position-leg.Position).Magnitude
+			if d<bestD then best,bestD=leg,d end
+		end
+		if best then hoofFor[best]=hoof end
+	end
+
+	local function removeConnections(part)
+		for _,j in ipairs(visual:GetDescendants()) do
+			if (j:IsA("Motor6D") or j:IsA("Weld") or j:IsA("WeldConstraint"))
+				and (j.Part0==part or j.Part1==part) then
+				j:Destroy()
 			end
-
-			-- Joint at the TOP of the leg. C0/C1 are computed from the current world
-			-- pose, so creating it cannot snap the mesh to a different position.
-			local hipWorld=part.CFrame*CFrame.new(0,part.Size.Y*.5,0)
-			local motor=Instance.new("Motor6D")
-			motor.Name="CowLegJoint_"..part.Name
-			motor.Part0=visualRoot
-			motor.Part1=part
-			motor.C0=visualRoot.CFrame:ToObjectSpace(hipWorld)
-			motor.C1=part.CFrame:ToObjectSpace(hipWorld)
-			motor.Parent=visualRoot
-			part.Anchored=false
-			part.Massless=true
-			part.CanCollide=false
-
-			table.insert(legs,{
-				part=part,
-				motor=motor,
-				baseC0=motor.C0,
-				baseC1=motor.C1,
-				pos=visualRoot.CFrame:PointToObjectSpace(part.Position),
-			})
 		end
 	end
-	if #legs~=4 then return nil,"CUSTOM LEGS="..#legs.."/4" end
 
-	-- Identify the four corners from their actual positions, then use a diagonal gait.
-	table.sort(legs,function(a,b) return a.pos.Z<b.pos.Z end)
-	local endA={legs[1],legs[2]}
-	local endB={legs[3],legs[4]}
-	table.sort(endA,function(a,b) return a.pos.X<b.pos.X end)
-	table.sort(endB,function(a,b) return a.pos.X<b.pos.X end)
-	local gait={
-		{data=endA[1],sign=1},{data=endA[2],sign=-1},
-		{data=endB[1],sign=-1},{data=endB[2],sign=1},
-	}
+	local legs={}
+	for _,leg in ipairs(longLegs) do
+		local hoof=hoofFor[leg]
+		local legWorld=leg.CFrame
+		local hoofWorld=hoof and hoof.CFrame or nil
+		removeConnections(leg)
+		if hoof then removeConnections(hoof) end
 
+		-- Invisible carrier at the hip. It is the only articulated object.
+		local hipWorld=legWorld*CFrame.new(0,leg.Size.Y*.5,0)
+		local carrier=Instance.new("Part")
+		carrier.Name="CowLegCarrier_"..leg.Name
+		carrier.Size=Vector3.new(.12,.12,.12)
+		carrier.Transparency=1
+		carrier.CanCollide=false
+		carrier.CanTouch=false
+		carrier.CanQuery=false
+		carrier.Massless=true
+		carrier.Anchored=false
+		carrier.CFrame=hipWorld
+		carrier.Parent=visual
+
+		local hip=Instance.new("Motor6D")
+		hip.Name="CowHip_"..leg.Name
+		hip.Part0=visualRoot
+		hip.Part1=carrier
+		hip.C0=visualRoot.CFrame:ToObjectSpace(hipWorld)
+		hip.C1=CFrame.identity
+		hip.Parent=visualRoot
+
+		-- Weld visual pieces to the carrier preserving their exact current pose.
+		local legWeld=Instance.new("Weld")
+		legWeld.Name="CowLegVisual_"..leg.Name
+		legWeld.Part0=carrier
+		legWeld.Part1=leg
+		legWeld.C0=carrier.CFrame:ToObjectSpace(legWorld)
+		legWeld.C1=CFrame.identity
+		legWeld.Parent=carrier
+		if hoof then
+			local hoofWeld=Instance.new("Weld")
+			hoofWeld.Name="CowHoofVisual_"..hoof.Name
+			hoofWeld.Part0=carrier
+			hoofWeld.Part1=hoof
+			hoofWeld.C0=carrier.CFrame:ToObjectSpace(hoofWorld)
+			hoofWeld.C1=CFrame.identity
+			hoofWeld.Parent=carrier
+		end
+
+		table.insert(legs,{
+			leg=leg,hoof=hoof,motor=hip,baseC0=hip.C0,
+			pos=visualRoot.CFrame:PointToObjectSpace(leg.Position),
+		})
+	end
+
+	table.sort(legs,function(x,y) return x.pos.Z<y.pos.Z end)
+	local a={legs[1],legs[2]}; local b={legs[3],legs[4]}
+	table.sort(a,function(x,y) return x.pos.X<y.pos.X end)
+	table.sort(b,function(x,y) return x.pos.X<y.pos.X end)
+	local gait={{a[1],1},{a[2],-1},{b[1],-1},{b[2],1}}
 	local phase=0
 	local connection
 	connection=RunService.PostSimulation:Connect(function(dt)
-		if not visual.Parent or not humanoid.Parent or not visualRoot.Parent then
+		if not visual.Parent or not humanoid.Parent then
 			if connection then connection:Disconnect() end
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.03
 		if moving then phase+=dt*7.2 end
-		local swing=moving and math.sin(phase)*math.rad(26) or 0
+		local swing=moving and math.sin(phase)*math.rad(25) or 0
 		for _,entry in ipairs(gait) do
-			local d=entry.data
-			-- This Motor6D belongs to us, so drive C0 directly. Unlike the imported
-			-- joints there is no Animator that should own/reset this C0.
+			local d,sign=entry[1],entry[2]
 			d.motor.Transform=CFrame.identity
-			d.motor.C1=d.baseC1
-			d.motor.C0=d.baseC0*CFrame.Angles(swing*entry.sign,0,0)
+			d.motor.C0=d.baseC0*CFrame.Angles(swing*sign,0,0)
 		end
 	end)
-
-	local names={}
-	for _,d in ipairs(legs) do table.insert(names,d.part.Name) end
-	return connection,"CUSTOM JOINTS="..table.concat(names,",")
+	return connection,"LEG GROUPS=4 | HOOFS="..#hooves
 end
 
 local function clearCow(player)
