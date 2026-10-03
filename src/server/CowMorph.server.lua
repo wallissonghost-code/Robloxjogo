@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-leg-motor-pivot-2"
+local COW_BUILD="2026-10-03-cow-leg-transform-3"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -191,9 +191,12 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		local swing=moving and math.sin(phase)*math.rad(24) or 0
 		for _,entry in ipairs(gait) do
 			local d,sign=entry[1],entry[2]
-			local target=d.baseC0*CFrame.Angles(swing*sign,0,0)
-			d.motor.C0=d.motor.C0:Lerp(target,math.min(dt*16,1))
+			-- Motor6D.Transform is the animation channel. C0/C1 define the joint;
+			-- Transform supplies the visible pose without fighting the joint solver.
+			d.motor.C0=d.baseC0
 			d.motor.C1=d.baseC1
+			local target=CFrame.Angles(swing*sign,0,0)
+			d.motor.Transform=d.motor.Transform:Lerp(target,math.min(dt*18,1))
 		end
 	end)
 	local names={}
