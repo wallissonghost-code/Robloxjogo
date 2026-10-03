@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cowwalk-axis-test"
+local COW_BUILD="2026-10-02-cowwalk-custom-joints"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -112,45 +112,57 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 			local longest=math.max(part.Size.X,part.Size.Y,part.Size.Z)
 			local shortest=math.min(part.Size.X,part.Size.Y,part.Size.Z)
 			if longest>=1.8 and shortest>=0.45 and localPos.Y<0 then
-				table.insert(candidates,{motor=obj,part=part,pos=localPos,score=longest})
+				table.insert(candidates,{oldMotor=obj,part=part,pos=localPos,score=longest})
 			end
 		end
 	end
 	table.sort(candidates,function(a,b) return a.score>b.score end)
 	while #candidates>4 do table.remove(candidates) end
 	if #candidates<4 then return nil,"legs="..#candidates end
+
 	table.sort(candidates,function(a,b) return a.pos.Z<b.pos.Z end)
 	local pairA={candidates[1],candidates[2]}
 	local pairB={candidates[3],candidates[4]}
 	table.sort(pairA,function(a,b) return a.pos.X<b.pos.X end)
 	table.sort(pairB,function(a,b) return a.pos.X<b.pos.X end)
 	local legs={FL=pairA[1],FR=pairA[2],BL=pairB[1],BR=pairB[2]}
-	for _,data in pairs(legs) do data.baseC0=data.motor.C0 end
 
-	-- Diagnostic axis cycle. This intentionally moves all four actual leg motors
-	-- through X, Y and Z so the imported Blender joint orientation is observable.
-	task.spawn(function()
-		local tests={
-			{name="X",cf=CFrame.Angles(math.rad(40),0,0)},
-			{name="Y",cf=CFrame.Angles(0,math.rad(40),0)},
-			{name="Z",cf=CFrame.Angles(0,0,math.rad(40))},
-		}
-		task.wait(1)
-		for _,test in ipairs(tests) do
-			if not visual.Parent then return end
-			remote:FireClient(player,"STATUS","EIXO "..test.name.." - pernas +40 graus")
-			for _,data in pairs(legs) do data.motor.C0=data.baseC0*test.cf end
-			task.wait(2)
-			for _,data in pairs(legs) do data.motor.C0=data.baseC0 end
-			task.wait(.6)
+	-- Replace only the four imported leg motors with joints we fully control.
+	for key,data in pairs(legs) do
+		local partWorld=data.part.CFrame
+		data.oldMotor:Destroy()
+		local motor=Instance.new("Motor6D")
+		motor.Name="CowLeg_"..key
+		motor.Part0=visualRoot
+		motor.Part1=data.part
+		motor.C0=visualRoot.CFrame:ToObjectSpace(partWorld)
+		motor.C1=CFrame.new()
+		motor.Parent=visualRoot
+		data.motor=motor
+		data.baseC0=motor.C0
+	end
+
+	local phase=0
+	local connection
+	connection=RunService.Heartbeat:Connect(function(dt)
+		if not visual.Parent or not humanoid.Parent then
+			if connection then connection:Disconnect() end
+			return
 		end
-		remote:FireClient(player,"STATUS","Teste X/Y/Z concluido")
+		local moving=humanoid.MoveDirection.Magnitude>0.05
+		if moving then phase+=dt*8 end
+		local swing=moving and math.sin(phase)*math.rad(28) or 0
+		local angles={FL=swing,BR=swing,FR=-swing,BL=-swing}
+		for key,data in pairs(legs) do
+			local target=data.baseC0*CFrame.Angles(angles[key],0,0)
+			data.motor.C0=data.motor.C0:Lerp(target,math.min(dt*14,1))
+		end
 	end)
 
 	local names={}
 	for key,data in pairs(legs) do table.insert(names,key.."="..data.part.Name) end
 	table.sort(names)
-	return nil,table.concat(names,",")
+	return connection,table.concat(names,",")
 end
 
 local function clearCow(player)
