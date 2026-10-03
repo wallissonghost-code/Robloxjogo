@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-leg-pivot-1"
+local COW_BUILD="2026-10-03-cow-leg-motor-pivot-2"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -148,27 +148,28 @@ local function findMotorForPart(visual,partName)
 end
 
 local function setupCowWalk(player,visual,humanoid,visualRoot)
-	-- The imported cow is a rigid cosmetic rig: animate the four identified leg
-	-- MeshParts directly around a virtual hip pivot instead of relying on its Motor6Ds.
+	-- Animate through the original Motor6Ds. Never detach the meshes: doing so
+	-- makes the legs physically independent from the cow.
 	local legNames={
 		["Cube.017"]=true,["Cube.018"]=true,
 		["Pintar marron.002"]=true,["Pintar marron.003"]=true,
 	}
 	local legs={}
-	for _,part in ipairs(getParts(visual)) do
-		if legNames[part.Name] then
-			local rootSpace=visualRoot.CFrame:ToObjectSpace(part.CFrame)
-			local hipOffset=CFrame.new(0,part.Size.Y*.5,0)
-			table.insert(legs,{
-				part=part,
-				base=rootSpace,
-				hip=hipOffset,
-				pos=rootSpace.Position,
-			})
-			-- Detach the leg's imported Motor6D. The leg itself remains massless/non-colliding.
-			for _,m in ipairs(visual:GetDescendants()) do
-				if m:IsA("Motor6D") and m.Part1==part then m.Enabled=false end
-			end
+	for _,m in ipairs(visual:GetDescendants()) do
+		if m:IsA("Motor6D") and m.Part1 and legNames[m.Part1.Name] then
+			m.Enabled=true
+			local p=m.Part1
+			local localPos=visualRoot.CFrame:PointToObjectSpace(p.Position)
+			-- C0 is Part0 -> joint and C1 is Part1 -> joint. To rotate the leg
+			-- around its TOP, move the joint from the mesh center to its upper end.
+			local oldC0,oldC1=m.C0,m.C1
+			local hipInPart=CFrame.new(0,p.Size.Y*0.5,0)
+			local worldHip=p.CFrame*hipInPart
+			local newC0=m.Part0.CFrame:ToObjectSpace(worldHip)
+			local newC1=hipInPart
+			m.C0=newC0
+			m.C1=newC1
+			table.insert(legs,{motor=m,baseC0=newC0,baseC1=newC1,pos=localPos,oldC0=oldC0,oldC1=oldC1})
 		end
 	end
 	if #legs~=4 then return nil,"pernas="..#legs.."/4" end
@@ -181,26 +182,23 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 	local phase=0
 	local connection
 	connection=RunService.Heartbeat:Connect(function(dt)
-		if not visual.Parent or not humanoid.Parent or not visualRoot.Parent then
+		if not visual.Parent or not humanoid.Parent then
 			if connection then connection:Disconnect() end
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.03
 		if moving then phase+=dt*7.5 end
-		local swing=moving and math.sin(phase)*math.rad(30) or 0
+		local swing=moving and math.sin(phase)*math.rad(24) or 0
 		for _,entry in ipairs(gait) do
 			local d,sign=entry[1],entry[2]
-			-- Rotate around the top of each leg so the hoof swings instead of the whole
-			-- mesh spinning around its center.
-			local localCF=d.base*d.hip*CFrame.Angles(swing*sign,0,0)*d.hip:Inverse()
-			d.part.CFrame=visualRoot.CFrame*localCF
-			d.part.AssemblyLinearVelocity=Vector3.zero
-			d.part.AssemblyAngularVelocity=Vector3.zero
+			local target=d.baseC0*CFrame.Angles(swing*sign,0,0)
+			d.motor.C0=d.motor.C0:Lerp(target,math.min(dt*16,1))
+			d.motor.C1=d.baseC1
 		end
 	end)
 	local names={}
-	for _,d in ipairs(legs) do table.insert(names,d.part.Name) end
-	return connection,"DIRECT LEGS="..table.concat(names,",")
+	for _,d in ipairs(legs) do table.insert(names,d.motor.Part1.Name) end
+	return connection,"MOTOR HIP LEGS="..table.concat(names,",")
 end
 
 local function clearCow(player)
