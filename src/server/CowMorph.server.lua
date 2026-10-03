@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-number-map-safe"
+local COW_BUILD="2026-10-02-cow-number-clean"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -108,22 +108,20 @@ local function applyNumberMap(visual)
 	for i,part in ipairs(filtered) do
 		local tag=Instance.new("BillboardGui")
 		tag.Name="CowNumberTag"
-		tag.Size=UDim2.fromOffset(34,26)
+		tag.Size=UDim2.fromOffset(26,22)
 		tag.StudsOffset=Vector3.new(0,math.max(.2,part.Size.Y*.25),0)
 		tag.AlwaysOnTop=true
 		tag.MaxDistance=28
 		tag.Parent=part
 		local label=Instance.new("TextLabel")
 		label.Size=UDim2.fromScale(1,1)
-		label.BackgroundColor3=Color3.fromRGB(0,0,0)
-		label.BackgroundTransparency=.15
+		label.BackgroundTransparency=1
 		label.TextColor3=Color3.new(1,1,1)
-		label.TextStrokeTransparency=0
+		label.TextStrokeTransparency=.05
 		label.Font=Enum.Font.GothamBold
 		label.TextScaled=true
 		label.Text=tostring(i)
 		label.Parent=tag
-		Instance.new("UICorner",label).CornerRadius=UDim.new(0,6)
 	end
 	return #filtered
 end
