@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-hoof-carrier-10"
+local COW_BUILD="2026-10-03-cow-full-leg-skin-11"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -176,10 +176,21 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 				local d=(p.Position-leg.Position).Magnitude
 				if d<bestD then best,bestD=leg,d end
 			end
-			-- Only claim small meshes physically sitting on/next to a leg. This avoids
-			-- stealing body/head pieces while capturing the separate black leg markings.
-			if best and bestD <= math.max(1.05,best.Size.X*1.35) and p.Size.Magnitude <= 1.8 then
-				table.insert(skinFor[best],p)
+			-- Claim small meshes along the FULL leg, not only near its center.
+			-- Imported hoof/sole details can sit below the long-leg center and were being missed.
+			if best and p.Size.Magnitude <= 1.8 then
+				local lp=best.CFrame:PointToObjectSpace(p.Position)
+				local halfY=best.Size.Y*.5
+				local xLimit=math.max(.85,best.Size.X*.95)
+				local zLimit=math.max(.85,best.Size.Z*.95)
+				local alongWholeLeg=
+					math.abs(lp.X)<=xLimit
+					and math.abs(lp.Z)<=zLimit
+					and lp.Y>=(-halfY-1.05)
+					and lp.Y<=(halfY+.35)
+				if alongWholeLeg then
+					table.insert(skinFor[best],p)
+				end
 			end
 		end
 	end
