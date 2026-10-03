@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-hoof-hardfollow-8"
+local COW_BUILD="2026-10-03-cow-hoof-hardfollow-9"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -208,7 +208,12 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		local hoofWorld=hoof and hoof.CFrame or nil
 		local skins=skinFor[leg] or {}
 		local skinWorld={}
-		for _,skin in ipairs(skins) do skinWorld[skin]=skin.CFrame end
+		for _,skin in ipairs(skins) do
+			skinWorld[skin]=skin.CFrame
+			skin.Anchored=false
+			skin.Massless=true
+			skin.CanCollide=false
+		end
 		removeConnections(leg)
 		if hoof then removeConnections(hoof) end
 		for _,skin in ipairs(skins) do removeConnections(skin) end
