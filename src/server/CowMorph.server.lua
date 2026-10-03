@@ -125,7 +125,9 @@ local function morphCow(player)
 	local TARGET_HEIGHT=6
 	local scaleFactor=TARGET_HEIGHT/boundsSize.Y
 	if visual:IsA("Model") then
-		local okScale,scaleErr=pcall(function() visual:ScaleTo(scaleFactor) end)
+		local originalModelScale=visual:GetScale()
+		local targetModelScale=originalModelScale*scaleFactor
+		local okScale,scaleErr=pcall(function() visual:ScaleTo(targetModelScale) end)
 		if not okScale then
 			warn("[CowMorph] ScaleTo failed: "..tostring(scaleErr))
 			visual:Destroy()
@@ -136,6 +138,9 @@ local function morphCow(player)
 		visualRoot=chooseRoot(visual,parts)
 		local _,scaledSize=visual:GetBoundingBox()
 		boundsSize=scaledSize
+		print(("[CowMorph] scale %.5f -> %.5f | scaled bounds %.2f x %.2f x %.2f"):format(
+			originalModelScale,targetModelScale,boundsSize.X,boundsSize.Y,boundsSize.Z
+		))
 	end
 
 	for _,part in ipairs(parts) do
