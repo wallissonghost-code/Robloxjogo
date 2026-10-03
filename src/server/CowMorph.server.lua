@@ -110,6 +110,17 @@ local function morphCow(player)
 		return
 	end
 
+	local boundsSize
+	if visual:IsA("Model") then
+		local _,size=visual:GetBoundingBox()
+		boundsSize=size
+	else
+		boundsSize=visualRoot.Size
+	end
+	print(("[CowMorph] original bounds %.2f x %.2f x %.2f studs | parts=%d | root=%s"):format(
+		boundsSize.X,boundsSize.Y,boundsSize.Z,#parts,visualRoot.Name
+	))
+
 	for _,part in ipairs(parts) do
 		part.Anchored=false
 		part.CanCollide=false
@@ -162,7 +173,7 @@ local function morphCow(player)
 		part.Transparency=math.min(part.Transparency,0)
 	end
 	states[player]={character=character,visual=visual}
-	remote:FireClient(player,"ON",("Vaca ativa | parts=%d | root=%s"):format(#parts,visualRoot.Name))
+	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | parts=%d | root=%s"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,#parts,visualRoot.Name))
 end
 
 remote.OnServerEvent:Connect(function(player,action)
