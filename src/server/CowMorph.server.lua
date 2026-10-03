@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-moo-3s-13"
+local COW_BUILD="2026-10-03-cow-head-sway-14"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -311,10 +311,51 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 	return connection,"LEG GROUPS=4 | HOOFS="..#hooves.." | SKIN="..skinCount
 end
 
+local function setupCowHeadSway(visual,humanoid,visualRoot)
+	-- Find the most head-like large part near one horizontal end of the cow.
+	-- We animate its existing RootPart Motor6D so all original head details remain intact.
+	local candidates={}
+	for _,p in ipairs(getParts(visual)) do
+		if p~=visualRoot and p.Size.Magnitude>=1.2 then
+			local lp=visualRoot.CFrame:PointToObjectSpace(p.Position)
+			local motor=nil
+			for _,j in ipairs(visual:GetDescendants()) do
+				if j:IsA("Motor6D") and j.Part0==visualRoot and j.Part1==p then motor=j break end
+			end
+			if motor then table.insert(candidates,{part=p,motor=motor,pos=lp}) end
+		end
+	end
+	if #candidates==0 then return nil,"HEAD=NA" end
+	-- Head is expected at the horizontal extremity; prefer high parts and avoid leg-level pieces.
+	table.sort(candidates,function(a,b)
+		local sa=math.max(math.abs(a.pos.X),math.abs(a.pos.Z))+a.pos.Y*.35
+		local sb=math.max(math.abs(b.pos.X),math.abs(b.pos.Z))+b.pos.Y*.35
+		return sa>sb
+	end)
+	local head=candidates[1]
+	if not head or head.pos.Y < -0.4 then return nil,"HEAD=NA" end
+	local baseC0=head.motor.C0
+	local phase=0
+	local connection
+	connection=RunService.PostSimulation:Connect(function(dt)
+		if not visual.Parent or not humanoid.Parent or not head.motor.Parent then
+			if connection then connection:Disconnect() end
+			return
+		end
+		local moving=humanoid.MoveDirection.Magnitude>0.03
+		if moving then phase+=dt*7.2 end
+		local yaw=moving and math.sin(phase)*math.rad(5.5) or 0
+		head.motor.Transform=CFrame.identity
+		head.motor.C0=baseC0*CFrame.Angles(0,yaw,0)
+	end)
+	return connection,"HEAD SWAY="..head.part.Name
+end
+
 local function clearCow(player)
 	local state=states[player]
 	if not state then return end
 	if state.walkConnection then state.walkConnection:Disconnect() end
+	if state.headConnection then state.headConnection:Disconnect() end
 	if state.visual and state.visual.Parent then state.visual:Destroy() end
 	if state.character and state.character.Parent then setCharacterVisible(state.character,true) end
 	states[player]=nil
@@ -450,6 +491,7 @@ local function morphCow(player)
 		part.Transparency=math.min(part.Transparency,0)
 	end
 	local walkConnection,walkMap=setupCowWalk(player,visual,humanoid,visualRoot)
+	local headConnection,headMap=setupCowHeadSway(visual,humanoid,visualRoot)
 
 	-- Positional cow spawn SFX. Parent it to the cow root so the moo comes from the cow.
 	local spawnMoo=Instance.new("Sound")
@@ -471,8 +513,8 @@ local function morphCow(player)
 		end
 	end)
 
-	states[player]={character=character,visual=visual,walkConnection=walkConnection}
-	local legMap=walkMap or "walk sem mapa"
+	states[player]={character=character,visual=visual,walkConnection=walkConnection,headConnection=headConnection}
+	local legMap=(walkMap or "walk sem mapa").." | "..(headMap or "head sem mapa")
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
 
@@ -511,6 +553,7 @@ end)
 game:GetService("Players").PlayerRemoving:Connect(function(player)
 	local state=states[player]
 	if state and state.walkConnection then state.walkConnection:Disconnect() end
+	if state and state.headConnection then state.headConnection:Disconnect() end
 	states[player]=nil
 end)
 
