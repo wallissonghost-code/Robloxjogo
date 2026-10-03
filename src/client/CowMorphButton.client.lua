@@ -86,6 +86,38 @@ closeRig.Parent=rigFrame
 Instance.new("UICorner",closeRig).CornerRadius=UDim.new(0,8)
 closeRig.Activated:Connect(function() rigFrame.Visible=false end)
 
+local selector=Instance.new("Frame")
+selector.Name="CowNumberSelector"
+selector.Size=UDim2.fromOffset(238,190)
+selector.Position=UDim2.new(0,12,.5,-95)
+selector.BackgroundColor3=Color3.fromRGB(14,16,20)
+selector.BackgroundTransparency=.12
+selector.Visible=false
+selector.ZIndex=30
+selector.Parent=gui
+Instance.new("UICorner",selector).CornerRadius=UDim.new(0,10)
+local title=Instance.new("TextLabel")
+title.Size=UDim2.new(1,-12,0,24) title.Position=UDim2.fromOffset(6,4)
+title.BackgroundTransparency=1 title.Text="PECAS DA VACA" title.TextColor3=Color3.new(1,1,1)
+title.Font=Enum.Font.GothamBold title.TextSize=12 title.ZIndex=31 title.Parent=selector
+local gridFrame=Instance.new("Frame")
+gridFrame.Size=UDim2.new(1,-12,1,-34) gridFrame.Position=UDim2.fromOffset(6,30)
+gridFrame.BackgroundTransparency=1 gridFrame.ZIndex=31 gridFrame.Parent=selector
+local grid=Instance.new("UIGridLayout")
+grid.CellSize=UDim2.fromOffset(28,24) grid.CellPadding=UDim2.fromOffset(4,4)
+grid.FillDirectionMaxCells=7 grid.SortOrder=Enum.SortOrder.LayoutOrder grid.Parent=gridFrame
+local numberButtons={}
+for i=1,34 do
+	local n=i
+	local b=Instance.new("TextButton")
+	b.Name="N"..i b.LayoutOrder=i b.Text=tostring(i)
+	b.BackgroundColor3=Color3.fromRGB(45,48,55) b.TextColor3=Color3.fromRGB(150,150,150)
+	b.Font=Enum.Font.GothamBold b.TextSize=11 b.ZIndex=32 b.Parent=gridFrame
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,5)
+	numberButtons[i]=b
+	b.Activated:Connect(function() remote:FireServer("number",n) end)
+end
+
 local busy=false
 button.Activated:Connect(function()
 	if busy then return end
@@ -95,9 +127,17 @@ button.Activated:Connect(function()
 	task.delay(1,function() busy=false end)
 end)
 
-remote.OnClientEvent:Connect(function(state,message)
+remote.OnClientEvent:Connect(function(state,message,extra)
 	busy=false
-	if state=="STATUS" then
+	if state=="NUMBER" then
+		local n=tonumber(message)
+		local b=n and numberButtons[n]
+		if b then
+			b.BackgroundColor3=extra and Color3.fromRGB(35,120,255) or Color3.fromRGB(45,48,55)
+			b.TextColor3=extra and Color3.new(1,1,1) or Color3.fromRGB(150,150,150)
+		end
+		return
+	elseif state=="STATUS" then
 		status.Text="VACA: "..tostring(message)
 		return
 	elseif state=="RIG" then
@@ -105,9 +145,12 @@ remote.OnClientEvent:Connect(function(state,message)
 		rigFrame.Visible=true
 		return
 	elseif state=="ON" then
+		selector.Visible=true
 		button.Text="VOLTAR NORMAL"
 		status.Text="VACA: "..tostring(message)
 	elseif state=="OFF" then
+		selector.Visible=false
+		for _,b in pairs(numberButtons) do b.BackgroundColor3=Color3.fromRGB(45,48,55) b.TextColor3=Color3.fromRGB(150,150,150) end
 		button.Text="VIRAR VACA"
 		status.Text="VACA: "..tostring(message)
 	else
