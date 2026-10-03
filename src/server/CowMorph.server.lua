@@ -151,12 +151,22 @@ local function morphCow(player)
 		part.Massless=true
 	end
 
-	-- Move the whole cow to the player's physical root before connecting it.
+	-- First align the cow root with the player's root, then correct vertical placement
+	-- from the cow's real bounding-box bottom instead of using a fixed offset.
 	local currentPivot=visual:IsA("Model") and visual:GetPivot() or visualRoot.CFrame
 	local rootOffset=currentPivot:ToObjectSpace(visualRoot.CFrame)
-	local desiredRoot=hrp.CFrame*CFrame.new(0,-1.6,0)
-	local desiredPivot=desiredRoot*rootOffset:Inverse()
-	if visual:IsA("Model") then visual:PivotTo(desiredPivot) else visualRoot.CFrame=desiredRoot end
+	local desiredPivot=hrp.CFrame*rootOffset:Inverse()
+	if visual:IsA("Model") then visual:PivotTo(desiredPivot) else visualRoot.CFrame=hrp.CFrame end
+
+	if visual:IsA("Model") then
+		local boxCF,boxSize=visual:GetBoundingBox()
+		local cowBottomY=boxCF.Position.Y-boxSize.Y/2
+		-- Approximate the player's standing floor from HRP + Humanoid.HipHeight.
+		local playerFloorY=hrp.Position.Y-(hrp.Size.Y/2+humanoid.HipHeight)
+		local lift=playerFloorY-cowBottomY+0.08
+		visual:PivotTo(visual:GetPivot()+Vector3.new(0,lift,0))
+		print(("[CowMorph] floor align bottom=%.2f floor=%.2f lift=%.2f"):format(cowBottomY,playerFloorY,lift))
+	end
 
 	-- Preserve any original Motor6D/Weld rig. Only disconnected assemblies are tied
 	-- to the chosen cow root, then that root follows the real player character.
