@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-spawn-moo-12"
+local COW_BUILD="2026-10-03-cow-moo-3s-13"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -460,7 +460,16 @@ local function morphCow(player)
 	spawnMoo.RollOffMinDistance=8
 	spawnMoo.RollOffMaxDistance=55
 	spawnMoo.Parent=visualRoot
+	-- Skip the quiet/lead-in portion of the source clip so the moo starts immediately,
+	-- then stop after a short 3-second burst.
+	spawnMoo.TimePosition=2
 	spawnMoo:Play()
+	task.delay(3,function()
+		if spawnMoo and spawnMoo.Parent then
+			spawnMoo:Stop()
+			spawnMoo:Destroy()
+		end
+	end)
 
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	local legMap=walkMap or "walk sem mapa"
