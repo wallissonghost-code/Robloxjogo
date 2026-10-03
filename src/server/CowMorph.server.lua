@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-leg-direct-c0-1"
+local COW_BUILD="2026-10-02-cow-leg-pivot-1"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -148,53 +148,59 @@ local function findMotorForPart(visual,partName)
 end
 
 local function setupCowWalk(player,visual,humanoid,visualRoot)
-	-- Four actual long leg meshes identified from the part map.
+	-- The imported cow is a rigid cosmetic rig: animate the four identified leg
+	-- MeshParts directly around a virtual hip pivot instead of relying on its Motor6Ds.
 	local legNames={
 		["Cube.017"]=true,["Cube.018"]=true,
 		["Pintar marron.002"]=true,["Pintar marron.003"]=true,
 	}
 	local legs={}
-	for _,obj in ipairs(visual:GetDescendants()) do
-		if obj:IsA("Motor6D") and obj.Part1 and legNames[obj.Part1.Name] then
-			local part=obj.Part1
+	for _,part in ipairs(getParts(visual)) do
+		if legNames[part.Name] then
+			local rootSpace=visualRoot.CFrame:ToObjectSpace(part.CFrame)
+			local hipOffset=CFrame.new(0,part.Size.Y*.5,0)
 			table.insert(legs,{
-				motor=obj,part=part,baseC0=obj.C0,
-				pos=visualRoot.CFrame:PointToObjectSpace(part.Position)
+				part=part,
+				base=rootSpace,
+				hip=hipOffset,
+				pos=rootSpace.Position,
 			})
+			-- Detach the leg's imported Motor6D. The leg itself remains massless/non-colliding.
+			for _,m in ipairs(visual:GetDescendants()) do
+				if m:IsA("Motor6D") and m.Part1==part then m.Enabled=false end
+			end
 		end
 	end
 	if #legs~=4 then return nil,"pernas="..#legs.."/4" end
-
-	-- Imported rig has every mesh motorized directly to RootPart. C0 is therefore
-	-- the reliable animation channel here; Transform was not producing visible motion.
-	table.sort(legs,function(a,b) return a.pos.Z<b.pos.Z end)
+	table.sort(legs,function(x,y) return x.pos.Z<y.pos.Z end)
 	local front={legs[1],legs[2]}
 	local back={legs[3],legs[4]}
-	table.sort(front,function(a,b) return a.pos.X<b.pos.X end)
-	table.sort(back,function(a,b) return a.pos.X<b.pos.X end)
-	local gait={
-		{data=front[1],sign=1},{data=front[2],sign=-1},
-		{data=back[1],sign=-1},{data=back[2],sign=1},
-	}
+	table.sort(front,function(x,y) return x.pos.X<y.pos.X end)
+	table.sort(back,function(x,y) return x.pos.X<y.pos.X end)
+	local gait={{front[1],1},{front[2],-1},{back[1],-1},{back[2],1}}
 	local phase=0
 	local connection
 	connection=RunService.Heartbeat:Connect(function(dt)
-		if not visual.Parent or not humanoid.Parent then
+		if not visual.Parent or not humanoid.Parent or not visualRoot.Parent then
 			if connection then connection:Disconnect() end
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.03
 		if moving then phase+=dt*7.5 end
-		local swing=moving and math.sin(phase)*math.rad(32) or 0
+		local swing=moving and math.sin(phase)*math.rad(30) or 0
 		for _,entry in ipairs(gait) do
-			local d=entry.data
-			local target=d.baseC0*CFrame.Angles(swing*entry.sign,0,0)
-			d.motor.C0=d.motor.C0:Lerp(target,math.min(dt*18,1))
+			local d,sign=entry[1],entry[2]
+			-- Rotate around the top of each leg so the hoof swings instead of the whole
+			-- mesh spinning around its center.
+			local localCF=d.base*d.hip*CFrame.Angles(swing*sign,0,0)*d.hip:Inverse()
+			d.part.CFrame=visualRoot.CFrame*localCF
+			d.part.AssemblyLinearVelocity=Vector3.zero
+			d.part.AssemblyAngularVelocity=Vector3.zero
 		end
 	end)
 	local names={}
 	for _,d in ipairs(legs) do table.insert(names,d.part.Name) end
-	return connection,"LEGS="..table.concat(names,",")
+	return connection,"DIRECT LEGS="..table.concat(names,",")
 end
 
 local function clearCow(player)
