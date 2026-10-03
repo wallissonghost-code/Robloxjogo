@@ -8,6 +8,32 @@ remote.Parent=ReplicatedStorage
 
 local states={}
 
+local function cowRigReport(visual)
+	local lines={"=== COW RIG "..COW_ASSET_ID.." ==="}
+	local motors,welds,parts=0,0,0
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("BasePart") then parts+=1 end
+		if obj:IsA("Motor6D") then motors+=1 end
+		if obj:IsA("Weld") or obj:IsA("WeldConstraint") then welds+=1 end
+	end
+	table.insert(lines,("Parts: %d | Motor6D: %d | Welds: %d"):format(parts,motors,welds))
+	table.insert(lines,"--- JOINTS ---")
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("Motor6D") or obj:IsA("Weld") or obj:IsA("WeldConstraint") then
+			local p0=obj.Part0 and obj.Part0.Name or "nil"
+			local p1=obj.Part1 and obj.Part1.Name or "nil"
+			table.insert(lines,("%s %s | %s -> %s"):format(obj.ClassName,obj.Name,p0,p1))
+		end
+	end
+	table.insert(lines,"--- PARTS ---")
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			table.insert(lines,("%s [%s] size=%.2f,%.2f,%.2f"):format(obj.Name,obj.ClassName,obj.Size.X,obj.Size.Y,obj.Size.Z))
+		end
+	end
+	return table.concat(lines,"\n")
+end
+
 local function setCharacterVisible(character,visible)
 	for _,obj in ipairs(character:GetDescendants()) do
 		if obj:IsA("BasePart") then
@@ -206,6 +232,7 @@ local function morphCow(player)
 	end
 	states[player]={character=character,visual=visual}
 	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | escala %.1f%% | parts=%d"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,scaleFactor*100,#parts))
+	remote:FireClient(player,"RIG",cowRigReport(visual))
 end
 
 remote.OnServerEvent:Connect(function(player,action)
