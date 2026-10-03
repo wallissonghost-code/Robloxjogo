@@ -111,7 +111,7 @@ local function setupCowWalk(player,visual,humanoid)
 			warn("[CowMorph] leg motor missing: "..name)
 			return nil
 		end
-		motors[name]={motor=motor,base=motor.Transform}
+		motors[name]={motor=motor,baseC0=motor.C0}
 	end
 
 	local phase=0
@@ -125,7 +125,7 @@ local function setupCowWalk(player,visual,humanoid)
 		if moving then
 			phase+=dt*8.5
 		end
-		local swing=moving and math.sin(phase)*math.rad(24) or 0
+		local swing=moving and math.sin(phase)*math.rad(30) or 0
 		-- Natural diagonal quadruped pairs.
 		local targets={
 			["M.F.L.F"]=swing,
@@ -134,8 +134,8 @@ local function setupCowWalk(player,visual,humanoid)
 			["M.B.L.F"]=-swing,
 		}
 		for name,data in pairs(motors) do
-			local target=data.base*CFrame.Angles(targets[name],0,0)
-			data.motor.Transform=data.motor.Transform:Lerp(target,math.min(dt*12,1))
+			local target=data.baseC0*CFrame.Angles(targets[name],0,0)
+			data.motor.C0=data.motor.C0:Lerp(target,math.min(dt*12,1))
 		end
 	end)
 	return connection
