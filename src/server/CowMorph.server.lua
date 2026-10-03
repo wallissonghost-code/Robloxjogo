@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-click-inspector"
+local COW_BUILD="2026-10-02-cow-number-map"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -93,6 +93,40 @@ local function chooseRoot(root,parts)
 			or parts[1]
 	end
 	return root:IsA("BasePart") and root or parts[1]
+end
+
+local function applyNumberMap(visual)
+	local list=getParts(visual)
+	local filtered={}
+	for _,part in ipairs(list) do
+		if part.Name~="RootPart" then table.insert(filtered,part) end
+	end
+	table.sort(filtered,function(a,b)
+		if a.Name==b.Name then return a:GetFullName()<b:GetFullName() end
+		return a.Name<b.Name
+	end)
+	for i,part in ipairs(filtered) do
+		part:SetAttribute("CowMapNumber",i)
+		local tag=Instance.new("BillboardGui")
+		tag.Name="CowNumberTag"
+		tag.Size=UDim2.fromOffset(34,26)
+		tag.StudsOffset=Vector3.new(0,math.max(.2,part.Size.Y*.25),0)
+		tag.AlwaysOnTop=true
+		tag.MaxDistance=28
+		tag.Parent=part
+		local label=Instance.new("TextLabel")
+		label.Size=UDim2.fromScale(1,1)
+		label.BackgroundColor3=Color3.fromRGB(0,0,0)
+		label.BackgroundTransparency=.15
+		label.TextColor3=Color3.new(1,1,1)
+		label.TextStrokeTransparency=0
+		label.Font=Enum.Font.GothamBold
+		label.TextScaled=true
+		label.Text=tostring(i)
+		label.Parent=tag
+		Instance.new("UICorner",label).CornerRadius=UDim.new(0,6)
+	end
+	return #filtered
 end
 
 local function findMotorForPart(visual,partName)
@@ -303,8 +337,9 @@ local function morphCow(player)
 	for _,part in ipairs(parts) do
 		part.Transparency=math.min(part.Transparency,0)
 	end
+	local mapCount=applyNumberMap(visual)
 	local walkConnection=nil
-	local legMap="INSPETOR POR TOQUE ATIVO"
+	local legMap="MAPA NUMERADO 1-"..mapCount
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
