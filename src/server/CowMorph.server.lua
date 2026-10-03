@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-head-sway-14"
+local COW_BUILD="2026-10-03-cow-head-group-15"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -312,43 +312,113 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 end
 
 local function setupCowHeadSway(visual,humanoid,visualRoot)
-	-- Find the most head-like large part near one horizontal end of the cow.
-	-- We animate its existing RootPart Motor6D so all original head details remain intact.
-	local candidates={}
-	for _,p in ipairs(getParts(visual)) do
-		if p~=visualRoot and p.Size.Magnitude>=1.2 then
+	-- Build a real articulated head group. The imported cow is a star rig, so moving
+	-- one original Motor6D is not enough: every head detail is independently rooted.
+	local parts=getParts(visual)
+	local longLegNames={
+		["Cube.017"]=true,["Cube.018"]=true,
+		["Pintar marron.002"]=true,["Pintar marron.003"]=true,
+	}
+	local hoofNames={
+		["M.B.L.F."]=true,["M.B.R.F"]=true,["M.F.L.F"]=true,["M.F.R.F"]=true,
+	}
+	-- Udder/teat pieces 33/34 are intentionally excluded from head grouping.
+	-- Locate the horizontal end containing the highest non-leg geometry.
+	local endSign=1
+	local bestScore=-math.huge
+	for _,p in ipairs(parts) do
+		if p~=visualRoot and not longLegNames[p.Name] and not hoofNames[p.Name] then
 			local lp=visualRoot.CFrame:PointToObjectSpace(p.Position)
-			local motor=nil
-			for _,j in ipairs(visual:GetDescendants()) do
-				if j:IsA("Motor6D") and j.Part0==visualRoot and j.Part1==p then motor=j break end
+			local ax=math.abs(lp.X); local az=math.abs(lp.Z)
+			local horizontal=math.max(ax,az)
+			local score=horizontal+lp.Y*.55
+			if score>bestScore then
+				bestScore=score
+				if az>=ax then endSign=(lp.Z>=0) and 1 or -1
+				else endSign=(lp.X>=0) and 2 or -2 end
 			end
-			if motor then table.insert(candidates,{part=p,motor=motor,pos=lp}) end
 		end
 	end
-	if #candidates==0 then return nil,"HEAD=NA" end
-	-- Head is expected at the horizontal extremity; prefer high parts and avoid leg-level pieces.
-	table.sort(candidates,function(a,b)
-		local sa=math.max(math.abs(a.pos.X),math.abs(a.pos.Z))+a.pos.Y*.35
-		local sb=math.max(math.abs(b.pos.X),math.abs(b.pos.Z))+b.pos.Y*.35
-		return sa>sb
-	end)
-	local head=candidates[1]
-	if not head or head.pos.Y < -0.4 then return nil,"HEAD=NA" end
-	local baseC0=head.motor.C0
+
+	local headParts={}
+	local neckCenter=nil
+	for _,p in ipairs(parts) do
+		if p~=visualRoot and not longLegNames[p.Name] and not hoofNames[p.Name] then
+			local lp=visualRoot.CFrame:PointToObjectSpace(p.Position)
+			local along=(math.abs(endSign)==1) and lp.Z or lp.X
+			local side=(math.abs(endSign)==1) and lp.X or lp.Z
+			local dir=(endSign>0) and 1 or -1
+			-- Front/head cluster: high enough to exclude legs/udder and near the selected end.
+			-- This captures muzzle, skull, eyes, ears and horns as one rigid visual group.
+			if along*dir>0.65 and lp.Y>-0.15 and math.abs(side)<1.75 then
+				table.insert(headParts,p)
+				neckCenter=neckCenter and (neckCenter+p.Position) or p.Position
+			end
+		end
+	end
+	if #headParts<2 then return nil,"HEAD GROUP="..#headParts end
+	neckCenter=neckCenter/#headParts
+
+	local function removeConnections(part)
+		for _,j in ipairs(visual:GetDescendants()) do
+			if (j:IsA("Motor6D") or j:IsA("Weld") or j:IsA("WeldConstraint"))
+				and (j.Part0==part or j.Part1==part) then
+				j:Destroy()
+			end
+		end
+	end
+	local saved={}
+	for _,p in ipairs(headParts) do saved[p]=p.CFrame; removeConnections(p) end
+
+	-- Pivot toward the rear edge of the head group so it swings from the neck.
+	local rootLocal=visualRoot.CFrame:PointToObjectSpace(neckCenter)
+	local axisZ=math.abs(endSign)==1
+	local dir=(endSign>0) and 1 or -1
+	if axisZ then rootLocal=Vector3.new(rootLocal.X,rootLocal.Y,rootLocal.Z-dir*.65)
+	else rootLocal=Vector3.new(rootLocal.X-dir*.65,rootLocal.Y,rootLocal.Z) end
+	local pivotWorld=visualRoot.CFrame:PointToWorldSpace(rootLocal)
+	local carrier=Instance.new("Part")
+	carrier.Name="CowHeadCarrier"
+	carrier.Size=Vector3.new(.12,.12,.12)
+	carrier.Transparency=1
+	carrier.CanCollide=false; carrier.CanTouch=false; carrier.CanQuery=false
+	carrier.Massless=true; carrier.Anchored=false
+	carrier.CFrame=CFrame.new(pivotWorld)*visualRoot.CFrame.Rotation
+	carrier.Parent=visual
+
+	local neck=Instance.new("Motor6D")
+	neck.Name="CowNeck"
+	neck.Part0=visualRoot; neck.Part1=carrier
+	neck.C0=visualRoot.CFrame:ToObjectSpace(carrier.CFrame)
+	neck.C1=CFrame.identity
+	neck.Parent=visualRoot
+	for _,p in ipairs(headParts) do
+		p.Anchored=false; p.Massless=true; p.CanCollide=false
+		p.CFrame=saved[p]
+		local w=Instance.new("Weld")
+		w.Name="CowHeadPiece_"..p.Name
+		w.Part0=carrier; w.Part1=p
+		w.C0=carrier.CFrame:ToObjectSpace(saved[p])
+		w.C1=CFrame.identity
+		w.Parent=carrier
+	end
+
+	local baseC0=neck.C0
 	local phase=0
 	local connection
 	connection=RunService.PostSimulation:Connect(function(dt)
-		if not visual.Parent or not humanoid.Parent or not head.motor.Parent then
+		if not visual.Parent or not humanoid.Parent or not neck.Parent then
 			if connection then connection:Disconnect() end
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.03
 		if moving then phase+=dt*7.2 end
-		local yaw=moving and math.sin(phase)*math.rad(5.5) or 0
-		head.motor.Transform=CFrame.identity
-		head.motor.C0=baseC0*CFrame.Angles(0,yaw,0)
+		local sway=moving and math.sin(phase)*math.rad(5.5) or 0
+		neck.Transform=CFrame.identity
+		-- Yaw around the cow's vertical axis; whole head group follows.
+		neck.C0=baseC0*CFrame.Angles(0,sway,0)
 	end)
-	return connection,"HEAD SWAY="..head.part.Name
+	return connection,"HEAD GROUP="..#headParts
 end
 
 local function clearCow(player)
