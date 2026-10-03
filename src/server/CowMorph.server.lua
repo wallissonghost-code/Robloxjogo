@@ -121,6 +121,23 @@ local function morphCow(player)
 		boundsSize.X,boundsSize.Y,boundsSize.Z,#parts,visualRoot.Name
 	))
 
+	-- Normalize this oversized asset to roughly one Roblox player's height.
+	local TARGET_HEIGHT=6
+	local scaleFactor=TARGET_HEIGHT/boundsSize.Y
+	if visual:IsA("Model") then
+		local okScale,scaleErr=pcall(function() visual:ScaleTo(scaleFactor) end)
+		if not okScale then
+			warn("[CowMorph] ScaleTo failed: "..tostring(scaleErr))
+			visual:Destroy()
+			remote:FireClient(player,"ERROR","Nao consegui reduzir a vaca")
+			return
+		end
+		parts=getParts(visual)
+		visualRoot=chooseRoot(visual,parts)
+		local _,scaledSize=visual:GetBoundingBox()
+		boundsSize=scaledSize
+	end
+
 	for _,part in ipairs(parts) do
 		part.Anchored=false
 		part.CanCollide=false
@@ -173,7 +190,7 @@ local function morphCow(player)
 		part.Transparency=math.min(part.Transparency,0)
 	end
 	states[player]={character=character,visual=visual}
-	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | parts=%d | root=%s"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,#parts,visualRoot.Name))
+	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | escala %.1f%% | parts=%d"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,scaleFactor*100,#parts))
 end
 
 remote.OnServerEvent:Connect(function(player,action)
