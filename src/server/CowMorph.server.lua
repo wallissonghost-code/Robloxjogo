@@ -1,5 +1,6 @@
 local InsertService=game:GetService("InsertService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
@@ -93,9 +94,57 @@ local function chooseRoot(root,parts)
 	return root:IsA("BasePart") and root or parts[1]
 end
 
+local function findMotorForPart(visual,partName)
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("Motor6D") and obj.Part1 and obj.Part1.Name==partName then
+			return obj
+		end
+	end
+end
+
+local function setupCowWalk(player,visual,humanoid)
+	local names={"M.F.L.F","M.F.R.F","M.B.L.F","M.B.R.F"}
+	local motors={}
+	for _,name in ipairs(names) do
+		local motor=findMotorForPart(visual,name)
+		if not motor then
+			warn("[CowMorph] leg motor missing: "..name)
+			return nil
+		end
+		motors[name]={motor=motor,base=motor.Transform}
+	end
+
+	local phase=0
+	local connection
+	connection=RunService.Heartbeat:Connect(function(dt)
+		if not visual.Parent or humanoid.Parent==nil then
+			if connection then connection:Disconnect() end
+			return
+		end
+		local moving=humanoid.MoveDirection.Magnitude>0.05
+		if moving then
+			phase+=dt*8.5
+		end
+		local swing=moving and math.sin(phase)*math.rad(24) or 0
+		-- Natural diagonal quadruped pairs.
+		local targets={
+			["M.F.L.F"]=swing,
+			["M.B.R.F"]=swing,
+			["M.F.R.F"]=-swing,
+			["M.B.L.F"]=-swing,
+		}
+		for name,data in pairs(motors) do
+			local target=data.base*CFrame.Angles(targets[name],0,0)
+			data.motor.Transform=data.motor.Transform:Lerp(target,math.min(dt*12,1))
+		end
+	end)
+	return connection
+end
+
 local function clearCow(player)
 	local state=states[player]
 	if not state then return end
+	if state.walkConnection then state.walkConnection:Disconnect() end
 	if state.visual and state.visual.Parent then state.visual:Destroy() end
 	if state.character and state.character.Parent then setCharacterVisible(state.character,true) end
 	states[player]=nil
@@ -230,7 +279,8 @@ local function morphCow(player)
 	for _,part in ipairs(parts) do
 		part.Transparency=math.min(part.Transparency,0)
 	end
-	states[player]={character=character,visual=visual}
+	local walkConnection=setupCowWalk(player,visual,humanoid)
+	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | escala %.1f%% | parts=%d"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,scaleFactor*100,#parts))
 	remote:FireClient(player,"RIG",cowRigReport(visual))
 end
@@ -241,6 +291,8 @@ remote.OnServerEvent:Connect(function(player,action)
 end)
 
 game:GetService("Players").PlayerRemoving:Connect(function(player)
+	local state=states[player]
+	if state and state.walkConnection then state.walkConnection:Disconnect() end
 	states[player]=nil
 end)
 
