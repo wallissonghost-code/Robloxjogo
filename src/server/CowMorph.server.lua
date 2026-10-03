@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-hoof-visual-6"
+local COW_BUILD="2026-10-03-cow-hoof-to-leg-7"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -244,29 +244,22 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		legWeld.C1=CFrame.identity
 		legWeld.Parent=carrier
 		if hoof then
-			-- The imported hoof is a separate replicated physics part and produced a
-			-- one-frame "shadow" while the carrier moved. Replace it with a visual
-			-- clone rigidly welded to the carrier and hide the original.
-			local hoofClone=hoof:Clone()
-			hoofClone.Name="CowHoofVisual_"..hoof.Name
-			hoofClone.CFrame=hoofWorld
-			hoofClone.Anchored=false
-			hoofClone.CanCollide=false
-			hoofClone.CanTouch=false
-			hoofClone.CanQuery=false
-			hoofClone.Massless=true
-			for _,d in ipairs(hoofClone:GetDescendants()) do
-				if d:IsA("JointInstance") or d:IsA("WeldConstraint") then d:Destroy() end
-			end
-			hoofClone.Parent=visual
-			local hoofWeld=Instance.new("Weld")
-			hoofWeld.Name="CowHoofVisualWeld_"..hoof.Name
-			hoofWeld.Part0=carrier
-			hoofWeld.Part1=hoofClone
-			hoofWeld.C0=carrier.CFrame:ToObjectSpace(hoofWorld)
-			hoofWeld.C1=CFrame.identity
-			hoofWeld.Parent=carrier
-			hoof.Transparency=1
+			-- Hoof is part of the leg itself: preserve its exact relative transform
+			-- to the long leg and rigidly weld it directly to that leg.
+			hoof.Transparency=0
+			hoof.Anchored=false
+			hoof.CanCollide=false
+			hoof.CanTouch=false
+			hoof.CanQuery=false
+			hoof.Massless=true
+			hoof.CFrame=hoofWorld
+			local hoofToLeg=Instance.new("Weld")
+			hoofToLeg.Name="CowHoofToLeg_"..hoof.Name
+			hoofToLeg.Part0=leg
+			hoofToLeg.Part1=hoof
+			hoofToLeg.C0=legWorld:ToObjectSpace(hoofWorld)
+			hoofToLeg.C1=CFrame.identity
+			hoofToLeg.Parent=leg
 		end
 		for _,skin in ipairs(skins) do
 			local skinWeld=Instance.new("Weld")
