@@ -44,6 +44,48 @@ status.TextXAlignment=Enum.TextXAlignment.Left
 status.Text="VACA: pronta"
 status.Parent=gui
 
+local rigFrame=Instance.new("ScrollingFrame")
+rigFrame.Name="CowRigDiagnostic"
+rigFrame.Size=UDim2.new(.92,0,.78,0)
+rigFrame.Position=UDim2.new(.04,0,.08,0)
+rigFrame.BackgroundColor3=Color3.fromRGB(8,10,13)
+rigFrame.BackgroundTransparency=.04
+rigFrame.BorderSizePixel=0
+rigFrame.AutomaticCanvasSize=Enum.AutomaticSize.Y
+rigFrame.CanvasSize=UDim2.new()
+rigFrame.ScrollBarThickness=7
+rigFrame.Visible=false
+rigFrame.ZIndex=50
+rigFrame.Parent=gui
+Instance.new("UICorner",rigFrame).CornerRadius=UDim.new(0,12)
+
+local rigText=Instance.new("TextLabel")
+rigText.Size=UDim2.new(1,-24,0,0)
+rigText.Position=UDim2.fromOffset(12,48)
+rigText.AutomaticSize=Enum.AutomaticSize.Y
+rigText.BackgroundTransparency=1
+rigText.TextColor3=Color3.new(1,1,1)
+rigText.Font=Enum.Font.Code
+rigText.TextSize=12
+rigText.TextWrapped=false
+rigText.TextXAlignment=Enum.TextXAlignment.Left
+rigText.TextYAlignment=Enum.TextYAlignment.Top
+rigText.ZIndex=51
+rigText.Parent=rigFrame
+
+local closeRig=Instance.new("TextButton")
+closeRig.Size=UDim2.fromOffset(82,32)
+closeRig.Position=UDim2.new(1,-94,0,8)
+closeRig.BackgroundColor3=Color3.fromRGB(55,58,64)
+closeRig.TextColor3=Color3.new(1,1,1)
+closeRig.Font=Enum.Font.GothamBold
+closeRig.TextSize=12
+closeRig.Text="FECHAR"
+closeRig.ZIndex=52
+closeRig.Parent=rigFrame
+Instance.new("UICorner",closeRig).CornerRadius=UDim.new(0,8)
+closeRig.Activated:Connect(function() rigFrame.Visible=false end)
+
 local busy=false
 button.Activated:Connect(function()
 	if busy then return end
@@ -55,7 +97,11 @@ end)
 
 remote.OnClientEvent:Connect(function(state,message)
 	busy=false
-	if state=="ON" then
+	if state=="RIG" then
+		rigText.Text=tostring(message)
+		rigFrame.Visible=true
+		return
+	elseif state=="ON" then
 		button.Text="VOLTAR NORMAL"
 		status.Text="VACA: "..tostring(message)
 	elseif state=="OFF" then
