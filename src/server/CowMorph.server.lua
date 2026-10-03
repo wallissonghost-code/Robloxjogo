@@ -3,6 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
+local COW_BUILD="2026-10-02-cowwalk-2"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -102,16 +103,43 @@ local function findMotorForPart(visual,partName)
 	end
 end
 
-local function setupCowWalk(player,visual,humanoid)
-	local names={"M.F.L.F","M.F.R.F","M.B.L.F","M.B.R.F"}
-	local motors={}
-	for _,name in ipairs(names) do
-		local motor=findMotorForPart(visual,name)
-		if not motor then
-			warn("[CowMorph] leg motor missing: "..name)
-			return nil
+local function setupCowWalk(player,visual,humanoid,visualRoot)
+	-- The M.* parts are small feet/details. Find the four actual long leg meshes
+	-- geometrically: tall parts below the cow root/body, then animate their Motor6Ds.
+	local candidates={}
+	for _,obj in ipairs(visual:GetDescendants()) do
+		if obj:IsA("Motor6D") and obj.Part0==visualRoot and obj.Part1 then
+			local part=obj.Part1
+			local localPos=visualRoot.CFrame:PointToObjectSpace(part.Position)
+			local longest=math.max(part.Size.X,part.Size.Y,part.Size.Z)
+			local shortest=math.min(part.Size.X,part.Size.Y,part.Size.Z)
+			if longest>=1.8 and shortest>=0.45 and localPos.Y<0 then
+				table.insert(candidates,{motor=obj,part=part,pos=localPos,score=longest})
+			end
 		end
-		motors[name]={motor=motor,baseC0=motor.C0}
+	end
+	table.sort(candidates,function(a,b) return a.score>b.score end)
+	while #candidates>4 do table.remove(candidates) end
+	if #candidates<4 then
+		warn("[CowMorph] expected 4 long leg motors, found "..#candidates)
+		return nil,"legs="..#candidates
+	end
+
+	-- Split by local Z (front/back) and X (left/right), while preserving each C0.
+	table.sort(candidates,function(a,b) return a.pos.Z<b.pos.Z end)
+	local pairA={candidates[1],candidates[2]}
+	local pairB={candidates[3],candidates[4]}
+	table.sort(pairA,function(a,b) return a.pos.X<b.pos.X end)
+	table.sort(pairB,function(a,b) return a.pos.X<b.pos.X end)
+	local legs={
+		FL=pairA[1], FR=pairA[2],
+		BL=pairB[1], BR=pairB[2],
+	}
+	for key,data in pairs(legs) do
+		data.baseC0=data.motor.C0
+		print(("[CowMorph] LEG %s = %s pos %.2f %.2f %.2f size %.2f %.2f %.2f"):format(
+			key,data.part.Name,data.pos.X,data.pos.Y,data.pos.Z,
+			data.part.Size.X,data.part.Size.Y,data.part.Size.Z))
 	end
 
 	local phase=0
@@ -122,23 +150,18 @@ local function setupCowWalk(player,visual,humanoid)
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.05
-		if moving then
-			phase+=dt*8.5
-		end
+		if moving then phase+=dt*8.5 end
 		local swing=moving and math.sin(phase)*math.rad(30) or 0
-		-- Natural diagonal quadruped pairs.
-		local targets={
-			["M.F.L.F"]=swing,
-			["M.B.R.F"]=swing,
-			["M.F.R.F"]=-swing,
-			["M.B.L.F"]=-swing,
-		}
-		for name,data in pairs(motors) do
-			local target=data.baseC0*CFrame.Angles(targets[name],0,0)
+		local angles={FL=swing,BR=swing,FR=-swing,BL=-swing}
+		for key,data in pairs(legs) do
+			local target=data.baseC0*CFrame.Angles(angles[key],0,0)
 			data.motor.C0=data.motor.C0:Lerp(target,math.min(dt*12,1))
 		end
 	end)
-	return connection
+	local names={}
+	for key,data in pairs(legs) do table.insert(names,key.."="..data.part.Name) end
+	table.sort(names)
+	return connection,table.concat(names,",")
 end
 
 local function clearCow(player)
@@ -279,9 +302,9 @@ local function morphCow(player)
 	for _,part in ipairs(parts) do
 		part.Transparency=math.min(part.Transparency,0)
 	end
-	local walkConnection=setupCowWalk(player,visual,humanoid)
+	local walkConnection,legMap=setupCowWalk(player,visual,humanoid,visualRoot)
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
-	remote:FireClient(player,"ON",("Vaca %.1fx%.1fx%.1f studs | escala %.1f%% | parts=%d"):format(boundsSize.X,boundsSize.Y,boundsSize.Z,scaleFactor*100,#parts))
+	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
 
 remote.OnServerEvent:Connect(function(player,action)
@@ -309,4 +332,4 @@ for _,player in ipairs(game:GetService("Players"):GetPlayers()) do
 	end)
 end
 
-print("[CowMorph] Ready | asset "..COW_ASSET_ID)
+print("[CowMorph] Ready | asset "..COW_ASSET_ID.." | "..COW_BUILD)
