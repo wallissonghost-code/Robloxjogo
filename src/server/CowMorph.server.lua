@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-number-selector"
+local COW_BUILD="2026-10-02-cow-exact-legs-1"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -148,43 +148,42 @@ local function findMotorForPart(visual,partName)
 end
 
 local function setupCowWalk(player,visual,humanoid,visualRoot)
-	local candidates={}
+	-- Exact leg meshes discovered from the cow rig map. Do not animate udders (33/34)
+	-- or choose by size: the torso meshes are larger and were being selected before.
+	local legNames={
+		["Cube.017"]="A",
+		["Cube.018"]="B",
+		["Pintar marron.002"]="C",
+		["Pintar marron.003"]="D",
+	}
+	local legs={}
 	for _,obj in ipairs(visual:GetDescendants()) do
-		if obj:IsA("Motor6D") and obj.Part0==visualRoot and obj.Part1 then
+		if obj:IsA("Motor6D") and obj.Part0==visualRoot and obj.Part1 and legNames[obj.Part1.Name] then
 			local part=obj.Part1
-			local localPos=visualRoot.CFrame:PointToObjectSpace(part.Position)
-			local longest=math.max(part.Size.X,part.Size.Y,part.Size.Z)
-			local shortest=math.min(part.Size.X,part.Size.Y,part.Size.Z)
-			if longest>=1.8 and shortest>=0.45 and localPos.Y<0 then
-				table.insert(candidates,{oldMotor=obj,part=part,pos=localPos,score=longest})
-			end
+			legs[part.Name]={
+				motor=obj,
+				part=part,
+				baseC0=obj.C0,
+				pos=visualRoot.CFrame:PointToObjectSpace(part.Position),
+			}
 		end
 	end
-	table.sort(candidates,function(a,b) return a.score>b.score end)
-	while #candidates>4 do table.remove(candidates) end
-	if #candidates<4 then return nil,"legs="..#candidates end
+	local count=0
+	for _ in pairs(legs) do count+=1 end
+	if count~=4 then return nil,"pernas exatas="..count.."/4" end
 
-	table.sort(candidates,function(a,b) return a.pos.Z<b.pos.Z end)
-	local pairA={candidates[1],candidates[2]}
-	local pairB={candidates[3],candidates[4]}
-	table.sort(pairA,function(a,b) return a.pos.X<b.pos.X end)
-	table.sort(pairB,function(a,b) return a.pos.X<b.pos.X end)
-	local legs={FL=pairA[1],FR=pairA[2],BL=pairB[1],BR=pairB[2]}
-
-	-- Replace only the four imported leg motors with joints we fully control.
-	for key,data in pairs(legs) do
-		local partWorld=data.part.CFrame
-		data.oldMotor:Destroy()
-		local motor=Instance.new("Motor6D")
-		motor.Name="CowLeg_"..key
-		motor.Part0=visualRoot
-		motor.Part1=data.part
-		motor.C0=visualRoot.CFrame:ToObjectSpace(partWorld)
-		motor.C1=CFrame.new()
-		motor.Parent=visualRoot
-		data.motor=motor
-		data.baseC0=motor.C0
-	end
+	-- Determine front/back + left/right from the actual positions, then use diagonal gait.
+	local arr={}
+	for _,data in pairs(legs) do table.insert(arr,data) end
+	table.sort(arr,function(x,y) return x.pos.Z<y.pos.Z end)
+	local pair1={arr[1],arr[2]}
+	local pair2={arr[3],arr[4]}
+	table.sort(pair1,function(x,y) return x.pos.X<y.pos.X end)
+	table.sort(pair2,function(x,y) return x.pos.X<y.pos.X end)
+	local gait={
+		{data=pair1[1],sign=1},{data=pair1[2],sign=-1},
+		{data=pair2[1],sign=-1},{data=pair2[2],sign=1},
+	}
 
 	local phase=0
 	local connection
@@ -194,19 +193,18 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 			return
 		end
 		local moving=humanoid.MoveDirection.Magnitude>0.05
-		if moving then phase+=dt*8 end
-		local swing=moving and math.sin(phase)*math.rad(28) or 0
-		local angles={FL=swing,BR=swing,FR=-swing,BL=-swing}
-		for key,data in pairs(legs) do
-			local target=data.baseC0*CFrame.Angles(angles[key],0,0)
-			data.motor.C0=data.motor.C0:Lerp(target,math.min(dt*14,1))
+		if moving then phase+=dt*7.5 end
+		local swing=moving and math.sin(phase)*math.rad(24) or 0
+		for _,entry in ipairs(gait) do
+			-- Transform is intended for animation and preserves the imported C0/C1 rig.
+			entry.data.motor.Transform=CFrame.Angles(swing*entry.sign,0,0)
 		end
 	end)
 
 	local names={}
-	for key,data in pairs(legs) do table.insert(names,key.."="..data.part.Name) end
+	for name in pairs(legs) do table.insert(names,name) end
 	table.sort(names)
-	return connection,table.concat(names,",")
+	return connection,"LEGS="..table.concat(names,",")
 end
 
 local function clearCow(player)
