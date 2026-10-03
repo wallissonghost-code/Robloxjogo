@@ -1,6 +1,5 @@
 local Players=game:GetService("Players")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local UserInputService=game:GetService("UserInputService")
 
 local player=Players.LocalPlayer
 local remote=ReplicatedStorage:WaitForChild("CowMorphToggle")
@@ -87,51 +86,6 @@ closeRig.Parent=rigFrame
 Instance.new("UICorner",closeRig).CornerRadius=UDim.new(0,8)
 closeRig.Activated:Connect(function() rigFrame.Visible=false end)
 
-local inspectCard=Instance.new("TextLabel")
-inspectCard.Size=UDim2.fromOffset(300,86)
-inspectCard.Position=UDim2.new(.5,-150,0,112)
-inspectCard.BackgroundColor3=Color3.fromRGB(10,12,16)
-inspectCard.BackgroundTransparency=.08
-inspectCard.TextColor3=Color3.new(1,1,1)
-inspectCard.Font=Enum.Font.Code
-inspectCard.TextSize=12
-inspectCard.TextWrapped=true
-inspectCard.TextXAlignment=Enum.TextXAlignment.Left
-inspectCard.TextYAlignment=Enum.TextYAlignment.Top
-inspectCard.Visible=false
-inspectCard.ZIndex=40
-inspectCard.Parent=gui
-Instance.new("UICorner",inspectCard).CornerRadius=UDim.new(0,10)
-
-local selection=Instance.new("Highlight")
-selection.Name="CowSelectedPart"
-selection.FillTransparency=.25
-selection.OutlineTransparency=0
-selection.Enabled=false
-selection.Parent=workspace
-
-local inspectEnabled=false
-local function inspectAt(screenPos)
-	if not inspectEnabled then return end
-	local camera=workspace.CurrentCamera
-	if not camera then return end
-	local ray=camera:ViewportPointToRay(screenPos.X,screenPos.Y)
-	local params=RaycastParams.new()
-	params.FilterType=Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances={player.Character}
-	local hit=workspace:Raycast(ray.Origin,ray.Direction*500,params)
-	if hit and hit.Instance then remote:FireServer("inspect",hit.Instance) end
-end
-
-UserInputService.TouchTap:Connect(function(positions,processed)
-	if processed or not positions[1] then return end
-	inspectAt(positions[1])
-end)
-UserInputService.InputBegan:Connect(function(input,processed)
-	if processed then return end
-	if input.UserInputType==Enum.UserInputType.MouseButton1 then inspectAt(input.Position) end
-end)
-
 local busy=false
 button.Activated:Connect(function()
 	if busy then return end
@@ -143,14 +97,7 @@ end)
 
 remote.OnClientEvent:Connect(function(state,message)
 	busy=false
-	if state=="INSPECT" then
-		local part,name,className,size,pos,motor=message,...
-		selection.Adornee=part
-		selection.Enabled=part~=nil
-		inspectCard.Text=("PECA: %s [%s]\nTamanho: %s\nPos local: %s\nMotor: %s"):format(tostring(name),tostring(className),tostring(size),tostring(pos),tostring(motor))
-		inspectCard.Visible=true
-		return
-	elseif state=="STATUS" then
+	if state=="STATUS" then
 		status.Text="VACA: "..tostring(message)
 		return
 	elseif state=="RIG" then
@@ -158,13 +105,9 @@ remote.OnClientEvent:Connect(function(state,message)
 		rigFrame.Visible=true
 		return
 	elseif state=="ON" then
-		inspectEnabled=true
 		button.Text="VOLTAR NORMAL"
 		status.Text="VACA: "..tostring(message)
 	elseif state=="OFF" then
-		inspectEnabled=false
-		selection.Enabled=false
-		inspectCard.Visible=false
 		button.Text="VIRAR VACA"
 		status.Text="VACA: "..tostring(message)
 	else
