@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-02-cow-walk-reenabled"
+local COW_BUILD="2026-10-02-cow-number-filter-1"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -105,7 +105,9 @@ local function applyNumberMap(visual)
 		if a.Name==b.Name then return a:GetFullName()<b:GetFullName() end
 		return a.Name<b.Name
 	end)
+	local hiddenNumbers={[5]=true,[7]=true,[12]=true,[24]=true,[25]=true,[26]=true,[27]=true,[28]=true,[30]=true}
 	for i,part in ipairs(filtered) do
+		if hiddenNumbers[i] then continue end
 		local tag=Instance.new("BillboardGui")
 		tag.Name="CowNumberTag"
 		tag.Size=UDim2.fromOffset(16,14)
