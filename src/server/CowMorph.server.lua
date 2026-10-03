@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-head-group-15"
+local COW_BUILD="2026-10-03-cow-head-group-safe-16"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -350,7 +350,7 @@ local function setupCowHeadSway(visual,humanoid,visualRoot)
 			local dir=(endSign>0) and 1 or -1
 			-- Front/head cluster: high enough to exclude legs/udder and near the selected end.
 			-- This captures muzzle, skull, eyes, ears and horns as one rigid visual group.
-			if along*dir>0.65 and lp.Y>-0.15 and math.abs(side)<1.75 then
+			if along*dir>1.45 and lp.Y>0.55 and math.abs(side)<1.55 then
 				table.insert(headParts,p)
 				neckCenter=neckCenter and (neckCenter+p.Position) or p.Position
 			end
