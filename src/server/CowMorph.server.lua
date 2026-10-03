@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-leg-groups-skin-4"
+local COW_BUILD="2026-10-03-cow-hoof-lock-5"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -244,12 +244,13 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		legWeld.C1=CFrame.identity
 		legWeld.Parent=carrier
 		if hoof then
-			local hoofWeld=Instance.new("Weld")
-			hoofWeld.Name="CowHoofVisual_"..hoof.Name
+			-- Keep the black hoof rigidly attached to the animated leg carrier.
+			-- WeldConstraint avoids the imported hoof pose fighting a classic Weld C0.
+			hoof.CFrame=hoofWorld
+			local hoofWeld=Instance.new("WeldConstraint")
+			hoofWeld.Name="CowHoofLock_"..hoof.Name
 			hoofWeld.Part0=carrier
 			hoofWeld.Part1=hoof
-			hoofWeld.C0=carrier.CFrame:ToObjectSpace(hoofWorld)
-			hoofWeld.C1=CFrame.identity
 			hoofWeld.Parent=carrier
 		end
 		for _,skin in ipairs(skins) do
