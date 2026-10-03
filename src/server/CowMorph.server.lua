@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-full-leg-skin-11"
+local COW_BUILD="2026-10-03-cow-spawn-moo-12"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -450,6 +450,18 @@ local function morphCow(player)
 		part.Transparency=math.min(part.Transparency,0)
 	end
 	local walkConnection,walkMap=setupCowWalk(player,visual,humanoid,visualRoot)
+
+	-- Positional cow spawn SFX. Parent it to the cow root so the moo comes from the cow.
+	local spawnMoo=Instance.new("Sound")
+	spawnMoo.Name="CowSpawnMoo"
+	spawnMoo.SoundId="rbxassetid://107992974664839"
+	spawnMoo.Volume=0.75
+	spawnMoo.RollOffMode=Enum.RollOffMode.Inverse
+	spawnMoo.RollOffMinDistance=8
+	spawnMoo.RollOffMaxDistance=55
+	spawnMoo.Parent=visualRoot
+	spawnMoo:Play()
+
 	states[player]={character=character,visual=visual,walkConnection=walkConnection}
 	local legMap=walkMap or "walk sem mapa"
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
