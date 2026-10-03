@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-leg-groups-3"
+local COW_BUILD="2026-10-03-cow-leg-groups-skin-4"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -164,8 +164,25 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 	end
 	if #longLegs~=4 then return nil,"LONG LEGS="..#longLegs.."/4" end
 
-	-- Pair each hoof to the closest long leg before changing any joints.
+	-- Pair each hoof AND every small leg-skin/decor mesh to the closest long leg.
+	-- The imported asset attaches these black markings independently to RootPart.
 	local hoofFor={}
+	local skinFor={}
+	for _,leg in ipairs(longLegs) do skinFor[leg]={} end
+	for _,p in ipairs(getParts(visual)) do
+		if p~=visualRoot and not legNames[p.Name] and not hoofNames[p.Name] then
+			local best,bestD=nil,math.huge
+			for _,leg in ipairs(longLegs) do
+				local d=(p.Position-leg.Position).Magnitude
+				if d<bestD then best,bestD=leg,d end
+			end
+			-- Only claim small meshes physically sitting on/next to a leg. This avoids
+			-- stealing body/head pieces while capturing the separate black leg markings.
+			if best and bestD <= math.max(1.05,best.Size.X*1.35) and p.Size.Magnitude <= 1.8 then
+				table.insert(skinFor[best],p)
+			end
+		end
+	end
 	for _,hoof in ipairs(hooves) do
 		local best,bestD=nil,math.huge
 		for _,leg in ipairs(longLegs) do
@@ -189,8 +206,12 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		local hoof=hoofFor[leg]
 		local legWorld=leg.CFrame
 		local hoofWorld=hoof and hoof.CFrame or nil
+		local skins=skinFor[leg] or {}
+		local skinWorld={}
+		for _,skin in ipairs(skins) do skinWorld[skin]=skin.CFrame end
 		removeConnections(leg)
 		if hoof then removeConnections(hoof) end
+		for _,skin in ipairs(skins) do removeConnections(skin) end
 
 		-- Invisible carrier at the hip. It is the only articulated object.
 		local hipWorld=legWorld*CFrame.new(0,leg.Size.Y*.5,0)
@@ -231,6 +252,15 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 			hoofWeld.C1=CFrame.identity
 			hoofWeld.Parent=carrier
 		end
+		for _,skin in ipairs(skins) do
+			local skinWeld=Instance.new("Weld")
+			skinWeld.Name="CowLegSkin_"..skin.Name
+			skinWeld.Part0=carrier
+			skinWeld.Part1=skin
+			skinWeld.C0=carrier.CFrame:ToObjectSpace(skinWorld[skin])
+			skinWeld.C1=CFrame.identity
+			skinWeld.Parent=carrier
+		end
 
 		table.insert(legs,{
 			leg=leg,hoof=hoof,motor=hip,baseC0=hip.C0,
@@ -259,7 +289,8 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 			d.motor.C0=d.baseC0*CFrame.Angles(swing*sign,0,0)
 		end
 	end)
-	return connection,"LEG GROUPS=4 | HOOFS="..#hooves
+	local skinCount=0; for _,list in pairs(skinFor) do skinCount+=#list end
+	return connection,"LEG GROUPS=4 | HOOFS="..#hooves.." | SKIN="..skinCount
 end
 
 local function clearCow(player)
