@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-leg-transform-3"
+local COW_BUILD="2026-10-03-cow-leg-postsimulation-4"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -181,7 +181,7 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 	local gait={{front[1],1},{front[2],-1},{back[1],-1},{back[2],1}}
 	local phase=0
 	local connection
-	connection=RunService.Heartbeat:Connect(function(dt)
+	connection=RunService.PostSimulation:Connect(function(dt)
 		if not visual.Parent or not humanoid.Parent then
 			if connection then connection:Disconnect() end
 			return
@@ -191,12 +191,11 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		local swing=moving and math.sin(phase)*math.rad(24) or 0
 		for _,entry in ipairs(gait) do
 			local d,sign=entry[1],entry[2]
-			-- Motor6D.Transform is the animation channel. C0/C1 define the joint;
-			-- Transform supplies the visible pose without fighting the joint solver.
+			-- Apply after physics/Animator work. The asset's original rig was overwriting
+			-- Transform before replication, which made the legs look static.
 			d.motor.C0=d.baseC0
 			d.motor.C1=d.baseC1
-			local target=CFrame.Angles(swing*sign,0,0)
-			d.motor.Transform=d.motor.Transform:Lerp(target,math.min(dt*18,1))
+			d.motor.Transform=CFrame.Angles(swing*sign,0,0)
 		end
 	end)
 	local names={}
