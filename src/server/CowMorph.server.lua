@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-custom-leg-rig-1"
+local COW_BUILD="2026-10-03-cow-custom-c0-rig-2"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -214,9 +214,11 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		local swing=moving and math.sin(phase)*math.rad(26) or 0
 		for _,entry in ipairs(gait) do
 			local d=entry.data
-			d.motor.C0=d.baseC0
+			-- This Motor6D belongs to us, so drive C0 directly. Unlike the imported
+			-- joints there is no Animator that should own/reset this C0.
+			d.motor.Transform=CFrame.identity
 			d.motor.C1=d.baseC1
-			d.motor.Transform=CFrame.Angles(swing*entry.sign,0,0)
+			d.motor.C0=d.baseC0*CFrame.Angles(swing*entry.sign,0,0)
 		end
 	end)
 
