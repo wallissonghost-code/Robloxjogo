@@ -3,7 +3,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-hoof-to-leg-7"
+local COW_BUILD="2026-10-03-cow-hoof-hardfollow-8"
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -243,23 +243,18 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		legWeld.C0=carrier.CFrame:ToObjectSpace(legWorld)
 		legWeld.C1=CFrame.identity
 		legWeld.Parent=carrier
+		local hoofOffset=nil
 		if hoof then
-			-- Hoof is part of the leg itself: preserve its exact relative transform
-			-- to the long leg and rigidly weld it directly to that leg.
+			-- The hoof asset refuses to follow joints reliably. Keep no joint on it;
+			-- store its exact transform relative to the leg and hard-follow that pose.
 			hoof.Transparency=0
-			hoof.Anchored=false
+			hoof.Anchored=true
 			hoof.CanCollide=false
 			hoof.CanTouch=false
 			hoof.CanQuery=false
 			hoof.Massless=true
-			hoof.CFrame=hoofWorld
-			local hoofToLeg=Instance.new("Weld")
-			hoofToLeg.Name="CowHoofToLeg_"..hoof.Name
-			hoofToLeg.Part0=leg
-			hoofToLeg.Part1=hoof
-			hoofToLeg.C0=legWorld:ToObjectSpace(hoofWorld)
-			hoofToLeg.C1=CFrame.identity
-			hoofToLeg.Parent=leg
+			hoofOffset=legWorld:ToObjectSpace(hoofWorld)
+			hoof.CFrame=legWorld*hoofOffset
 		end
 		for _,skin in ipairs(skins) do
 			local skinWeld=Instance.new("Weld")
@@ -272,7 +267,7 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 		end
 
 		table.insert(legs,{
-			leg=leg,hoof=hoof,motor=hip,baseC0=hip.C0,
+			leg=leg,hoof=hoof,hoofOffset=hoofOffset,motor=hip,baseC0=hip.C0,
 			pos=visualRoot.CFrame:PointToObjectSpace(leg.Position),
 		})
 	end
@@ -296,6 +291,13 @@ local function setupCowWalk(player,visual,humanoid,visualRoot)
 			local d,sign=entry[1],entry[2]
 			d.motor.Transform=CFrame.identity
 			d.motor.C0=d.baseC0*CFrame.Angles(swing*sign,0,0)
+		end
+		-- After moving the articulated legs, place every black hoof from the actual
+		-- current leg CFrame. This makes it visually inseparable from the leg.
+		for _,d in ipairs(legs) do
+			if d.hoof and d.hoofOffset then
+				d.hoof.CFrame=d.leg.CFrame*d.hoofOffset
+			end
 		end
 	end)
 	local skinCount=0; for _,list in pairs(skinFor) do skinCount+=#list end
