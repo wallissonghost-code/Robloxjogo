@@ -3,7 +3,8 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local RunService=game:GetService("RunService")
 
 local COW_ASSET_ID=80696062872929
-local COW_BUILD="2026-10-03-cow-head-group-safe-16"
+local COW_BUILD="2026-10-04-cow-timed-morph-17"
+local DEFAULT_MORPH_DURATION=5
 local remote=ReplicatedStorage:FindFirstChild("CowMorphToggle") or Instance.new("RemoteEvent")
 remote.Name="CowMorphToggle"
 remote.Parent=ReplicatedStorage
@@ -583,7 +584,9 @@ local function morphCow(player)
 		end
 	end)
 
-	states[player]={character=character,visual=visual,walkConnection=walkConnection,headConnection=headConnection}
+	local previousGeneration=(states[player] and states[player].generation) or 0
+	local generation=previousGeneration+1
+	states[player]={character=character,visual=visual,walkConnection=walkConnection,headConnection=headConnection,generation=generation}
 	local legMap=(walkMap or "walk sem mapa").." | "..(headMap or "head sem mapa")
 	remote:FireClient(player,"ON",("BUILD %s | Vaca %.1fx%.1fx%.1f | %s"):format(COW_BUILD,boundsSize.X,boundsSize.Y,boundsSize.Z,tostring(legMap)))
 end
@@ -616,8 +619,23 @@ remote.OnServerEvent:Connect(function(player,action,part)
 			motor and motor.Name or "sem Motor6D")
 		return
 	end
-	if action~="toggle" then return end
-	if states[player] then clearCow(player) else morphCow(player) end
+	if action~="toggle" and action~="morph" then return end
+	-- Morph is an action, not an ON/OFF toggle. Every request starts/restarts the
+	-- temporary transformation. A stale timer can never clear a newer morph.
+	local duration=tonumber(part) or DEFAULT_MORPH_DURATION
+	duration=math.clamp(duration,0.1,3600)
+	local oldState=states[player]
+	local nextGeneration=(oldState and oldState.generation or 0)+1
+	morphCow(player)
+	local state=states[player]
+	if not state then return end
+	state.generation=nextGeneration
+	task.delay(duration,function()
+		local current=states[player]
+		if current and current.generation==nextGeneration then
+			clearCow(player)
+		end
+	end)
 end)
 
 game:GetService("Players").PlayerRemoving:Connect(function(player)
