@@ -92,7 +92,7 @@ button.Activated:Connect(function()
 	if busy then return end
 	busy=true
 	status.Text="VACA: transformando..."
-	remote:FireServer("toggle")
+	remote:FireServer("morph",5)
 	task.delay(1,function() busy=false end)
 end)
 
@@ -106,7 +106,7 @@ remote.OnClientEvent:Connect(function(state,message,extra)
 		rigFrame.Visible=true
 		return
 	elseif state=="ON" then
-		button.Text="VOLTAR NORMAL"
+		button.Text="REINICIAR 5S"
 		status.Text="VACA: "..tostring(message)
 	elseif state=="OFF" then
 		button.Text="VIRAR VACA"
