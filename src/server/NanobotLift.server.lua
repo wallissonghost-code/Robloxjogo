@@ -1,71 +1,40 @@
--- Nanobot Lift V1: server-authoritative lift, visual swarm rendered locally.
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-
-local remote = Instance.new("RemoteEvent")
-remote.Name = "NanobotLift"
-remote.Parent = ReplicatedStorage
-
-local HEIGHT = 42
-local DURATION = 3.2
-local COOLDOWN = 7
-local lastUse = {}
-local active = {}
-
-local function lift(player)
-    local now = os.clock()
-    if active[player] or (lastUse[player] and now - lastUse[player] < COOLDOWN) then return end
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not humanoid or humanoid.Health <= 0 or not root or not root:IsDescendantOf(workspace) then return end
-    if humanoid.Sit then return end
-    lastUse[player] = now
-    active[player] = true
-
-    local origin = root.Position
-    local platform = Instance.new("Part")
-    platform.Name = "NanobotLiftSupport"
-    platform.Size = Vector3.new(6, 0.6, 6)
-    platform.Anchored = true
-    platform.CanCollide = true
-    platform.Transparency = 1
-    platform.Position = Vector3.new(origin.X, origin.Y - 3.2, origin.Z)
-    platform.Parent = workspace
-
-    remote:FireAllClients("start", player, origin, HEIGHT, DURATION)
-    local started = os.clock()
-    local previous = 0
-    while active[player] and player.Parent and character.Parent and humanoid.Health > 0 do
-        local elapsed = os.clock() - started
-        local t = math.clamp(elapsed / DURATION, 0, 1)
-        local eased = t * t * (3 - 2 * t)
-        local height = HEIGHT * eased
-        local delta = height - previous
-        previous = height
-        platform.Position += Vector3.new(0, delta, 0)
-        -- Move character with the rising surface, without imparting a huge impulse.
-        if root.Parent then
-            character:PivotTo(character:GetPivot() + Vector3.new(0, delta, 0))
-        end
-        if t >= 1 then break end
-        RunService.Heartbeat:Wait()
-    end
-    active[player] = nil
-    -- Keep the invisible physical surface briefly so the player can step off.
-    task.delay(2.5, function()
-        if platform.Parent then platform:Destroy() end
-    end)
-    remote:FireAllClients("finish", player)
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local remote=RS:FindFirstChild("NanobotLift") or Instance.new("RemoteEvent")
+remote.Name="NanobotLift"; remote.Parent=RS
+local HEIGHT,UP,DOWN=34,10,11
+local states={}
+local function floorY(pos,char)
+ local p=RaycastParams.new(); p.FilterType=Enum.RaycastFilterType.Exclude;p.FilterDescendantsInstances={char}
+ local hit=workspace:Raycast(pos+Vector3.new(0,4,0),Vector3.new(0,-250,0),p)
+ return hit and hit.Position.Y or 0
 end
-
-remote.OnServerEvent:Connect(function(player, command)
-    if command ~= "subir" then return end
-    task.spawn(lift, player)
+local function stop(plr)
+ local s=states[plr];if not s then return end
+ states[plr]=nil;if s.c then s.c:Disconnect() end;if s.part then s.part:Destroy() end
+ remote:FireAllClients("off",plr)
+end
+local function start(plr)
+ if states[plr] then states[plr].mode="up";return end
+ local ch=plr.Character;local hum=ch and ch:FindFirstChildOfClass("Humanoid");local root=ch and ch:FindFirstChild("HumanoidRootPart")
+ if not hum or hum.Health<=0 or not root then return end
+ local part=Instance.new("Part");part.Name="NanobotSupport";part.Size=Vector3.new(9,.7,9);part.Anchored=true;part.CanCollide=true;part.Transparency=1;part.Parent=workspace
+ local s={ch=ch,hum=hum,root=root,part=part,height=0,mode="up",ground=floorY(root.Position,ch)};states[plr]=s
+ remote:FireAllClients("on",plr)
+ s.c=RunService.Heartbeat:Connect(function(dt)
+  if states[plr]~=s or not ch.Parent or hum.Health<=0 or not root.Parent then stop(plr);return end
+  dt=math.min(dt,.05)
+  local gy=floorY(root.Position,ch);s.ground+=math.clamp(gy-s.ground,-6*dt,6*dt)
+  local target=s.mode=="up" and HEIGHT or 0;local speed=s.mode=="up" and UP or DOWN;local old=s.height
+  if s.height<target then s.height=math.min(target,s.height+speed*dt) else s.height=math.max(target,s.height-speed*dt) end
+  part.Position=Vector3.new(root.Position.X,s.ground+s.height+.35,root.Position.Z)
+  local dy=s.height-old;if math.abs(dy)>.0001 then ch:PivotTo(ch:GetPivot()+Vector3.new(0,dy,0)) end
+  remote:FireAllClients("state",plr,part.Position,s.height,target)
+  if s.mode=="down" and s.height<=.05 then stop(plr) end
+ end)
+end
+remote.OnServerEvent:Connect(function(plr,cmd)
+ if cmd=="subir" then start(plr) elseif cmd=="descer" and states[plr] then states[plr].mode="down" end
 end)
-
-Players.PlayerRemoving:Connect(function(player)
-    active[player] = nil
-    lastUse[player] = nil
-end)
+Players.PlayerRemoving:Connect(stop)
