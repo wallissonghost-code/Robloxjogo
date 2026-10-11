@@ -8,8 +8,16 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [256, 1, 256],
-          "Position": [0, 0, 0],
+          "Size": [
+            256,
+            1,
+            256
+          ],
+          "Position": [
+            0,
+            0,
+            0
+          ],
           "Material": "Grass"
         }
       }
@@ -29,6 +37,9 @@
         "$className": "StarterPlayerScripts",
         "GoldHUD": {
           "$path": "src/client/GoldHUD.client.lua"
+        },
+        "BuildDiagnostic": {
+          "$path": "src/client/BuildDiagnostic.client.lua"
         }
       }
     }
