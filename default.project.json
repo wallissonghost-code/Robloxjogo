@@ -8,17 +8,24 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [
-            256,
-            1,
-            256
-          ],
-          "Position": [
-            0,
-            0,
-            0
-          ],
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
           "Material": "Grass"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "GoldService": {
+        "$path": "src/server/GoldService.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "GoldHUD": {
+          "$path": "src/client/GoldHUD.client.lua"
         }
       }
     }
