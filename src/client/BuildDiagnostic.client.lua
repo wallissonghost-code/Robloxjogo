@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V6"
+local BUILD_VERSION = "V7"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -69,22 +69,20 @@ local function refresh()
 	for _,v in ipairs(atm:GetDescendants()) do
 		if v:IsA("BasePart") then parts+=1 end
 	end
-	local pos
-	local bottomY, topY
-	if atm:IsA("Model") then
-		local cf,size=atm:GetBoundingBox()
-		pos=cf.Position
-		bottomY=cf.Position.Y-size.Y/2
-		topY=cf.Position.Y+size.Y/2
-	elseif atm:IsA("BasePart") then
-		pos=atm.Position
-		bottomY=atm.Position.Y-atm.Size.Y/2
-		topY=atm.Position.Y+atm.Size.Y/2
-	else
-		pos=Vector3.zero
-		bottomY=0
-		topY=0
+	local minX,minY,minZ=math.huge,math.huge,math.huge
+	local maxX,maxY,maxZ=-math.huge,-math.huge,-math.huge
+	for _,v in ipairs(atm:GetDescendants()) do
+		if v:IsA("BasePart") then
+			local half=v.Size*0.5
+			local p=v.Position
+			minX=math.min(minX,p.X-half.X); maxX=math.max(maxX,p.X+half.X)
+			minY=math.min(minY,p.Y-half.Y); maxY=math.max(maxY,p.Y+half.Y)
+			minZ=math.min(minZ,p.Z-half.Z); maxZ=math.max(maxZ,p.Z+half.Z)
+		end
 	end
+	local pos=Vector3.new((minX+maxX)/2,(minY+maxY)/2,(minZ+maxZ)/2)
+	local bottomY=minY
+	local topY=maxY
 	reportText = table.concat({
 		"BUILD " .. BUILD_VERSION,
 		"ATM LOADER: ENCONTRADO",
