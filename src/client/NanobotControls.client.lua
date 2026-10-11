@@ -10,7 +10,13 @@ local function btn(txt,x)local b=Instance.new("TextButton");b.Size=UDim2.fromOff
 btn("SUBIR",-18).Activated:Connect(function()remote:FireServer("subir")end)
 btn("DESCER",-133).Activated:Connect(function()remote:FireServer("descer")end)
 UIS.InputBegan:Connect(function(i,p)if p then return end;if i.KeyCode==Enum.KeyCode.E then remote:FireServer("subir")elseif i.KeyCode==Enum.KeyCode.Q then remote:FireServer("descer")end end)
-local function norm(s)return string.lower(s):gsub("[áàâã]","a"):gsub("[éê]","e"):gsub("í","i"):gsub("[óôõ]","o"):gsub("ú","u")end
+local function norm(s)return string.lower(s):gsub("[áàâã]","a"):gsub("[éê]","e"):gsub("í","i"):gsub("[óôõ]","o"):gsub("ú","u"):gsub("[^%a%s]","")end
+local function voiceCommand(t)
+ local compact=t:gsub("%s+","")
+ if t:find("subir",1,true) or compact=="sobi" or compact=="subi" or compact=="sobe" then return "SUBIR" end
+ if t:find("descer",1,true) or compact=="desert" or compact=="desce" or compact=="desse" or compact=="deser" then return "DESCER" end
+ return "NENHUM"
+end
 local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
  local stt=Instance.new("AudioSpeechToText");stt.Name="NanobotSTT";stt.Enabled=true;stt.Parent=gui
@@ -18,8 +24,8 @@ local ok,err=pcall(function()
  status.Text="VOZ: OUVINDO\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
   local raw=stt.Text;if raw==""then return end
-  local t=norm(raw);local command="NENHUM"
-  if t:find("subir",1,true)then command="SUBIR";remote:FireServer("subir")elseif t:find("descer",1,true)then command="DESCER";remote:FireServer("descer")end
+  local t=norm(raw);local command=voiceCommand(t)
+  if command=="SUBIR" then remote:FireServer("subir") elseif command=="DESCER" then remote:FireServer("descer") end
   status.Text="VOZ: OUVINDO\nBRUTO: "..string.sub(raw,1,50).."\nNORMAL: "..string.sub(t,1,50).."\nCOMANDO: "..command
   print("[NanobotVoice] bruto=",raw," normal=",t," comando=",command)
  end)
