@@ -73,7 +73,6 @@ input.TextColor3=Color3.new(1,1,1)
 input.PlaceholderText="Digite a quantidade de Ouro"
 input.Text=""
 input.ClearTextOnFocus=false
-input.KeyboardType=Enum.KeyboardType.NumberPad
 input.Font=Enum.Font.Gotham
 input.TextSize=16
 input.BorderSizePixel=0
@@ -99,7 +98,7 @@ end
 
 local deposit=makeButton("DEPOSITAR",0)
 local withdraw=makeButton("SACAR",.5)
-local status=label("ATM V21 PRONTO",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false)
+local status=label("ATM PRONTO",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false)
 status.TextColor3=Color3.fromRGB(175,180,188)
 status.TextWrapped=true
 
@@ -116,7 +115,7 @@ end
 
 local function openATM(source)
 	refresh()
-	status.Text="ATM V21 ABERTO - "..source
+	status.Text="ATM ABERTO"
 	panel.Visible=true
 end
 
@@ -138,21 +137,5 @@ deposit.Activated:Connect(function() transact("deposit") end)
 withdraw.Activated:Connect(function() transact("withdraw") end)
 close.Activated:Connect(function() panel.Visible=false end)
 openEvent.OnClientEvent:Connect(function() openATM("PROMPT") end)
-
-local fallback=Instance.new("TextButton")
-fallback.Name="ATMV21Fallback"
-fallback.AnchorPoint=Vector2.new(.5,.5)
-fallback.Position=UDim2.fromScale(.5,.78)
-fallback.Size=UDim2.fromOffset(240,56)
-fallback.BackgroundColor3=Color3.fromRGB(255,205,55)
-fallback.TextColor3=Color3.fromRGB(20,20,22)
-fallback.Text="ABRIR BANCO - V21"
-fallback.Font=Enum.Font.GothamBold
-fallback.TextSize=16
-fallback.BorderSizePixel=0
-fallback.ZIndex=100
-fallback.Parent=gui
-Instance.new("UICorner",fallback).CornerRadius=UDim.new(0,14)
-fallback.Activated:Connect(function() openATM("BOTAO TESTE") end)
 
 refresh()
