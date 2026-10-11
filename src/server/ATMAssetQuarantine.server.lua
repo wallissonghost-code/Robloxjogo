@@ -109,7 +109,16 @@ end
 print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
 	ASSET_ID, scriptCount, interactionCount
 ))
-local anchor = parts[1]
+local anchor
+local bestScore = -math.huge
+for _, part in ipairs(parts) do
+	local distanceXZ = (Vector2.new(part.Position.X, part.Position.Z) - Vector2.new(POSITION.X, POSITION.Z)).Magnitude
+	local score = (part.Size.X * part.Size.Y * part.Size.Z) - distanceXZ * 2
+	if score > bestScore then
+		bestScore = score
+		anchor = part
+	end
+end
 if anchor then
 	for _, obj in ipairs(root:GetDescendants()) do
 		if obj:IsA("ProximityPrompt") then obj.Enabled = false end
@@ -126,7 +135,7 @@ if anchor then
 		openEvent:FireClient(player)
 	end)
 	root:SetAttribute("SafePromptReady", true)
-	root:SetAttribute("ServerBuild", "V15")
+	root:SetAttribute("ServerBuild", "V16")
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "ServerBuildTag"
 	tag.Size = UDim2.fromOffset(150, 34)
@@ -138,7 +147,7 @@ if anchor then
 	txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 	txt.BackgroundTransparency = 0.15
 	txt.TextColor3 = Color3.new(1,1,1)
-	txt.Text = "BUILD V15"
+	txt.Text = "BUILD V16"
 	txt.Font = Enum.Font.GothamBold
 	txt.TextSize = 16
 	txt.Parent = tag
