@@ -109,46 +109,49 @@ end
 print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
 	ASSET_ID, scriptCount, interactionCount
 ))
-local anchor
-local bestScore = -math.huge
-for _, part in ipairs(parts) do
-	local distanceXZ = (Vector2.new(part.Position.X, part.Position.Z) - Vector2.new(POSITION.X, POSITION.Z)).Magnitude
-	local score = (part.Size.X * part.Size.Y * part.Size.Z) - distanceXZ * 2
-	if score > bestScore then
-		bestScore = score
-		anchor = part
-	end
+local interactionPart = Instance.new("Part")
+interactionPart.Name = "SafeATMInteraction"
+interactionPart.Size = Vector3.new(6, 6, 4)
+interactionPart.Transparency = 1
+interactionPart.CanCollide = false
+interactionPart.CanTouch = false
+interactionPart.CanQuery = false
+interactionPart.Anchored = true
+interactionPart.CFrame = CFrame.new(POSITION.X, 3.5, POSITION.Z + 3)
+interactionPart.Parent = root
+
+for _, obj in ipairs(root:GetDescendants()) do
+	if obj:IsA("ProximityPrompt") then obj.Enabled = false end
 end
-if anchor then
-	for _, obj in ipairs(root:GetDescendants()) do
-		if obj:IsA("ProximityPrompt") then obj.Enabled = false end
-	end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "SafeATMPrompt"
-	prompt.ActionText = "Acessar"
-	prompt.ObjectText = "Caixa Eletronico"
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = anchor
-	prompt.Triggered:Connect(function(player)
-		openEvent:FireClient(player)
-	end)
-	root:SetAttribute("SafePromptReady", true)
-	root:SetAttribute("ServerBuild", "V16")
-	local tag = Instance.new("BillboardGui")
-	tag.Name = "ServerBuildTag"
-	tag.Size = UDim2.fromOffset(150, 34)
-	tag.StudsOffset = Vector3.new(0, 5, 0)
-	tag.AlwaysOnTop = true
-	tag.Parent = anchor
-	local txt = Instance.new("TextLabel")
-	txt.Size = UDim2.fromScale(1,1)
-	txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
-	txt.BackgroundTransparency = 0.15
-	txt.TextColor3 = Color3.new(1,1,1)
-	txt.Text = "BUILD V16"
-	txt.Font = Enum.Font.GothamBold
-	txt.TextSize = 16
-	txt.Parent = tag
-end
+
+local prompt = Instance.new("ProximityPrompt")
+prompt.Name = "SafeATMPrompt"
+prompt.ActionText = "Acessar"
+prompt.ObjectText = "Caixa Eletronico"
+prompt.HoldDuration = 0
+prompt.MaxActivationDistance = 12
+prompt.RequiresLineOfSight = false
+prompt.KeyboardKeyCode = Enum.KeyCode.E
+prompt.Parent = interactionPart
+prompt.Triggered:Connect(function(player)
+	openEvent:FireClient(player)
+end)
+
+root:SetAttribute("SafePromptReady", true)
+root:SetAttribute("ServerBuild", "V17")
+
+local tag = Instance.new("BillboardGui")
+tag.Name = "ServerBuildTag"
+tag.Size = UDim2.fromOffset(150, 34)
+tag.StudsOffset = Vector3.new(0, 5, 0)
+tag.AlwaysOnTop = true
+tag.Parent = interactionPart
+local txt = Instance.new("TextLabel")
+txt.Size = UDim2.fromScale(1,1)
+txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
+txt.BackgroundTransparency = 0.15
+txt.TextColor3 = Color3.new(1,1,1)
+txt.Text = "BUILD V17"
+txt.Font = Enum.Font.GothamBold
+txt.TextSize = 16
+txt.Parent = tag
