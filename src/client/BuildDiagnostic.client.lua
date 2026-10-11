@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V10"
+local BUILD_VERSION = "V11"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -93,7 +93,7 @@ local function refresh()
 		"Partes: " .. tostring(parts),
 		"Scripts desativados: " .. tostring(atm:GetAttribute("DisabledScriptCount")),
 		"Interacoes: " .. tostring(atm:GetAttribute("InteractionCount")),
-		"Quarentena: " .. tostring(atm:GetAttribute("Quarantined"))
+		"Quarentena: " .. tostring(atm:GetAttribute("Quarantined")),\n\t\t"Prompt seguro: " .. tostring(atm:GetAttribute("SafePromptReady"))
 	}, "\n")
 	info.Text=reportText
 end
