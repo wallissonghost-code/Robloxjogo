@@ -134,11 +134,19 @@ prompt.RequiresLineOfSight = false
 prompt.KeyboardKeyCode = Enum.KeyCode.E
 prompt.Parent = interactionPart
 prompt.Triggered:Connect(function(player)
+	local count = (root:GetAttribute("PromptTriggerCount") or 0) + 1
+	root:SetAttribute("PromptTriggerCount", count)
+	root:SetAttribute("LastPromptUserId", player.UserId)
+	root:SetAttribute("LastPromptServerTime", math.floor(workspace:GetServerTimeNow() * 100) / 100)
 	openEvent:FireClient(player)
+	root:SetAttribute("ATMOpenFireCount", (root:GetAttribute("ATMOpenFireCount") or 0) + 1)
 end)
 
 root:SetAttribute("SafePromptReady", true)
-root:SetAttribute("ServerBuild", "V22")
+root:SetAttribute("PromptTriggerCount", 0)
+root:SetAttribute("ATMOpenFireCount", 0)
+root:SetAttribute("LastPromptUserId", 0)
+root:SetAttribute("ServerBuild", "V23")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -151,7 +159,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V22"
+txt.Text = "BUILD V23"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
