@@ -18,6 +18,9 @@
       "$className": "ServerScriptService",
       "GoldService": {
         "$path": "src/server/GoldService.server.lua"
+      },
+      "ATMAssetQuarantine": {
+        "$path": "src/server/ATMAssetQuarantine.server.lua"
       }
     },
     "StarterPlayer": {
