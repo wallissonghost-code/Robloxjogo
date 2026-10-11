@@ -126,7 +126,7 @@ if anchor then
 		openEvent:FireClient(player)
 	end)
 	root:SetAttribute("SafePromptReady", true)
-	root:SetAttribute("ServerBuild", "V14")
+	root:SetAttribute("ServerBuild", "V15")
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "ServerBuildTag"
 	tag.Size = UDim2.fromOffset(150, 34)
@@ -138,7 +138,7 @@ if anchor then
 	txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 	txt.BackgroundTransparency = 0.15
 	txt.TextColor3 = Color3.new(1,1,1)
-	txt.Text = "BUILD V14"
+	txt.Text = "BUILD V15"
 	txt.Font = Enum.Font.GothamBold
 	txt.TextSize = 16
 	txt.Parent = tag
