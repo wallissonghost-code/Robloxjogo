@@ -29,27 +29,25 @@ local function voiceCommand(t)
  if bestScore<.68 then best="NENHUM" end
  return best,bestAlias,bestScore
 end
+local voiceEvents,voiceSent,voiceAck=0,0,0
+local lastRaw,lastCommand,lastAt="","",0
 local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
  local stt=Instance.new("AudioSpeechToText");stt.Name="NanobotSTT";stt.Enabled=true;stt.Parent=gui
  local wire=Instance.new("Wire");wire.SourceInstance=input;wire.TargetInstance=stt;wire.Parent=gui
- local armed=true
- local function rearm()
-  armed=false
-  stt.Enabled=false
-  task.delay(.18,function()
-   if stt.Parent then stt.Enabled=true;armed=true end
-  end)
- end
- status.Text="VOZ V2: OUVINDO\nBRUTO: --\nALVO: --  CONFIANCA: --\nCOMANDO: aguardando"
+ status.Text="VOZ V3: OUVINDO"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
-  if not armed then return end
-  local raw=stt.Text;if raw==""then return end
+  local raw=stt.Text;if raw=="" then return end
+  voiceEvents+=1
   local t=norm(raw);local command,matched,confidence=voiceCommand(t);local pct=math.floor(confidence*100+.5)
-  if command=="SUBIR" then remote:FireServer("subir");rearm()
-  elseif command=="DESCER" then remote:FireServer("descer");rearm() end
-  status.Text="VOZ V2: OUVINDO\nBRUTO: "..string.sub(raw,1,44).."\nALVO: "..matched.."  CONFIANCA: "..pct.."%\nCOMANDO: "..command
-  print("[NanobotVoiceV2]",raw,matched,pct,command)
+  local now=os.clock()
+  local duplicate=(raw==lastRaw and command==lastCommand and now-lastAt<.65)
+  if command~="NENHUM" and not duplicate then
+   voiceSent+=1;lastRaw=raw;lastCommand=command;lastAt=now
+   remote:FireServer(string.lower(command))
+  end
+  status.Text="VOZ V3 | EVENTOS "..voiceEvents.." | ENVIOS "..voiceSent.." | ACK "..voiceAck.."\nBRUTO: "..string.sub(raw,1,42).."\nALVO: "..matched.."  "..pct.."%  => "..command
+  print("[NanobotVoiceV3]",voiceEvents,voiceSent,raw,matched,pct,command)
  end)
 end)
 if not ok then status.Text="VOZ: FALHOU";warn("Nanobot voice:",err)end
@@ -67,5 +65,9 @@ local function create(owner)
  end)
 end
 remote.OnClientEvent:Connect(function(action,owner,pos,height)
+ if action=="ack" then
+  voiceAck+=1
+  return
+ end
  if action=="on"then create(owner)elseif action=="state"then local s=swarms[owner];if s then s.pos=pos;s.height=height or 0 end elseif action=="off"then task.delay(.5,function()remove(owner)end)end
 end)
