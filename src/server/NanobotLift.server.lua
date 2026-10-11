@@ -15,7 +15,7 @@ local function stop(plr)
  remote:FireAllClients("off",plr)
 end
 local function start(plr)
- if states[plr] then states[plr].mode="up";return end
+ if states[plr] then states[plr].mode="up";remote:FireClient(plr,"command","SUBIR");return end
  local ch=plr.Character;local hum=ch and ch:FindFirstChildOfClass("Humanoid");local root=ch and ch:FindFirstChild("HumanoidRootPart")
  if not hum or hum.Health<=0 or not root then return end
  local support=Instance.new("Part");support.Name="NanobotSupport";support.Size=Vector3.new(10,.8,10);support.Anchored=true;support.CanCollide=true;support.CanTouch=false;support.Transparency=1;support.Parent=workspace
@@ -43,7 +43,10 @@ local function start(plr)
  end)
 end
 remote.OnServerEvent:Connect(function(plr,cmd)
- if cmd=="subir" then start(plr)
- elseif cmd=="descer" then local s=states[plr];if s then s.mode="down" end end
+ if cmd=="subir" then start(plr);remote:FireClient(plr,"command","SUBIR")
+ elseif cmd=="descer" then
+  local s=states[plr]
+  if s then s.mode="down";remote:FireClient(plr,"command","DESCER") end
+ end
 end)
 Players.PlayerRemoving:Connect(stop)
