@@ -2,7 +2,7 @@ local InsertService = game:GetService("InsertService")
 
 local ASSET_ID = 119678628566456
 local MODEL_NAME = "QuarantinedATM_" .. ASSET_ID
-local POSITION = Vector3.new(0, 0, -18)
+local POSITION = Vector3.new(0, 0.55, -18)
 
 local old = workspace:FindFirstChild(MODEL_NAME)
 if old then old:Destroy() end
@@ -16,31 +16,23 @@ if not ok then
 	return
 end
 
--- IMPORTANT: asset remains outside Workspace while every embedded script is neutralized.
+-- Keep community code disabled. We inspect the interaction objects and rebuild
+-- the ATM functionality ourselves instead of executing untrusted scripts.
 local scriptCount = 0
-local scriptsFound = {}
+local interactionCount = 0
+local findings = {}
 
-local function quarantineScript(obj)
+for _, obj in ipairs(container:GetDescendants()) do
 	if obj:IsA("Script") or obj:IsA("LocalScript") then
 		obj.Disabled = true
 		scriptCount += 1
-		table.insert(scriptsFound, obj.ClassName .. " :: " .. obj:GetFullName())
+		table.insert(findings, "CODE(disabled) " .. obj.ClassName .. " :: " .. obj:GetFullName())
 	elseif obj:IsA("ModuleScript") then
-		-- ModuleScripts do not execute by themselves, but remove them so another script can never require them.
 		scriptCount += 1
-		table.insert(scriptsFound, obj.ClassName .. " :: " .. obj:GetFullName())
-		obj:Destroy()
-	end
-end
-
-for _, obj in ipairs(container:GetDescendants()) do
-	quarantineScript(obj)
-end
-
--- Delete Script/LocalScript after recording them. We only keep the ATM's non-code assets.
-for _, obj in ipairs(container:GetDescendants()) do
-	if obj:IsA("Script") or obj:IsA("LocalScript") then
-		obj:Destroy()
+		table.insert(findings, "CODE(module-not-executed) :: " .. obj:GetFullName())
+	elseif obj:IsA("ClickDetector") or obj:IsA("ProximityPrompt") then
+		interactionCount += 1
+		table.insert(findings, "INTERACTION " .. obj.ClassName .. " :: " .. obj:GetFullName())
 	end
 end
 
@@ -68,7 +60,15 @@ end
 root.Name = MODEL_NAME
 root:SetAttribute("SourceAssetId", ASSET_ID)
 root:SetAttribute("Quarantined", true)
-root:SetAttribute("RemovedScriptCount", scriptCount)
+root:SetAttribute("DisabledScriptCount", scriptCount)
+root:SetAttribute("InteractionCount", interactionCount)
+
+-- Disable scripts again after reparenting as a defense-in-depth check.
+for _, obj in ipairs(root:GetDescendants()) do
+	if obj:IsA("Script") or obj:IsA("LocalScript") then
+		obj.Disabled = true
+	end
+end
 
 if root:IsA("Model") then
 	local boxCF, boxSize = root:GetBoundingBox()
@@ -83,7 +83,9 @@ elseif root:IsA("BasePart") then
 	root.Position = Vector3.new(POSITION.X, POSITION.Y + root.Size.Y / 2, POSITION.Z)
 end
 
-print(("[ATM Quarantine] Asset %d loaded. Removed %d embedded script(s)."):format(ASSET_ID, scriptCount))
-for _, entry in ipairs(scriptsFound) do
-	print("[ATM Quarantine] Removed: " .. entry)
+print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
+	ASSET_ID, scriptCount, interactionCount
+))
+for _, entry in ipairs(findings) do
+	print("[ATM Quarantine] " .. entry)
 end
