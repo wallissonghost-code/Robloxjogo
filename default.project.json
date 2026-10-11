@@ -40,6 +40,9 @@
         },
         "BuildDiagnostic": {
           "$path": "src/client/BuildDiagnostic.client.lua"
+        },
+        "SafeATM": {
+          "$path": "src/client/SafeATM.client.lua"
         }
       }
     }
