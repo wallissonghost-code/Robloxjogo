@@ -138,7 +138,7 @@ prompt.Triggered:Connect(function(player)
 end)
 
 root:SetAttribute("SafePromptReady", true)
-root:SetAttribute("ServerBuild", "V21")
+root:SetAttribute("ServerBuild", "V22")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -151,7 +151,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V21"
+txt.Text = "BUILD V22"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
