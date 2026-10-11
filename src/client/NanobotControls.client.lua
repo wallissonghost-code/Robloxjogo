@@ -33,13 +33,23 @@ local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
  local stt=Instance.new("AudioSpeechToText");stt.Name="NanobotSTT";stt.Enabled=true;stt.Parent=gui
  local wire=Instance.new("Wire");wire.SourceInstance=input;wire.TargetInstance=stt;wire.Parent=gui
- status.Text="VOZ: OUVINDO • UM=SUBIR • DOIS=DESCER\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
+ local armed=true
+ local function rearm()
+  armed=false
+  stt.Enabled=false
+  task.delay(.18,function()
+   if stt.Parent then stt.Enabled=true;armed=true end
+  end)
+ end
+ status.Text="VOZ V2: OUVINDO\nBRUTO: --\nALVO: --  CONFIANCA: --\nCOMANDO: aguardando"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
+  if not armed then return end
   local raw=stt.Text;if raw==""then return end
-  local t=norm(raw);local command,matched,confidence=voiceCommand(t)
-  if command=="SUBIR" then remote:FireServer("subir") elseif command=="DESCER" then remote:FireServer("descer") end
-  status.Text="VOZ: OUVINDO\nBRUTO: "..string.sub(raw,1,50).."\nNORMAL: "..string.sub(t,1,50).."\nCOMANDO: "..command
-  print("[NanobotVoice] bruto=",raw," normal=",t," comando=",command)
+  local t=norm(raw);local command,matched,confidence=voiceCommand(t);local pct=math.floor(confidence*100+.5)
+  if command=="SUBIR" then remote:FireServer("subir");rearm()
+  elseif command=="DESCER" then remote:FireServer("descer");rearm() end
+  status.Text="VOZ V2: OUVINDO\nBRUTO: "..string.sub(raw,1,44).."\nALVO: "..matched.."  CONFIANCA: "..pct.."%\nCOMANDO: "..command
+  print("[NanobotVoiceV2]",raw,matched,pct,command)
  end)
 end)
 if not ok then status.Text="VOZ: FALHOU";warn("Nanobot voice:",err)end
