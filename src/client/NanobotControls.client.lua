@@ -11,11 +11,23 @@ btn("SUBIR",-18).Activated:Connect(function()remote:FireServer("subir")end)
 btn("DESCER",-133).Activated:Connect(function()remote:FireServer("descer")end)
 UIS.InputBegan:Connect(function(i,p)if p then return end;if i.KeyCode==Enum.KeyCode.E then remote:FireServer("subir")elseif i.KeyCode==Enum.KeyCode.Q then remote:FireServer("descer")end end)
 local function norm(s)return string.lower(s):gsub("[áàâã]","a"):gsub("[éê]","e"):gsub("í","i"):gsub("[óôõ]","o"):gsub("ú","u"):gsub("[^%a%s]","")end
+local aliases={SUBIR={"subir","subi","sobi","sobe","um"},DESCER={"descer","decer","desce","desse","deser","desert","dois"}}
+local function editDistance(a,b)
+ local prev={};for j=0,#b do prev[j]=j end
+ for i=1,#a do local cur={[0]=i};for j=1,#b do local cost=(a:sub(i,i)==b:sub(j,j)) and 0 or 1;cur[j]=math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+cost)end;prev=cur end
+ return prev[#b]
+end
+local function similarity(a,b)
+ if a==b then return 1 end
+ if a:find(b,1,true) or b:find(a,1,true) then return .94 end
+ return 1-editDistance(a,b)/math.max(#a,#b,1)
+end
 local function voiceCommand(t)
- local compact=t:gsub("%s+","")
- if compact=="um" or compact=="1" or t:find("numero um",1,true) or t:find("subir",1,true) or compact=="sobi" or compact=="subi" or compact=="sobe" then return "SUBIR" end
- if compact=="dois" or compact=="2" or t:find("numero dois",1,true) or t:find("descer",1,true) or compact=="desert" or compact=="desce" or compact=="desse" or compact=="deser" then return "DESCER" end
- return "NENHUM"
+ local best,bestAlias,bestScore="NENHUM","--",0
+ local samples={t};for word in t:gmatch("%a+") do table.insert(samples,word)end
+ for command,list in pairs(aliases) do for _,alias in ipairs(list)do for _,sample in ipairs(samples)do local s=similarity(sample,alias);if s>bestScore then best,bestAlias,bestScore=command,alias,s end end end end
+ if bestScore<.68 then best="NENHUM" end
+ return best,bestAlias,bestScore
 end
 local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
@@ -24,7 +36,7 @@ local ok,err=pcall(function()
  status.Text="VOZ: OUVINDO • UM=SUBIR • DOIS=DESCER\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
   local raw=stt.Text;if raw==""then return end
-  local t=norm(raw);local command=voiceCommand(t)
+  local t=norm(raw);local command,matched,confidence=voiceCommand(t)
   if command=="SUBIR" then remote:FireServer("subir") elseif command=="DESCER" then remote:FireServer("descer") end
   status.Text="VOZ: OUVINDO\nBRUTO: "..string.sub(raw,1,50).."\nNORMAL: "..string.sub(t,1,50).."\nCOMANDO: "..command
   print("[NanobotVoice] bruto=",raw," normal=",t," comando=",command)
