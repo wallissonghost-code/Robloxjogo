@@ -8,32 +8,43 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [
-            256,
-            1,
-            256
-          ],
-          "Position": [
-            0,
-            0,
-            0
-          ],
-          "Material": "Grass"
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
+          "Material": "SmoothPlastic",
+          "Color": [0.08, 0.08, 0.09]
         }
-      }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "NanobotLift": {
-        "$path": "src/server/NanobotLift.server.lua"
-      }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "NanobotControls": {
-          "$path": "src/client/NanobotControls.client.lua"
+      },
+      "CommunityAltar": {
+        "$className": "Model",
+        "MainStage": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [48, 2, 20],
+            "Position": [0, 1.5, -32],
+            "Material": "SmoothPlastic",
+            "Color": [0.15, 0.15, 0.17]
+          }
+        },
+        "BackWall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Size": [48, 12, 1],
+            "Position": [0, 7, -41.5],
+            "Material": "SmoothPlastic",
+            "Color": [0.05, 0.05, 0.06]
+          }
+        },
+        "AvatarSlots": {
+          "$className": "Folder",
+          "Slot01": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[-18,3,-31]}},
+          "Slot02": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[-12,3,-31]}},
+          "Slot03": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[-6,3,-31]}},
+          "Slot04": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[0,3,-31]}},
+          "Slot05": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[6,3,-31]}},
+          "Slot06": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[12,3,-31]}},
+          "Slot07": {"$className":"Part","$properties":{"Anchored":true,"Transparency":1,"CanCollide":false,"Size":[4,1,4],"Position":[18,3,-31]}}
         }
       }
     }
