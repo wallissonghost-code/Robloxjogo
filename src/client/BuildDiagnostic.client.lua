@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V19"
+local BUILD_VERSION = "V20"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -103,7 +103,11 @@ local function refresh()
 		"Prompt enabled: " .. tostring((atm:FindFirstChild("SafeATMPrompt", true) and atm:FindFirstChild("SafeATMPrompt", true).Enabled) or false),
 		"leaderstats: " .. tostring(player:FindFirstChild("leaderstats") ~= nil),
 		"Ouro: " .. tostring(player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Ouro") ~= nil),
-		"Banco: " .. tostring(player:FindFirstChild("Banco") ~= nil)
+		"Banco: " .. tostring(player:FindFirstChild("Banco") ~= nil),
+		"PlayerScripts: " .. tostring(player:FindFirstChild("PlayerScripts") ~= nil),
+		"SafeATM script: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("SafeATM") ~= nil),
+		"SafeATM disabled: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("SafeATM") and player.PlayerScripts.SafeATM.Disabled or "N/A"),
+		"SafeATMGui: " .. tostring(player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("SafeATMGui") ~= nil)
 	}, "\n")
 	info.Text=reportText
 end
