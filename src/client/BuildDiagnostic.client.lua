@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V5"
+local BUILD_VERSION = "V6"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -85,13 +85,18 @@ local function refresh()
 		bottomY=0
 		topY=0
 	end
-	reportText=string.format(
-		"ATM LOADER: ENCONTRADO\nAsset: %d\nPos: %.2f, %.2f, %.2f\nPartes: %d\nScripts detectados: %s\nInteracoes: %s\nQuarentena: %s",
-		ASSET_ID,pos.X,pos.Y,pos.Z,bottomY,topY,parts,
-		tostring(atm:GetAttribute("DisabledScriptCount")),
-		tostring(atm:GetAttribute("InteractionCount")),
-		tostring(atm:GetAttribute("Quarantined"))
-	)
+	reportText = table.concat({
+		"BUILD " .. BUILD_VERSION,
+		"ATM LOADER: ENCONTRADO",
+		"Asset: " .. tostring(ASSET_ID),
+		string.format("Centro visual: X %.2f | Y %.2f | Z %.2f", pos.X, pos.Y, pos.Z),
+		string.format("BottomY: %.2f", bottomY),
+		string.format("TopY: %.2f", topY),
+		"Partes: " .. tostring(parts),
+		"Scripts desativados: " .. tostring(atm:GetAttribute("DisabledScriptCount")),
+		"Interacoes: " .. tostring(atm:GetAttribute("InteractionCount")),
+		"Quarentena: " .. tostring(atm:GetAttribute("Quarantined"))
+	}, "\n")
 	info.Text=reportText
 end
 
