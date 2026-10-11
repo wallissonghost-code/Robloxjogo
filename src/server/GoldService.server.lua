@@ -38,5 +38,8 @@ remote.OnServerInvoke=function(p,action,raw)
  return true,"Operacao concluida"
 end
 Players.PlayerAdded:Connect(setupPlayer)
+for _,p in ipairs(Players:GetPlayers()) do
+ task.spawn(setupPlayer,p)
+end
 Players.PlayerRemoving:Connect(function(p)savePlayer(p);sessions[p]=nil end)
 game:BindToClose(function()for p in pairs(sessions)do savePlayer(p)end end)
