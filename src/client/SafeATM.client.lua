@@ -18,17 +18,36 @@ local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(20,132);inpu
 local ic=Instance.new("UICorner");ic.CornerRadius=UDim.new(0,12);ic.Parent=input
 local function btn(t,x)local b=Instance.new("TextButton");b.Position=UDim2.new(x,x==0 and 20 or 5,0,202);b.Size=UDim2.new(.5,-25,0,54);b.BackgroundColor3=Color3.fromRGB(255,205,55);b.TextColor3=Color3.fromRGB(20,20,22);b.Text=t;b.Font=Enum.Font.GothamBold;b.TextSize=16;b.BorderSizePixel=0;b.Parent=panel;local q=Instance.new("UICorner");q.CornerRadius=UDim.new(0,12);q.Parent=b;return b end
 local dep=btn("DEPOSITAR",0);local wit=btn("SACAR",.5)
-local status=label("ATM SEGURO V17",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
+local status=label("ATM SEGURO V18",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
 local gold=p:WaitForChild("leaderstats"):WaitForChild("Ouro");local bank=p:WaitForChild("Banco")
 local function refresh()wl.Text="CARTEIRA\n"..gold.Value.." Ouro";bl.Text="BANCO\n"..bank.Value.." Ouro"end
 refresh();gold:GetPropertyChangedSignal("Value"):Connect(refresh);bank:GetPropertyChangedSignal("Value"):Connect(refresh)
 local busy=false
 local function tx(action)if busy then return end;if not remote then status.Text="ATMTransaction indisponivel.";return end;local n=tonumber(input.Text);if not n or n<1 then status.Text="Digite um valor valido.";return end;busy=true;local ok,success,msg=pcall(function()return remote:InvokeServer(action,n)end);busy=false;if not ok then status.Text="Falha de comunicacao.";return end;status.Text=msg or(success and"Operacao concluida."or"Operacao recusada.");if success then input.Text=""end;refresh()end
 dep.Activated:Connect(function()tx("deposit")end);wit.Activated:Connect(function()tx("withdraw")end);close.Activated:Connect(function()overlay.Visible=false end)
+local test=Instance.new("TextButton")
+test.Name="ATMTestButton"
+test.AnchorPoint=Vector2.new(.5,1)
+test.Position=UDim2.new(.5,0,1,-24)
+test.Size=UDim2.fromOffset(210,44)
+test.BackgroundColor3=Color3.fromRGB(255,205,55)
+test.TextColor3=Color3.fromRGB(20,20,22)
+test.Text="ABRIR ATM (TESTE)"
+test.Font=Enum.Font.GothamBold
+test.TextSize=14
+test.BorderSizePixel=0
+test.Parent=gui
+local tc=Instance.new("UICorner");tc.CornerRadius=UDim.new(0,12);tc.Parent=test
+test.Activated:Connect(function()
+ refresh()
+ status.Text="ABERTO PELO TESTE V18"
+ overlay.Visible=true
+end)
+
 if openEvent then openEvent.OnClientEvent:Connect(function()
  refresh()
- status.Text="ATM SEGURO V17"
+ status.Text="ATM SEGURO V18"
  overlay.Visible=true
 end) else
- warn("[ATM V17] ATMOpen nao encontrado")
+ warn("[ATM V18] ATMOpen nao encontrado")
 end
