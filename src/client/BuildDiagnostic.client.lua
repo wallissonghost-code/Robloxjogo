@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V3"
+local BUILD_VERSION = "V4"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -68,12 +68,24 @@ local function refresh()
 		if v:IsA("BasePart") then parts+=1 end
 	end
 	local pos
-	if atm:IsA("Model") then pos=atm:GetPivot().Position
-	elseif atm:IsA("BasePart") then pos=atm.Position
-	else pos=Vector3.zero end
+	local bottomY, topY
+	if atm:IsA("Model") then
+		local cf,size=atm:GetBoundingBox()
+		pos=cf.Position
+		bottomY=cf.Position.Y-size.Y/2
+		topY=cf.Position.Y+size.Y/2
+	elseif atm:IsA("BasePart") then
+		pos=atm.Position
+		bottomY=atm.Position.Y-atm.Size.Y/2
+		topY=atm.Position.Y+atm.Size.Y/2
+	else
+		pos=Vector3.zero
+		bottomY=0
+		topY=0
+	end
 	info.Text=string.format(
 		"ATM LOADER: ENCONTRADO\nAsset: %d\nPos: %.2f, %.2f, %.2f\nPartes: %d\nScripts detectados: %s\nInteracoes: %s\nQuarentena: %s",
-		ASSET_ID,pos.X,pos.Y,pos.Z,parts,
+		ASSET_ID,pos.X,pos.Y,pos.Z,bottomY,topY,parts,
 		tostring(atm:GetAttribute("DisabledScriptCount")),
 		tostring(atm:GetAttribute("InteractionCount")),
 		tostring(atm:GetAttribute("Quarantined"))
