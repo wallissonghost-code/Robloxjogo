@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V21"
+local BUILD_VERSION = "V22"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -25,7 +25,7 @@ button.Parent = gui
 local bc=Instance.new("UICorner"); bc.CornerRadius=UDim.new(0,9); bc.Parent=button
 
 local panel=Instance.new("Frame")
-panel.Size=UDim2.fromOffset(330,310)
+panel.Size=UDim2.fromOffset(360,390)
 panel.Position=UDim2.fromOffset(12,54)
 panel.BackgroundColor3=Color3.fromRGB(16,16,19)
 panel.BackgroundTransparency=.04
@@ -64,6 +64,15 @@ local function refresh()
 	if not atm then
 		info.Text="ATM LOADER: NAO ENCONTRADO\n\nNome esperado:\n"..ATM_NAME.."\n\nSe existe outro caixa visivel no mapa, ele NAO e a instancia carregada pelo nosso script."
 		return
+	end
+	local atmGui=player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("SafeATMGui")
+	local guiChildren={}
+	local guiDescendants=0
+	if atmGui then
+		for _,v in ipairs(atmGui:GetChildren()) do
+			table.insert(guiChildren, v.Name..":"..v.ClassName)
+		end
+		guiDescendants=#atmGui:GetDescendants()
 	end
 	local parts=0
 	for _,v in ipairs(atm:GetDescendants()) do
@@ -107,7 +116,12 @@ local function refresh()
 		"PlayerScripts: " .. tostring(player:FindFirstChild("PlayerScripts") ~= nil),
 		"SafeATM script: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("SafeATM") ~= nil),
 		"SafeATM disabled: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("SafeATM") and player.PlayerScripts.SafeATM.Disabled or "N/A"),
-		"SafeATMGui: " .. tostring(player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("SafeATMGui") ~= nil)
+		"SafeATMGui: " .. tostring(atmGui ~= nil),
+		"GUI filhos: " .. tostring(atmGui and #atmGui:GetChildren() or 0),
+		"GUI descendentes: " .. tostring(guiDescendants),
+		"GUI lista: " .. (#guiChildren > 0 and table.concat(guiChildren,", ") or "VAZIA"),
+		"ATMPanel: " .. tostring(atmGui and atmGui:FindFirstChild("ATMPanel") ~= nil),
+		"Fallback V21: " .. tostring(atmGui and atmGui:FindFirstChild("ATMV21Fallback") ~= nil)
 	}, "\n")
 	info.Text=reportText
 end
