@@ -43,10 +43,13 @@ local function start(plr)
  end)
 end
 remote.OnServerEvent:Connect(function(plr,cmd)
- if cmd=="subir" then start(plr);remote:FireClient(plr,"command","SUBIR")
+ if cmd=="subir" then
+  start(plr)
+  remote:FireClient(plr,"ack","SUBIR")
  elseif cmd=="descer" then
   local s=states[plr]
-  if s then s.mode="down";remote:FireClient(plr,"command","DESCER") end
+  if s then s.mode="down" end
+  remote:FireClient(plr,"ack","DESCER")
  end
 end)
 Players.PlayerRemoving:Connect(stop)
