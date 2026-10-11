@@ -33,14 +33,32 @@
     },
     "StarterGui": {
       "$className": "StarterGui",
-      "GoldHUD": {
-        "$path": "src/client/GoldHUD.client.lua"
+      "GoldHUDContainer": {
+        "$className": "ScreenGui",
+        "$properties": {
+          "ResetOnSpawn": false
+        },
+        "Client": {
+          "$path": "src/client/GoldHUD.client.lua"
+        }
       },
-      "BuildDiagnostic": {
-        "$path": "src/client/BuildDiagnostic.client.lua"
+      "DiagnosticContainer": {
+        "$className": "ScreenGui",
+        "$properties": {
+          "ResetOnSpawn": false
+        },
+        "Client": {
+          "$path": "src/client/BuildDiagnostic.client.lua"
+        }
       },
-      "SafeATM": {
-        "$path": "src/client/SafeATM.client.lua"
+      "ATMContainer": {
+        "$className": "ScreenGui",
+        "$properties": {
+          "ResetOnSpawn": false
+        },
+        "Client": {
+          "$path": "src/client/SafeATM.client.lua"
+        }
       }
     }
   }
