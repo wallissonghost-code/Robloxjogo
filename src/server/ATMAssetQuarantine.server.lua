@@ -1,8 +1,13 @@
 local InsertService = game:GetService("InsertService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ASSET_ID = 119678628566456
 local MODEL_NAME = "QuarantinedATM_" .. ASSET_ID
 local POSITION = Vector3.new(0, 4.5, -18)
+
+local openEvent = ReplicatedStorage:FindFirstChild("ATMOpen") or Instance.new("RemoteEvent")
+openEvent.Name = "ATMOpen"
+openEvent.Parent = ReplicatedStorage
 
 local old = workspace:FindFirstChild(MODEL_NAME)
 if old then old:Destroy() end
@@ -104,6 +109,14 @@ end
 print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
 	ASSET_ID, scriptCount, interactionCount
 ))
+for _, obj in ipairs(root:GetDescendants()) do
+	if obj:IsA("ProximityPrompt") then
+		obj.Triggered:Connect(function(player)
+			openEvent:FireClient(player)
+		end)
+	end
+end
+
 for _, entry in ipairs(findings) do
 	print("[ATM Quarantine] " .. entry)
 end
