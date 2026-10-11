@@ -2,7 +2,7 @@ local InsertService = game:GetService("InsertService")
 
 local ASSET_ID = 119678628566456
 local MODEL_NAME = "QuarantinedATM_" .. ASSET_ID
-local POSITION = Vector3.new(0, 2.5, -18)
+local POSITION = Vector3.new(0, 4.5, -18)
 
 local old = workspace:FindFirstChild(MODEL_NAME)
 if old then old:Destroy() end
