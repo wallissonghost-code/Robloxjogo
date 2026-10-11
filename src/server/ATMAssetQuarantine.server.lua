@@ -109,14 +109,21 @@ end
 print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
 	ASSET_ID, scriptCount, interactionCount
 ))
-for _, obj in ipairs(root:GetDescendants()) do
-	if obj:IsA("ProximityPrompt") then
-		obj.Triggered:Connect(function(player)
-			openEvent:FireClient(player)
-		end)
+local anchor = parts[1]
+if anchor then
+	for _, obj in ipairs(root:GetDescendants()) do
+		if obj:IsA("ProximityPrompt") then obj.Enabled = false end
 	end
-end
-
-for _, entry in ipairs(findings) do
-	print("[ATM Quarantine] " .. entry)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "SafeATMPrompt"
+	prompt.ActionText = "Acessar"
+	prompt.ObjectText = "Caixa Eletronico"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = anchor
+	prompt.Triggered:Connect(function(player)
+		openEvent:FireClient(player)
+	end)
+	root:SetAttribute("SafePromptReady", true)
 end
