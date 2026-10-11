@@ -13,15 +13,15 @@ UIS.InputBegan:Connect(function(i,p)if p then return end;if i.KeyCode==Enum.KeyC
 local function norm(s)return string.lower(s):gsub("[áàâã]","a"):gsub("[éê]","e"):gsub("í","i"):gsub("[óôõ]","o"):gsub("ú","u"):gsub("[^%a%s]","")end
 local function voiceCommand(t)
  local compact=t:gsub("%s+","")
- if t:find("subir",1,true) or compact=="sobi" or compact=="subi" or compact=="sobe" then return "SUBIR" end
- if t:find("descer",1,true) or compact=="desert" or compact=="desce" or compact=="desse" or compact=="deser" then return "DESCER" end
+ if compact=="um" or compact=="1" or t:find("numero um",1,true) or t:find("subir",1,true) or compact=="sobi" or compact=="subi" or compact=="sobe" then return "SUBIR" end
+ if compact=="dois" or compact=="2" or t:find("numero dois",1,true) or t:find("descer",1,true) or compact=="desert" or compact=="desce" or compact=="desse" or compact=="deser" then return "DESCER" end
  return "NENHUM"
 end
 local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
  local stt=Instance.new("AudioSpeechToText");stt.Name="NanobotSTT";stt.Enabled=true;stt.Parent=gui
  local wire=Instance.new("Wire");wire.SourceInstance=input;wire.TargetInstance=stt;wire.Parent=gui
- status.Text="VOZ: OUVINDO\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
+ status.Text="VOZ: OUVINDO • UM=SUBIR • DOIS=DESCER\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
   local raw=stt.Text;if raw==""then return end
   local t=norm(raw);local command=voiceCommand(t)
