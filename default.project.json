@@ -8,9 +8,32 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [256, 1, 256],
-          "Position": [0, 0, 0],
+          "Size": [
+            256,
+            1,
+            256
+          ],
+          "Position": [
+            0,
+            0,
+            0
+          ],
           "Material": "Grass"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "NanobotLift": {
+        "$path": "src/server/NanobotLift.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "NanobotControls": {
+          "$path": "src/client/NanobotControls.client.lua"
         }
       }
     }
