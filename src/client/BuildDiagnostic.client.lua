@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V17"
+local BUILD_VERSION = "V18"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -97,7 +97,10 @@ local function refresh()
 		"Prompt seguro: " .. tostring(atm:GetAttribute("SafePromptReady")),
 		"Server build: " .. tostring(atm:GetAttribute("ServerBuild")),
 		"ATMOpen: " .. tostring(game:GetService("ReplicatedStorage"):FindFirstChild("ATMOpen") ~= nil),
-		"ATMTransaction: " .. tostring(game:GetService("ReplicatedStorage"):FindFirstChild("ATMTransaction") ~= nil)
+		"ATMTransaction: " .. tostring(game:GetService("ReplicatedStorage"):FindFirstChild("ATMTransaction") ~= nil),
+		"InteractionPart: " .. tostring(atm:FindFirstChild("SafeATMInteraction", true) ~= nil),
+		"SafePrompt client: " .. tostring(atm:FindFirstChild("SafeATMPrompt", true) ~= nil),
+		"Prompt enabled: " .. tostring((atm:FindFirstChild("SafeATMPrompt", true) and atm:FindFirstChild("SafeATMPrompt", true).Enabled) or false)
 	}, "\n")
 	info.Text=reportText
 end
