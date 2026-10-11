@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V1"
-local BUILD_NOTE = "Diagnostico visual + ATM em quarentena"
+local BUILD_VERSION = "V2"
+local BUILD_NOTE = "ATM elevado + scripts da comunidade ainda em quarentena"
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
