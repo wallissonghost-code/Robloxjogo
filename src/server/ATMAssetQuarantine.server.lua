@@ -2,7 +2,7 @@ local InsertService = game:GetService("InsertService")
 
 local ASSET_ID = 119678628566456
 local MODEL_NAME = "QuarantinedATM_" .. ASSET_ID
-local POSITION = Vector3.new(0, 0.65, -18)
+local POSITION = Vector3.new(0, 2.5, -18)
 
 local old = workspace:FindFirstChild(MODEL_NAME)
 if old then old:Destroy() end
@@ -74,6 +74,7 @@ if root:IsA("Model") then
 	local boxCF, boxSize = root:GetBoundingBox()
 	local pivot = root:GetPivot()
 	local bottom = boxCF.Position.Y - boxSize.Y / 2
+	-- V2: explicit clearance because this community asset has geometry extending below its visible ATM body.
 	root:PivotTo(pivot + Vector3.new(
 		POSITION.X - pivot.Position.X,
 		POSITION.Y - bottom,
