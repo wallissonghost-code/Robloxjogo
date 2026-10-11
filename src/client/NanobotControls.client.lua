@@ -5,7 +5,7 @@ local RunService=game:GetService("RunService")
 local player=Players.LocalPlayer
 local remote=RS:WaitForChild("NanobotLift")
 local gui=Instance.new("ScreenGui");gui.Name="NanobotControls";gui.ResetOnSpawn=false;gui.Parent=player:WaitForChild("PlayerGui")
-local status=Instance.new("TextLabel");status.Size=UDim2.fromOffset(250,30);status.Position=UDim2.new(.5,0,0,16);status.AnchorPoint=Vector2.new(.5,0);status.BackgroundColor3=Color3.fromRGB(12,14,18);status.TextColor3=Color3.new(1,1,1);status.TextScaled=true;status.Font=Enum.Font.GothamBold;status.Text="VOZ: INICIANDO";status.Parent=gui
+local status=Instance.new("TextLabel");status.Size=UDim2.fromOffset(360,110);status.Position=UDim2.new(.5,0,0,16);status.AnchorPoint=Vector2.new(.5,0);status.BackgroundColor3=Color3.fromRGB(12,14,18);status.BackgroundTransparency=.1;status.TextColor3=Color3.new(1,1,1);status.TextSize=16;status.TextWrapped=true;status.TextXAlignment=Enum.TextXAlignment.Left;status.TextYAlignment=Enum.TextYAlignment.Top;status.Font=Enum.Font.Code;status.Text="VOZ: INICIANDO\nBRUTO: --\nNORMAL: --\nCOMANDO: --";status.Parent=gui
 local function btn(txt,x)local b=Instance.new("TextButton");b.Size=UDim2.fromOffset(105,44);b.Position=UDim2.new(1,x,1,-105);b.AnchorPoint=Vector2.new(1,0);b.BackgroundColor3=Color3.fromRGB(15,18,24);b.TextColor3=Color3.new(1,1,1);b.TextScaled=true;b.Font=Enum.Font.GothamBold;b.Text=txt;b.Parent=gui;return b end
 btn("SUBIR",-18).Activated:Connect(function()remote:FireServer("subir")end)
 btn("DESCER",-133).Activated:Connect(function()remote:FireServer("descer")end)
@@ -15,12 +15,13 @@ local ok,err=pcall(function()
  local input=Instance.new("AudioDeviceInput");input.Name="NanobotMic";input.Player=player;input.Parent=gui
  local stt=Instance.new("AudioSpeechToText");stt.Name="NanobotSTT";stt.Enabled=true;stt.Parent=gui
  local wire=Instance.new("Wire");wire.SourceInstance=input;wire.TargetInstance=stt;wire.Parent=gui
- status.Text="VOZ: OUVINDO"
+ status.Text="VOZ: OUVINDO\nBRUTO: --\nNORMAL: --\nCOMANDO: aguardando"
  stt:GetPropertyChangedSignal("Text"):Connect(function()
   local raw=stt.Text;if raw==""then return end
-  status.Text="OUVI: "..string.sub(raw,1,24);local t=norm(raw)
-  if t:find("subir",1,true)then remote:FireServer("subir")elseif t:find("descer",1,true)then remote:FireServer("descer")end
-  task.delay(1.5,function()if status.Parent then status.Text="VOZ: OUVINDO"end end)
+  local t=norm(raw);local command="NENHUM"
+  if t:find("subir",1,true)then command="SUBIR";remote:FireServer("subir")elseif t:find("descer",1,true)then command="DESCER";remote:FireServer("descer")end
+  status.Text="VOZ: OUVINDO\nBRUTO: "..string.sub(raw,1,50).."\nNORMAL: "..string.sub(t,1,50).."\nCOMANDO: "..command
+  print("[NanobotVoice] bruto=",raw," normal=",t," comando=",command)
  end)
 end)
 if not ok then status.Text="VOZ: FALHOU";warn("Nanobot voice:",err)end
