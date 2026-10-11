@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V22"
+local BUILD_VERSION = "V23"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -25,7 +25,7 @@ button.Parent = gui
 local bc=Instance.new("UICorner"); bc.CornerRadius=UDim.new(0,9); bc.Parent=button
 
 local panel=Instance.new("Frame")
-panel.Size=UDim2.fromOffset(360,390)
+panel.Size=UDim2.fromOffset(370,450)
 panel.Position=UDim2.fromOffset(12,54)
 panel.BackgroundColor3=Color3.fromRGB(16,16,19)
 panel.BackgroundTransparency=.04
@@ -58,6 +58,9 @@ info.TextYAlignment=Enum.TextYAlignment.Top
 info.Parent=panel
 
 local reportText = ""
+local atmOpenReceived = 0
+local traceOpenEvent = game:GetService("ReplicatedStorage"):WaitForChild("ATMOpen",10)
+if traceOpenEvent then traceOpenEvent.OnClientEvent:Connect(function() atmOpenReceived += 1 end) end
 
 local function refresh()
 	local atm=workspace:FindFirstChild(ATM_NAME)
@@ -121,7 +124,10 @@ local function refresh()
 		"GUI descendentes: " .. tostring(guiDescendants),
 		"GUI lista: " .. (#guiChildren > 0 and table.concat(guiChildren,", ") or "VAZIA"),
 		"ATMPanel: " .. tostring(atmGui and atmGui:FindFirstChild("ATMPanel") ~= nil),
-		"Fallback V21: " .. tostring(atmGui and atmGui:FindFirstChild("ATMV21Fallback") ~= nil)
+		"Fallback V21: " .. tostring(atmGui and atmGui:FindFirstChild("ATMV21Fallback") ~= nil),
+		"Prompt Triggered: " .. tostring(atm:GetAttribute("PromptTriggerCount") or 0),
+		"ATMOpen enviado: " .. tostring(atm:GetAttribute("ATMOpenFireCount") or 0),
+		"ATMOpen recebido: " .. tostring(atmOpenReceived)
 	}, "\n")
 	info.Text=reportText
 end
