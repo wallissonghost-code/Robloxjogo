@@ -70,18 +70,35 @@ for _, obj in ipairs(root:GetDescendants()) do
 	end
 end
 
-if root:IsA("Model") then
-	local boxCF, boxSize = root:GetBoundingBox()
-	local pivot = root:GetPivot()
-	local bottom = boxCF.Position.Y - boxSize.Y / 2
-	-- V2: explicit clearance because this community asset has geometry extending below its visible ATM body.
-	root:PivotTo(pivot + Vector3.new(
-		POSITION.X - pivot.Position.X,
-		POSITION.Y - bottom,
-		POSITION.Z - pivot.Position.Z
-	))
-elseif root:IsA("BasePart") then
-	root.Position = Vector3.new(POSITION.X, POSITION.Y + root.Size.Y / 2, POSITION.Z)
+-- V7: this asset's root is a container, not a Model/BasePart.
+-- Move every physical part together using their real world-space bounds.
+local parts = {}
+if root:IsA("BasePart") then table.insert(parts, root) end
+for _, obj in ipairs(root:GetDescendants()) do
+	if obj:IsA("BasePart") then table.insert(parts, obj) end
+end
+
+if #parts > 0 then
+	local minX, minY, minZ = math.huge, math.huge, math.huge
+	local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+	for _, part in ipairs(parts) do
+		local half = part.Size * 0.5
+		local p = part.Position
+		minX = math.min(minX, p.X - half.X)
+		minY = math.min(minY, p.Y - half.Y)
+		minZ = math.min(minZ, p.Z - half.Z)
+		maxX = math.max(maxX, p.X + half.X)
+		maxY = math.max(maxY, p.Y + half.Y)
+		maxZ = math.max(maxZ, p.Z + half.Z)
+	end
+	local center = Vector3.new((minX+maxX)/2, (minY+maxY)/2, (minZ+maxZ)/2)
+	local targetBottomY = 0.65
+	local delta = Vector3.new(POSITION.X-center.X, targetBottomY-minY, POSITION.Z-center.Z)
+	for _, part in ipairs(parts) do
+		part.CFrame = part.CFrame + delta
+	end
+	root:SetAttribute("VisualBottomY", targetBottomY)
+	root:SetAttribute("MovedPartCount", #parts)
 end
 
 print(("[ATM Quarantine] Asset %d loaded; %d script(s) disabled; %d interaction object(s) found."):format(
