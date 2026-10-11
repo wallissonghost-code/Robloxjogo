@@ -2,6 +2,7 @@ local Players=game:GetService("Players")
 local RS=game:GetService("ReplicatedStorage")
 local p=Players.LocalPlayer
 local remote=RS:WaitForChild("ATMTransaction")
+local openEvent=RS:WaitForChild("ATMOpen")
 local ATM_NAME="QuarantinedATM_119678628566456"
 local gui=Instance.new("ScreenGui");gui.Name="SafeATMGui";gui.ResetOnSpawn=false;gui.DisplayOrder=500;gui.Parent=p:WaitForChild("PlayerGui")
 local overlay=Instance.new("Frame");overlay.Size=UDim2.fromScale(1,1);overlay.BackgroundColor3=Color3.new(0,0,0);overlay.BackgroundTransparency=.3;overlay.Visible=false;overlay.Parent=gui
@@ -17,13 +18,15 @@ local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(20,132);inpu
 local ic=Instance.new("UICorner");ic.CornerRadius=UDim.new(0,12);ic.Parent=input
 local function btn(t,x)local b=Instance.new("TextButton");b.Position=UDim2.new(x,x==0 and 20 or 5,0,202);b.Size=UDim2.new(.5,-25,0,54);b.BackgroundColor3=Color3.fromRGB(255,205,55);b.TextColor3=Color3.fromRGB(20,20,22);b.Text=t;b.Font=Enum.Font.GothamBold;b.TextSize=16;b.BorderSizePixel=0;b.Parent=panel;local q=Instance.new("UICorner");q.CornerRadius=UDim.new(0,12);q.Parent=b;return b end
 local dep=btn("DEPOSITAR",0);local wit=btn("SACAR",.5)
-local status=label("ATM SEGURO V9",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
+local status=label("ATM SEGURO V10",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
 local gold=p:WaitForChild("leaderstats"):WaitForChild("Ouro");local bank=p:WaitForChild("Banco")
 local function refresh()wl.Text="CARTEIRA\n"..gold.Value.." Ouro";bl.Text="BANCO\n"..bank.Value.." Ouro"end
 refresh();gold:GetPropertyChangedSignal("Value"):Connect(refresh);bank:GetPropertyChangedSignal("Value"):Connect(refresh)
 local busy=false
 local function tx(action)if busy then return end;local n=tonumber(input.Text);if not n or n<1 then status.Text="Digite um valor valido.";return end;busy=true;local ok,success,msg=pcall(function()return remote:InvokeServer(action,n)end);busy=false;if not ok then status.Text="Falha de comunicacao.";return end;status.Text=msg or(success and"Operacao concluida."or"Operacao recusada.");if success then input.Text=""end;refresh()end
 dep.Activated:Connect(function()tx("deposit")end);wit.Activated:Connect(function()tx("withdraw")end);close.Activated:Connect(function()overlay.Visible=false end)
-local connected={}
-local function scan()local atm=workspace:FindFirstChild(ATM_NAME);if not atm then return end;for _,o in ipairs(atm:GetDescendants())do if o:IsA("ProximityPrompt")and not connected[o]then connected[o]=true;o.Triggered:Connect(function()refresh();status.Text="ATM SEGURO V9";overlay.Visible=true end)end end end
-scan();workspace.ChildAdded:Connect(function(x)if x.Name==ATM_NAME then task.wait(.25);scan()end end)
+openEvent.OnClientEvent:Connect(function()
+ refresh()
+ status.Text="ATM SEGURO V10"
+ overlay.Visible=true
+end)
