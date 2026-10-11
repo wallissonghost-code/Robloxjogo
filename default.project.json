@@ -31,32 +31,17 @@
         "$path": "src/server/ATMAssetQuarantine.server.lua"
       }
     },
-    "StarterGui": {
-      "$className": "StarterGui",
-      "GoldHUDContainer": {
-        "$className": "ScreenGui",
-        "$properties": {
-          "ResetOnSpawn": false
-        },
-        "Client": {
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "GoldHUD": {
           "$path": "src/client/GoldHUD.client.lua"
-        }
-      },
-      "DiagnosticContainer": {
-        "$className": "ScreenGui",
-        "$properties": {
-          "ResetOnSpawn": false
         },
-        "Client": {
+        "BuildDiagnostic": {
           "$path": "src/client/BuildDiagnostic.client.lua"
-        }
-      },
-      "ATMContainer": {
-        "$className": "ScreenGui",
-        "$properties": {
-          "ResetOnSpawn": false
         },
-        "Client": {
+        "SafeATM": {
           "$path": "src/client/SafeATM.client.lua"
         }
       }
