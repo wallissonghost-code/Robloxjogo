@@ -1,6 +1,20 @@
 local Players=game:GetService("Players")
 local RS=game:GetService("ReplicatedStorage")
 local p=Players.LocalPlayer
+local bootGui=Instance.new("ScreenGui")
+bootGui.Name="ATMClientBootV20"
+bootGui.ResetOnSpawn=false
+bootGui.DisplayOrder=20000
+bootGui.Parent=p:WaitForChild("PlayerGui")
+local boot=Instance.new("TextLabel")
+boot.Size=UDim2.fromOffset(150,28)
+boot.Position=UDim2.new(0.5,-75,0,12)
+boot.BackgroundColor3=Color3.fromRGB(20,20,24)
+boot.TextColor3=Color3.new(1,1,1)
+boot.Text="ATM CLIENT V20 OK"
+boot.Font=Enum.Font.GothamBold
+boot.TextSize=12
+boot.Parent=bootGui
 local remote=RS:FindFirstChild("ATMTransaction")
 local openEvent=RS:FindFirstChild("ATMOpen")
 local ATM_NAME="QuarantinedATM_119678628566456"
@@ -18,7 +32,7 @@ local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(20,132);inpu
 local ic=Instance.new("UICorner");ic.CornerRadius=UDim.new(0,12);ic.Parent=input
 local function btn(t,x)local b=Instance.new("TextButton");b.Position=UDim2.new(x,x==0 and 20 or 5,0,202);b.Size=UDim2.new(.5,-25,0,54);b.BackgroundColor3=Color3.fromRGB(255,205,55);b.TextColor3=Color3.fromRGB(20,20,22);b.Text=t;b.Font=Enum.Font.GothamBold;b.TextSize=16;b.BorderSizePixel=0;b.Parent=panel;local q=Instance.new("UICorner");q.CornerRadius=UDim.new(0,12);q.Parent=b;return b end
 local dep=btn("DEPOSITAR",0);local wit=btn("SACAR",.5)
-local status=label("ATM SEGURO V19",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
+local status=label("ATM SEGURO V20",UDim2.fromOffset(20,278),UDim2.new(1,-40,0,70),14,false);status.TextColor3=Color3.fromRGB(175,180,188);status.TextWrapped=true
 local leaderstats=p:FindFirstChild("leaderstats")
 local gold=leaderstats and leaderstats:FindFirstChild("Ouro")
 local bank=p:FindFirstChild("Banco")
@@ -42,14 +56,14 @@ test.Parent=gui
 local tc=Instance.new("UICorner");tc.CornerRadius=UDim.new(0,12);tc.Parent=test
 test.Activated:Connect(function()
  refresh()
- status.Text="ABERTO PELO TESTE V19"
+ status.Text="ABERTO PELO TESTE V20"
  overlay.Visible=true
 end)
 
 if openEvent then openEvent.OnClientEvent:Connect(function()
  refresh()
- status.Text="ATM SEGURO V19"
+ status.Text="ATM SEGURO V20"
  overlay.Visible=true
 end) else
- warn("[ATM V19] ATMOpen nao encontrado")
+ warn("[ATM V20] ATMOpen nao encontrado")
 end
