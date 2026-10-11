@@ -119,6 +119,13 @@ local function openATM(source)
 	panel.Visible=true
 end
 
+local leaderstats = player:WaitForChild("leaderstats")
+local liveGold = leaderstats:WaitForChild("Ouro")
+local liveBank = player:WaitForChild("Banco")
+
+liveGold:GetPropertyChangedSignal("Value"):Connect(refresh)
+liveBank:GetPropertyChangedSignal("Value"):Connect(refresh)
+
 local busy=false
 local function transact(action)
 	if busy then return end
