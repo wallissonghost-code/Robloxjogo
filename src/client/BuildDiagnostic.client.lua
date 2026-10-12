@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V43"
+local BUILD_VERSION = "V44"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -141,7 +141,7 @@ adjust.Parent=panel
 local ac=Instance.new("UICorner");ac.CornerRadius=UDim.new(0,8);ac.Parent=adjust
 local coord=Instance.new("TextLabel");coord.BackgroundTransparency=1;coord.Position=UDim2.fromOffset(6,3);coord.Size=UDim2.new(1,-12,0,18);coord.TextColor3=Color3.fromRGB(255,211,74);coord.Font=Enum.Font.GothamBold;coord.TextSize=10;coord.Parent=adjust
 local function hudFrame()local g=player.PlayerGui:FindFirstChild("GoldHUD");return g and g:FindFirstChild("SettingsButton")end
-local function updateCoord()local h=hudFrame();coord.Text=h and ("CONFIG X "..tostring(h:GetAttribute("HUDX") or -122).."  Y "..tostring(h:GetAttribute("HUDY") or 6)) or "HUD indisponivel"end
+local function updateCoord()local h=hudFrame();coord.Text=h and ("CONFIG X "..tostring(h:GetAttribute("HUDX") or -87).."  Y "..tostring(h:GetAttribute("HUDY") or 0)) or "HUD indisponivel"end
 local function move(dx,dy,save)local g=player.PlayerGui:FindFirstChild("GoldHUD");local e=g and g:FindFirstChild("SettingsMove");if e then e:Fire(dx,dy);task.delay(.05,updateCoord)end end
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
 for i,d in ipairs(defs) do local b=Instance.new("TextButton");b.Position=UDim2.fromOffset(6+(i-1)*45,27);b.Size=UDim2.fromOffset(39,25);b.BackgroundColor3=Color3.fromRGB(48,48,56);b.Text=d[1];b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=14;b.BorderSizePixel=0;b.Parent=adjust;local cc=Instance.new("UICorner");cc.CornerRadius=UDim.new(0,6);cc.Parent=b;b.Activated:Connect(function()move(d[2],d[3],false)end)end
