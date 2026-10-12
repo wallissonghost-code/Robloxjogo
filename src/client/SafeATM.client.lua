@@ -6,6 +6,10 @@ local playerGui = player:WaitForChild("PlayerGui")
 local remote = RS:WaitForChild("ATMTransaction")
 local openEvent = RS:WaitForChild("ATMOpen")
 
+local camera=workspace.CurrentCamera
+local viewport=camera and camera.ViewportSize or Vector2.new(1280,720)
+local compact=viewport.X < 900 or viewport.Y < 600
+
 local old = playerGui:FindFirstChild("SafeATMGui")
 if old then old:Destroy() end
 
@@ -30,8 +34,8 @@ shade.Parent=gui
 local panel=Instance.new("Frame")
 panel.Name="ATMPanel"
 panel.AnchorPoint=Vector2.new(.5,.5)
-panel.Position=UDim2.fromScale(.5,.53)
-panel.Size=UDim2.new(.78,0,0,400)
+panel.Position=UDim2.fromScale(.5,compact and .54 or .53)
+panel.Size=compact and UDim2.new(.70,0,0,310) or UDim2.new(.78,0,0,400)
 panel.BackgroundColor3=Color3.fromRGB(12,14,18)
 panel.BorderSizePixel=0
 panel.ZIndex=20
@@ -43,8 +47,12 @@ stroke.Transparency=.35
 stroke.Thickness=1
 
 local sizeConstraint=Instance.new("UISizeConstraint",panel)
-sizeConstraint.MaxSize=Vector2.new(720,400)
-sizeConstraint.MinSize=Vector2.new(320,380)
+sizeConstraint.MaxSize=compact and Vector2.new(610,310) or Vector2.new(720,400)
+sizeConstraint.MinSize=compact and Vector2.new(300,290) or Vector2.new(320,380)
+
+local function sy(y) return compact and math.floor(y*.74) or y end
+local function sh(h) return compact and math.floor(h*.78) or h end
+local function fs(n) return compact and math.max(10,math.floor(n*.82)) or n end
 
 local function text(parent,value,pos,size,fontSize,bold,color,align)
 	local x=Instance.new("TextLabel")
@@ -62,8 +70,8 @@ local function text(parent,value,pos,size,fontSize,bold,color,align)
 end
 
 local coin=Instance.new("Frame")
-coin.Position=UDim2.fromOffset(24,22)
-coin.Size=UDim2.fromOffset(38,38)
+coin.Position=UDim2.fromOffset(24,sy(22))
+coin.Size=UDim2.fromOffset(sh(38),sh(38))
 coin.BackgroundColor3=Color3.fromRGB(255,197,47)
 coin.BorderSizePixel=0
 coin.ZIndex=22
@@ -71,13 +79,13 @@ coin.Parent=panel
 Instance.new("UICorner",coin).CornerRadius=UDim.new(1,0)
 text(coin,"O",UDim2.fromScale(0,0),UDim2.fromScale(1,1),18,true,Color3.fromRGB(25,25,27),Enum.TextXAlignment.Center)
 
-text(panel,"BANCO DE OURO",UDim2.fromOffset(74,19),UDim2.new(1,-140,0,28),22,true)
-text(panel,"Gerencie seu ouro com segurança",UDim2.fromOffset(74,46),UDim2.new(1,-140,0,20),12,false,Color3.fromRGB(145,150,160))
+text(panel,"BANCO DE OURO",UDim2.fromOffset(compact and 62 or 74,sy(19)),UDim2.new(1,-140,0,28),fs(22),true)
+text(panel,"Gerencie seu ouro com segurança",UDim2.fromOffset(compact and 62 or 74,sy(46)),UDim2.new(1,-140,0,20),fs(12),false,Color3.fromRGB(145,150,160))
 
 local close=Instance.new("TextButton")
 close.AnchorPoint=Vector2.new(1,0)
-close.Position=UDim2.new(1,-20,0,22)
-close.Size=UDim2.fromOffset(38,38)
+close.Position=UDim2.new(1,-20,0,sy(22))
+close.Size=UDim2.fromOffset(sh(38),sh(38))
 close.BackgroundColor3=Color3.fromRGB(31,34,41)
 close.Text="×"
 close.TextColor3=Color3.fromRGB(210,213,220)
@@ -89,7 +97,7 @@ close.Parent=panel
 Instance.new("UICorner",close).CornerRadius=UDim.new(0,11)
 
 local divider=Instance.new("Frame")
-divider.Position=UDim2.fromOffset(24,78)
+divider.Position=UDim2.fromOffset(24,sy(78))
 divider.Size=UDim2.new(1,-48,0,1)
 divider.BackgroundColor3=Color3.fromRGB(45,48,57)
 divider.BorderSizePixel=0
@@ -98,8 +106,8 @@ divider.Parent=panel
 
 local function balanceCard(title,x)
 	local card=Instance.new("Frame")
-	card.Position=UDim2.new(x,x==0 and 24 or 8,0,88)
-	card.Size=UDim2.new(.5,-32,0,76)
+	card.Position=UDim2.new(x,x==0 and 24 or 8,0,sy(88))
+	card.Size=UDim2.new(.5,-32,0,sh(76))
 	card.BackgroundColor3=Color3.fromRGB(22,25,31)
 	card.BorderSizePixel=0
 	card.ZIndex=21
@@ -107,7 +115,7 @@ local function balanceCard(title,x)
 	Instance.new("UICorner",card).CornerRadius=UDim.new(0,14)
 	local cs=Instance.new("UIStroke",card);cs.Color=Color3.fromRGB(53,57,67);cs.Transparency=.5
 	text(card,title,UDim2.fromOffset(16,12),UDim2.new(1,-32,0,18),11,true,Color3.fromRGB(145,150,160))
-	local value=text(card,"0",UDim2.fromOffset(16,33),UDim2.new(1,-32,0,32),23,true,Color3.fromRGB(255,205,62))
+	local value=text(card,"0",UDim2.fromOffset(16,33),UDim2.new(1,-32,0,sh(32)),23,true,Color3.fromRGB(255,205,62))
 	return value
 end
 
@@ -116,7 +124,7 @@ local bankValue=balanceCard("NO BANCO",.5)
 
 local input=Instance.new("TextBox")
 input.Position=UDim2.fromOffset(24,178)
-input.Size=UDim2.new(1,-48,0,46)
+input.Size=UDim2.new(1,-48,0,sh(46))
 input.BackgroundColor3=Color3.fromRGB(24,27,33)
 input.TextColor3=Color3.fromRGB(245,246,248)
 input.PlaceholderColor3=Color3.fromRGB(115,120,130)
@@ -139,7 +147,7 @@ for i,name in ipairs(shortcuts) do
 	local gap=8
 	local widthScale=1/3
 	local offsetX=left + (i-1)*gap/3
-	b.Position=UDim2.new((i-1)*widthScale,offsetX,0,236)
+	b.Position=UDim2.new((i-1)*widthScale,offsetX,0,sy(236))
 	b.Size=UDim2.new(widthScale,-((left+right+2*gap)/3),0,32)
 	b.BackgroundColor3=Color3.fromRGB(28,31,38)
 	b.TextColor3=Color3.fromRGB(190,194,202)
@@ -155,8 +163,8 @@ end
 
 local function actionButton(name,x)
 	local b=Instance.new("TextButton")
-	b.Position=UDim2.new(x,x==0 and 24 or 8,0,280)
-	b.Size=UDim2.new(.5,-32,0,50)
+	b.Position=UDim2.new(x,x==0 and 24 or 8,0,sy(280))
+	b.Size=UDim2.new(.5,-32,0,sh(50))
 	b.BackgroundColor3=Color3.fromRGB(255,197,47)
 	b.TextColor3=Color3.fromRGB(22,22,24)
 	b.Text=name
@@ -171,7 +179,7 @@ end
 
 local deposit=actionButton("DEPOSITAR",0)
 local withdraw=actionButton("SACAR",.5)
-local status=text(panel,"Pronto para transacionar",UDim2.fromOffset(24,344),UDim2.new(1,-48,0,28),12,false,Color3.fromRGB(135,141,151))
+local status=text(panel,"Pronto para transacionar",UDim2.fromOffset(24,sy(344)),UDim2.new(1,-48,0,28),12,false,Color3.fromRGB(135,141,151))
 status.TextXAlignment=Enum.TextXAlignment.Center
 
 local function values()
