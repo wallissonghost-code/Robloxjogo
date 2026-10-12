@@ -7,7 +7,7 @@ local openEvent=RS:WaitForChild("ATMOpen")
 
 local old=pg:FindFirstChild("SafeATMGui"); if old then old:Destroy() end
 local gui=Instance.new("ScreenGui"); gui.Name="SafeATMGui"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=false; gui.DisplayOrder=10000; gui.Parent=pg
-local shade=Instance.new("Frame"); shade.Size=UDim2.fromScale(1,1); shade.BackgroundColor3=Color3.new(0,0,0); shade.BackgroundTransparency=.38; shade.Visible=false; shade.Parent=gui
+local shade=Instance.new("Frame"); shade.Size=UDim2.fromScale(1,1); shade.BackgroundTransparency=1; shade.Visible=false; shade.Parent=gui
 
 local vp=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
 local compact=vp.X<900 or vp.Y<600
