@@ -206,7 +206,10 @@ local function update()
 	local value = formatNumber(gold.Value)
 	amount.Text = value
 	local width = TextService:GetTextSize(value, amount.TextSize, amount.Font, Vector2.new(1000, 38)).X
-	local baseWidth = math.max(86, math.ceil(width) + 52)\n\tframe:SetAttribute("BaseWidth", baseWidth)\n\tlocal scale = frame:GetAttribute("HUDScale") or 1\n\tframe.Size = UDim2.fromOffset(baseWidth * scale, 38 * scale)
+	local baseWidth = math.max(86, math.ceil(width) + 52)
+	frame:SetAttribute("BaseWidth", baseWidth)
+	local scale = frame:GetAttribute("HUDScale") or 1
+	frame.Size = UDim2.fromOffset(baseWidth * scale, 38 * scale)
 end
 
 update()
