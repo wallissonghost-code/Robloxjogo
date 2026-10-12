@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local TextService = game:GetService("TextService")
+local GuiService = game:GetService("GuiService")
 local player = Players.LocalPlayer
 
 local gui = Instance.new("ScreenGui")
@@ -67,6 +68,18 @@ amount.TextSize = 17
 amount.TextXAlignment = Enum.TextXAlignment.Left
 amount.TextYAlignment = Enum.TextYAlignment.Center
 amount.Parent = frame
+
+
+local function alignToPhysicalRight()
+	-- ScreenGui already ignores the normal top-bar inset. On devices where
+	-- Roblox still reports a right safe-zone, compensate only that right edge.
+	local topLeftInset, bottomRightInset = GuiService:GetGuiInset()
+	local rightInset = bottomRightInset.X
+	frame.Position = UDim2.new(1, rightInset, 0, 6)
+end
+
+alignToPhysicalRight()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(alignToPhysicalRight)
 
 local function formatNumber(n)
 	local s = tostring(math.floor(n))
