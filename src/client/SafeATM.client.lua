@@ -1,284 +1,122 @@
-local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local player=Players.LocalPlayer
+local pg=player:WaitForChild("PlayerGui")
+local remote=RS:WaitForChild("ATMTransaction")
+local openEvent=RS:WaitForChild("ATMOpen")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local remote = RS:WaitForChild("ATMTransaction")
-local openEvent = RS:WaitForChild("ATMOpen")
+local old=pg:FindFirstChild("SafeATMGui"); if old then old:Destroy() end
+local gui=Instance.new("ScreenGui"); gui.Name="SafeATMGui"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=false; gui.DisplayOrder=10000; gui.Parent=pg
+local shade=Instance.new("Frame"); shade.Size=UDim2.fromScale(1,1); shade.BackgroundColor3=Color3.new(0,0,0); shade.BackgroundTransparency=.38; shade.Visible=false; shade.Parent=gui
 
-local camera=workspace.CurrentCamera
-local viewport=camera and camera.ViewportSize or Vector2.new(1280,720)
-local compact=viewport.X < 900 or viewport.Y < 600
+local vp=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+local compact=vp.X<900 or vp.Y<600
+local W=compact and .76 or .72
+local H=compact and 330 or 470
 
-local old = playerGui:FindFirstChild("SafeATMGui")
-if old then old:Destroy() end
+local panel=Instance.new("Frame"); panel.AnchorPoint=Vector2.new(.5,.5); panel.Position=UDim2.fromScale(.5,.52); panel.Size=UDim2.new(W,0,0,H); panel.BackgroundColor3=Color3.fromRGB(8,10,14); panel.BorderSizePixel=0; panel.Parent=shade
+Instance.new("UICorner",panel).CornerRadius=UDim.new(0,18)
+local ps=Instance.new("UIStroke",panel); ps.Color=Color3.fromRGB(222,166,36); ps.Thickness=1.5; ps.Transparency=.15
+local c=Instance.new("UISizeConstraint",panel); c.MaxSize=compact and Vector2.new(650,330) or Vector2.new(900,470); c.MinSize=compact and Vector2.new(330,310) or Vector2.new(500,420)
 
-local gui=Instance.new("ScreenGui")
-gui.Name="SafeATMGui"
-gui.ResetOnSpawn=false
-gui.IgnoreGuiInset=false
-gui.DisplayOrder=10000
-gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-gui.Parent=playerGui
-
-local shade=Instance.new("Frame")
-shade.Name="Shade"
-shade.Size=UDim2.fromScale(1,1)
-shade.BackgroundColor3=Color3.fromRGB(0,0,0)
-shade.BackgroundTransparency=.38
-shade.BorderSizePixel=0
-shade.Visible=false
-shade.ZIndex=10
-shade.Parent=gui
-
-local panel=Instance.new("Frame")
-panel.Name="ATMPanel"
-panel.AnchorPoint=Vector2.new(.5,.5)
-panel.Position=UDim2.fromScale(.5,compact and .54 or .53)
-panel.Size=compact and UDim2.new(.68,0,0,330) or UDim2.new(.76,0,0,420)
-panel.BackgroundColor3=Color3.fromRGB(12,14,18)
-panel.BorderSizePixel=0
-panel.ZIndex=20
-panel.Parent=shade
-Instance.new("UICorner",panel).CornerRadius=UDim.new(0,22)
-local stroke=Instance.new("UIStroke",panel)
-stroke.Color=Color3.fromRGB(58,62,72)
-stroke.Transparency=.35
-stroke.Thickness=1
-
-local sizeConstraint=Instance.new("UISizeConstraint",panel)
-sizeConstraint.MaxSize=compact and Vector2.new(580,330) or Vector2.new(700,420)
-sizeConstraint.MinSize=compact and Vector2.new(300,310) or Vector2.new(320,400)
-
-local function sy(y) return compact and math.floor(y*.74) or y end
-local function sh(h) return compact and math.floor(h*.78) or h end
-local function fs(n) return compact and math.max(10,math.floor(n*.82)) or n end
-
-local function text(parent,value,pos,size,fontSize,bold,color,align)
-	local x=Instance.new("TextLabel")
-	x.BackgroundTransparency=1
-	x.Position=pos
-	x.Size=size
-	x.Text=value
-	x.TextColor3=color or Color3.fromRGB(238,240,244)
-	x.Font=bold and Enum.Font.GothamBold or Enum.Font.Gotham
-	x.TextSize=fontSize
-	x.TextXAlignment=align or Enum.TextXAlignment.Left
-	x.ZIndex=22
-	x.Parent=parent
-	return x
+local function sy(n) return compact and math.floor(n*.70) or n end
+local function fs(n) return compact and math.max(10,math.floor(n*.78)) or n end
+local function corner(o,r) Instance.new("UICorner",o).CornerRadius=UDim.new(0,r) end
+local function txt(parent,t,pos,size,n,bold,col,align)
+ local x=Instance.new("TextLabel"); x.BackgroundTransparency=1;x.Position=pos;x.Size=size;x.Text=t;x.TextColor3=col or Color3.fromRGB(238,240,244);x.Font=bold and Enum.Font.GothamBold or Enum.Font.Gotham;x.TextSize=fs(n);x.TextXAlignment=align or Enum.TextXAlignment.Left;x.Parent=parent;return x
 end
+local gold=Color3.fromRGB(255,194,45); local dim=Color3.fromRGB(145,151,164); local card=Color3.fromRGB(18,21,27)
 
-local coin=Instance.new("Frame")
-coin.Position=UDim2.fromOffset(24,sy(22))
-coin.Size=UDim2.fromOffset(sh(38),sh(38))
-coin.BackgroundColor3=Color3.fromRGB(255,197,47)
-coin.BorderSizePixel=0
-coin.ZIndex=22
-coin.Parent=panel
-Instance.new("UICorner",coin).CornerRadius=UDim.new(1,0)
-text(coin,"O",UDim2.fromScale(0,0),UDim2.fromScale(1,1),18,true,Color3.fromRGB(25,25,27),Enum.TextXAlignment.Center)
+-- header
+local logo=Instance.new("Frame");logo.Position=UDim2.fromOffset(22,sy(18));logo.Size=UDim2.fromOffset(sy(44),sy(44));logo.BackgroundColor3=gold;logo.Parent=panel;corner(logo,10)
+txt(logo,"▰",UDim2.fromScale(0,0),UDim2.fromScale(1,1),22,true,Color3.fromRGB(25,22,12),Enum.TextXAlignment.Center)
+txt(panel,"BANCO DE OURO",UDim2.fromOffset(compact and 64 or 80,sy(15)),UDim2.new(1,-160,0,sy(30)),24,true)
+txt(panel,"GERENCIE SEU OURO COM SEGURANÇA",UDim2.fromOffset(compact and 64 or 80,sy(44)),UDim2.new(1,-180,0,sy(20)),11,false,dim)
+local secure=txt(panel,"▣  SEU SALDO ESTÁ SEGURO",UDim2.new(1,-260,0,sy(31)),UDim2.fromOffset(190,sy(20)),10,true,gold,Enum.TextXAlignment.Right); secure.Visible=not compact
+local close=Instance.new("TextButton");close.AnchorPoint=Vector2.new(1,0);close.Position=UDim2.new(1,-18,0,sy(16));close.Size=UDim2.fromOffset(sy(42),sy(42));close.BackgroundColor3=Color3.fromRGB(25,28,35);close.Text="×";close.TextColor3=Color3.new(1,1,1);close.TextSize=fs(26);close.Font=Enum.Font.GothamBold;close.BorderSizePixel=0;close.Parent=panel;corner(close,10)
+local line=Instance.new("Frame");line.Position=UDim2.fromOffset(20,sy(76));line.Size=UDim2.new(1,-40,0,1);line.BackgroundColor3=Color3.fromRGB(170,126,28);line.BorderSizePixel=0;line.Parent=panel
 
-text(panel,"BANCO DE OURO",UDim2.fromOffset(compact and 62 or 74,sy(19)),UDim2.new(1,-140,0,28),fs(22),true)
-text(panel,"Gerencie seu ouro com segurança",UDim2.fromOffset(compact and 62 or 74,sy(46)),UDim2.new(1,-140,0,20),fs(12),false,Color3.fromRGB(145,150,160))
-
-local close=Instance.new("TextButton")
-close.AnchorPoint=Vector2.new(1,0)
-close.Position=UDim2.new(1,-20,0,sy(22))
-close.Size=UDim2.fromOffset(sh(38),sh(38))
-close.BackgroundColor3=Color3.fromRGB(31,34,41)
-close.Text="×"
-close.TextColor3=Color3.fromRGB(210,213,220)
-close.Font=Enum.Font.GothamBold
-close.TextSize=24
-close.BorderSizePixel=0
-close.ZIndex=24
-close.Parent=panel
-Instance.new("UICorner",close).CornerRadius=UDim.new(0,11)
-
-local divider=Instance.new("Frame")
-divider.Position=UDim2.fromOffset(24,sy(78))
-divider.Size=UDim2.new(1,-48,0,1)
-divider.BackgroundColor3=Color3.fromRGB(45,48,57)
-divider.BorderSizePixel=0
-divider.ZIndex=21
-divider.Parent=panel
-
-local function balanceCard(title,x)
-	local card=Instance.new("Frame")
-	card.Position=UDim2.new(x,x==0 and 24 or 8,0,sy(88))
-	card.Size=UDim2.new(.5,-32,0,sh(76))
-	card.BackgroundColor3=Color3.fromRGB(22,25,31)
-	card.BorderSizePixel=0
-	card.ZIndex=21
-	card.Parent=panel
-	Instance.new("UICorner",card).CornerRadius=UDim.new(0,14)
-	local cs=Instance.new("UIStroke",card);cs.Color=Color3.fromRGB(53,57,67);cs.Transparency=.5
-	text(card,title,UDim2.fromOffset(16,12),UDim2.new(1,-32,0,18),11,true,Color3.fromRGB(145,150,160))
-	local value=text(card,"0",UDim2.fromOffset(16,33),UDim2.new(1,-32,0,sh(32)),23,true,Color3.fromRGB(255,205,62))
-	return value
+-- sidebar
+local side=Instance.new("Frame");side.Position=UDim2.fromOffset(20,sy(91));side.Size=UDim2.new(compact and .27 or .25,-25,1,-sy(111));side.BackgroundTransparency=1;side.Parent=panel
+local navLayout=Instance.new("UIListLayout",side);navLayout.Padding=UDim.new(0,sy(10))
+local navs={}
+local function nav(name)
+ local b=Instance.new("TextButton");b.Size=UDim2.new(1,0,0,sy(68));b.BackgroundColor3=Color3.fromRGB(22,25,31);b.Text=name;b.TextColor3=Color3.fromRGB(220,223,230);b.TextSize=fs(13);b.Font=Enum.Font.GothamBold;b.BorderSizePixel=0;b.Parent=side;corner(b,11)
+ local st=Instance.new("UIStroke",b);st.Color=Color3.fromRGB(55,59,68);st.Transparency=.4
+ navs[name]=b;return b
 end
+nav("INÍCIO");nav("DEPOSITAR");nav("SACAR")
 
-local walletValue=balanceCard("CARTEIRA",0)
-local bankValue=balanceCard("NO BANCO",.5)
+local main=Instance.new("Frame");main.Position=UDim2.new(compact and .29 or .27,12,0,sy(91));main.Size=UDim2.new(compact and .71 or .73,-32,1,-sy(111));main.BackgroundTransparency=1;main.Parent=panel
 
-local input=Instance.new("TextBox")
-input.Position=UDim2.fromOffset(24,sy(178))
-input.Size=UDim2.new(1,-48,0,sh(46))
-input.BackgroundColor3=Color3.fromRGB(24,27,33)
-input.TextColor3=Color3.fromRGB(245,246,248)
-input.PlaceholderColor3=Color3.fromRGB(115,120,130)
-input.PlaceholderText="Quantidade de Ouro"
-input.Text=""
-input.ClearTextOnFocus=false
-input.Font=Enum.Font.Gotham
-input.TextSize=15
-input.BorderSizePixel=0
-input.ZIndex=22
-input.Parent=panel
-Instance.new("UICorner",input).CornerRadius=UDim.new(0,12)
+local home=Instance.new("Frame");home.Size=UDim2.fromScale(1,1);home.BackgroundTransparency=1;home.Parent=main
+local transactPage=Instance.new("Frame");transactPage.Size=UDim2.fromScale(1,1);transactPage.BackgroundTransparency=1;transactPage.Visible=false;transactPage.Parent=main
 
-local shortcuts={"25%","50%","MAX"}
-local shortcutButtons={}
-local shortcutRow=Instance.new("Frame")
-shortcutRow.Position=UDim2.fromOffset(24,sy(236))
-shortcutRow.Size=UDim2.new(1,-48,0,sh(32))
-shortcutRow.BackgroundTransparency=1
-shortcutRow.ZIndex=21
-shortcutRow.Parent=panel
-local rowLayout=Instance.new("UIListLayout",shortcutRow)
-rowLayout.FillDirection=Enum.FillDirection.Horizontal
-rowLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
-rowLayout.VerticalAlignment=Enum.VerticalAlignment.Center
-rowLayout.Padding=UDim.new(0,8)
-for i,name in ipairs(shortcuts) do
-	local b=Instance.new("TextButton")
-	b.Size=UDim2.new(1/3,-6,1,0)
-	b.BackgroundColor3=Color3.fromRGB(28,31,38)
-	b.TextColor3=Color3.fromRGB(190,194,202)
-	b.Text=name
-	b.Font=Enum.Font.GothamBold
-	b.TextSize=fs(12)
-	b.BorderSizePixel=0
-	b.ZIndex=22
-	b.Parent=shortcutRow
-	Instance.new("UICorner",b).CornerRadius=UDim.new(0,9)
-	shortcutButtons[i]=b
+txt(home,"BEM-VINDO",UDim2.fromOffset(4,sy(8)),UDim2.new(1,-8,0,sy(35)),27,true)
+txt(home,"SELECIONE UMA OPÇÃO AO LADO",UDim2.fromOffset(4,sy(43)),UDim2.new(1,-8,0,sy(24)),12,false,dim)
+
+local function balanceCard(parent,title,sub,x)
+ local f=Instance.new("Frame");f.Position=UDim2.new(x,x==0 and 4 or 8,1,-sy(145));f.Size=UDim2.new(.5,-12,0,sy(130));f.BackgroundColor3=card;f.BorderSizePixel=0;f.Parent=parent;corner(f,14)
+ local st=Instance.new("UIStroke",f);st.Color=gold;st.Transparency=.2
+ txt(f,title,UDim2.fromOffset(16,sy(14)),UDim2.new(1,-32,0,sy(24)),15,true)
+ txt(f,sub,UDim2.fromOffset(16,sy(38)),UDim2.new(1,-32,0,sy(20)),11,false,dim)
+ local v=txt(f,"0",UDim2.fromOffset(16,sy(69)),UDim2.new(1,-32,0,sy(42)),25,true,gold)
+ return v
 end
+local homeWallet=balanceCard(home,"CARTEIRA","Ouro em mãos",0)
+local homeBank=balanceCard(home,"NO BANCO","Ouro guardado",.5)
 
-local function modeButton(name,x)
-	local b=Instance.new("TextButton")
-	b.Position=UDim2.new(x,x==0 and 24 or 4,0,sy(280))
-	b.Size=UDim2.new(.5,-28,0,sh(34))
-	b.BackgroundColor3=Color3.fromRGB(34,37,44)
-	b.TextColor3=Color3.fromRGB(205,208,216)
-	b.Text=name
-	b.Font=Enum.Font.GothamBold
-	b.TextSize=fs(12)
-	b.BorderSizePixel=0
-	b.ZIndex=22
-	b.Parent=panel
-	Instance.new("UICorner",b).CornerRadius=UDim.new(0,10)
-	return b
-end
+local pageTitle=txt(transactPage,"DEPOSITAR OURO",UDim2.fromOffset(4,sy(5)),UDim2.new(1,-8,0,sy(32)),23,true)
+local pageSub=txt(transactPage,"Transfira ouro da carteira para o banco.",UDim2.fromOffset(4,sy(36)),UDim2.new(1,-8,0,sy(22)),11,false,dim)
 
-local depositMode=modeButton("DEPOSITAR",0)
-local withdrawMode=modeButton("SACAR",.5)
+local summary=Instance.new("Frame");summary.Position=UDim2.fromOffset(4,sy(70));summary.Size=UDim2.new(1,-8,0,sy(62));summary.BackgroundColor3=card;summary.BorderSizePixel=0;summary.Parent=transactPage;corner(summary,11)
+local available=txt(summary,"DISPONÍVEL  0 Ouro",UDim2.fromOffset(16,0),UDim2.new(1,-32,1,0),14,true,gold)
 
-local confirm=Instance.new("TextButton")
-confirm.Position=UDim2.fromOffset(24,sy(326))
-confirm.Size=UDim2.new(1,-48,0,sh(48))
-confirm.BackgroundColor3=Color3.fromRGB(255,197,47)
-confirm.TextColor3=Color3.fromRGB(22,22,24)
-confirm.Text="CONFIRMAR DEPÓSITO"
-confirm.Font=Enum.Font.GothamBold
-confirm.TextSize=fs(14)
-confirm.BorderSizePixel=0
-confirm.ZIndex=22
-confirm.Parent=panel
-Instance.new("UICorner",confirm).CornerRadius=UDim.new(0,13)
+local shortcuts={"25%","50%","MAX"};local shortcutButtons={}
+local row=Instance.new("Frame");row.Position=UDim2.fromOffset(4,sy(145));row.Size=UDim2.new(1,-8,0,sy(38));row.BackgroundTransparency=1;row.Parent=transactPage
+local rl=Instance.new("UIListLayout",row);rl.FillDirection=Enum.FillDirection.Horizontal;rl.Padding=UDim.new(0,8)
+for i,n in ipairs(shortcuts) do local b=Instance.new("TextButton");b.Size=UDim2.new(1/3,-6,1,0);b.BackgroundColor3=Color3.fromRGB(25,28,35);b.Text=n;b.TextColor3=Color3.fromRGB(215,218,225);b.Font=Enum.Font.GothamBold;b.TextSize=fs(12);b.BorderSizePixel=0;b.Parent=row;corner(b,9);shortcutButtons[i]=b end
 
-local status=text(panel,"",UDim2.fromOffset(24,sy(382)),UDim2.new(1,-48,0,20),fs(11),false,Color3.fromRGB(135,141,151))
-status.TextXAlignment=Enum.TextXAlignment.Center
+local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(4,sy(197));input.Size=UDim2.new(1,-8,0,sy(50));input.BackgroundColor3=Color3.fromRGB(18,21,27);input.TextColor3=Color3.new(1,1,1);input.PlaceholderColor3=dim;input.PlaceholderText="Digite a quantidade";input.Text="";input.ClearTextOnFocus=false;input.Font=Enum.Font.Gotham;input.TextSize=fs(14);input.BorderSizePixel=0;input.Parent=transactPage;corner(input,10)
 
-local function values()
-	local ls=player:FindFirstChild("leaderstats")
-	return ls and ls:FindFirstChild("Ouro"),player:FindFirstChild("Banco")
-end
+local confirm=Instance.new("TextButton");confirm.Position=UDim2.fromOffset(4,sy(261));confirm.Size=UDim2.new(1,-8,0,sy(54));confirm.BackgroundColor3=gold;confirm.TextColor3=Color3.fromRGB(20,18,12);confirm.Text="CONFIRMAR DEPÓSITO";confirm.Font=Enum.Font.GothamBold;confirm.TextSize=fs(14);confirm.BorderSizePixel=0;confirm.Parent=transactPage;corner(confirm,11)
+local status=txt(transactPage,"",UDim2.fromOffset(4,sy(320)),UDim2.new(1,-8,0,sy(25)),10,false,dim,Enum.TextXAlignment.Center)
 
+local action="deposit"
+local function vals() local ls=player:FindFirstChild("leaderstats");return ls and ls:FindFirstChild("Ouro"),player:FindFirstChild("Banco") end
 local function refresh()
-	local gold,bank=values()
-	walletValue.Text=(gold and tostring(gold.Value) or "—").." Ouro"
-	bankValue.Text=(bank and tostring(bank.Value) or "—").." Ouro"
+ local w,b=vals();local wv=w and w.Value or 0;local bv=b and b.Value or 0
+ homeWallet.Text=tostring(wv).." Ouro";homeBank.Text=tostring(bv).." Ouro"
+ available.Text="DISPONÍVEL  "..tostring(action=="deposit" and wv or bv).." Ouro"
 end
-
-local selectedAction="deposit"
-
-local function openATM()
-	refresh()
-	shade.Visible=true
+local function setNav(active)
+ for n,b in pairs(navs) do b.BackgroundColor3=n==active and gold or Color3.fromRGB(22,25,31);b.TextColor3=n==active and Color3.fromRGB(20,18,12) or Color3.fromRGB(220,223,230) end
 end
+local function showHome() home.Visible=true;transactPage.Visible=false;setNav("INÍCIO");refresh() end
+local function showAction(a)
+ action=a;home.Visible=false;transactPage.Visible=true;input.Text="";status.Text=""
+ if a=="deposit" then pageTitle.Text="DEPOSITAR OURO";pageSub.Text="Transfira ouro da carteira para o banco.";confirm.Text="CONFIRMAR DEPÓSITO";setNav("DEPOSITAR")
+ else pageTitle.Text="SACAR OURO";pageSub.Text="Transfira ouro do banco para sua carteira.";confirm.Text="CONFIRMAR SAQUE";setNav("SACAR") end
+ refresh()
+end
+navs["INÍCIO"].Activated:Connect(showHome);navs["DEPOSITAR"].Activated:Connect(function()showAction("deposit")end);navs["SACAR"].Activated:Connect(function()showAction("withdraw")end)
+local function source() local w,b=vals();return action=="deposit" and w or b end
+shortcutButtons[1].Activated:Connect(function()local v=source();if v then input.Text=tostring(math.max(1,math.floor(v.Value*.25)))end end)
+shortcutButtons[2].Activated:Connect(function()local v=source();if v then input.Text=tostring(math.max(1,math.floor(v.Value*.5)))end end)
+shortcutButtons[3].Activated:Connect(function()local v=source();if v then input.Text=tostring(v.Value)end end)
+
 local busy=false
-local function transact(action)
-	if busy then return end
-	local n=tonumber(input.Text)
-	if not n or n<1 then status.Text="Digite uma quantidade válida.";return end
-	busy=true
-	status.Text="Processando..."
-	local ok,success,msg=pcall(function() return remote:InvokeServer(action,n) end)
-	busy=false
-	if not ok then status.Text="Falha de comunicação.";return end
-	status.Text=msg or (success and "Operação concluída." or "Operação recusada.")
-	if success then input.Text="" end
-	refresh()
-end
-
-local function sourceBalance()
-	local gold,bank=values()
-	return selectedAction=="withdraw" and bank or gold
-end
-
-local function setFraction(frac)
-	local source=sourceBalance()
-	if source then input.Text=tostring(math.max(1,math.floor(source.Value*frac))) end
-end
-shortcutButtons[1].Activated:Connect(function() setFraction(.25) end)
-shortcutButtons[2].Activated:Connect(function() setFraction(.5) end)
-shortcutButtons[3].Activated:Connect(function()
-	local source=sourceBalance()
-	if source then input.Text=tostring(source.Value) end
+confirm.Activated:Connect(function()
+ if busy then return end
+ local n=tonumber(input.Text);if not n or n<1 then status.Text="Digite uma quantidade válida.";return end
+ busy=true;status.Text="Processando..."
+ local ok,success,msg=pcall(function()return remote:InvokeServer(action,n)end);busy=false
+ if not ok then status.Text="Falha de comunicação.";return end
+ status.Text=msg or (success and "Transação concluída." or "Operação recusada.")
+ if success then input.Text="" end;refresh()
 end)
-
-local function selectAction(action)
-	selectedAction=action
-	input.Text=""
-	if action=="deposit" then
-		depositMode.BackgroundColor3=Color3.fromRGB(255,197,47)
-		depositMode.TextColor3=Color3.fromRGB(22,22,24)
-		withdrawMode.BackgroundColor3=Color3.fromRGB(34,37,44)
-		withdrawMode.TextColor3=Color3.fromRGB(205,208,216)
-		confirm.Text="CONFIRMAR DEPÓSITO"
-		status.Text="Os atalhos usam o saldo da carteira."
-	else
-		withdrawMode.BackgroundColor3=Color3.fromRGB(255,197,47)
-		withdrawMode.TextColor3=Color3.fromRGB(22,22,24)
-		depositMode.BackgroundColor3=Color3.fromRGB(34,37,44)
-		depositMode.TextColor3=Color3.fromRGB(205,208,216)
-		confirm.Text="CONFIRMAR SAQUE"
-		status.Text="Os atalhos usam o saldo do banco."
-	end
-end
-
-depositMode.Activated:Connect(function() selectAction("deposit") end)
-withdrawMode.Activated:Connect(function() selectAction("withdraw") end)
-confirm.Activated:Connect(function() transact(selectedAction) end)
-close.Activated:Connect(function() shade.Visible=false end)
-openEvent.OnClientEvent:Connect(openATM)
-
-local leaderstats=player:WaitForChild("leaderstats")
-local liveGold=leaderstats:WaitForChild("Ouro")
-local liveBank=player:WaitForChild("Banco")
-liveGold:GetPropertyChangedSignal("Value"):Connect(refresh)
-liveBank:GetPropertyChangedSignal("Value"):Connect(refresh)
-selectAction("deposit")
-refresh()
+close.Activated:Connect(function()shade.Visible=false end)
+openEvent.OnClientEvent:Connect(function()showHome();shade.Visible=true end)
+local ls=player:WaitForChild("leaderstats");local liveGold=ls:WaitForChild("Ouro");local liveBank=player:WaitForChild("Banco")
+liveGold:GetPropertyChangedSignal("Value"):Connect(refresh);liveBank:GetPropertyChangedSignal("Value"):Connect(refresh)
+showHome()
