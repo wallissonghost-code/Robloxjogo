@@ -12,12 +12,12 @@ local shade=Instance.new("Frame"); shade.Size=UDim2.fromScale(1,1); shade.Backgr
 local vp=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
 local compact=vp.X<900 or vp.Y<600
 local W=compact and .76 or .72
-local H=compact and 330 or 470
+local H=compact and 270 or 390
 
 local panel=Instance.new("Frame"); panel.AnchorPoint=Vector2.new(.5,.5); panel.Position=UDim2.fromScale(.5,.52); panel.Size=UDim2.new(W,0,0,H); panel.BackgroundColor3=Color3.fromRGB(8,10,14); panel.BorderSizePixel=0; panel.Parent=shade
 Instance.new("UICorner",panel).CornerRadius=UDim.new(0,18)
 local ps=Instance.new("UIStroke",panel); ps.Color=Color3.fromRGB(222,166,36); ps.Thickness=1.5; ps.Transparency=.15
-local c=Instance.new("UISizeConstraint",panel); c.MaxSize=compact and Vector2.new(650,330) or Vector2.new(900,470); c.MinSize=compact and Vector2.new(330,310) or Vector2.new(500,420)
+local c=Instance.new("UISizeConstraint",panel); c.MaxSize=compact and Vector2.new(650,270) or Vector2.new(900,390); c.MinSize=compact and Vector2.new(330,260) or Vector2.new(500,350)
 
 local function sy(n) return compact and math.floor(n*.70) or n end
 local function fs(n) return compact and math.max(10,math.floor(n*.78)) or n end
@@ -41,7 +41,7 @@ local side=Instance.new("Frame");side.Position=UDim2.fromOffset(20,sy(91));side.
 local navLayout=Instance.new("UIListLayout",side);navLayout.Padding=UDim.new(0,sy(10))
 local navs={}
 local function nav(name)
- local b=Instance.new("TextButton");b.Size=UDim2.new(1,0,0,sy(68));b.BackgroundColor3=Color3.fromRGB(22,25,31);b.Text=name;b.TextColor3=Color3.fromRGB(220,223,230);b.TextSize=fs(13);b.Font=Enum.Font.GothamBold;b.BorderSizePixel=0;b.Parent=side;corner(b,11)
+ local b=Instance.new("TextButton");b.Size=UDim2.new(1,0,0,sy(56));b.BackgroundColor3=Color3.fromRGB(22,25,31);b.Text=name;b.TextColor3=Color3.fromRGB(220,223,230);b.TextSize=fs(13);b.Font=Enum.Font.GothamBold;b.BorderSizePixel=0;b.Parent=side;corner(b,11)
  local st=Instance.new("UIStroke",b);st.Color=Color3.fromRGB(55,59,68);st.Transparency=.4
  navs[name]=b;return b
 end
@@ -56,11 +56,11 @@ txt(home,"BEM-VINDO",UDim2.fromOffset(4,sy(8)),UDim2.new(1,-8,0,sy(35)),27,true)
 txt(home,"SELECIONE UMA OPÇÃO AO LADO",UDim2.fromOffset(4,sy(43)),UDim2.new(1,-8,0,sy(24)),12,false,dim)
 
 local function balanceCard(parent,title,sub,x)
- local f=Instance.new("Frame");f.Position=UDim2.new(x,x==0 and 4 or 8,1,-sy(145));f.Size=UDim2.new(.5,-12,0,sy(130));f.BackgroundColor3=card;f.BorderSizePixel=0;f.Parent=parent;corner(f,14)
+ local f=Instance.new("Frame");f.Position=UDim2.new(x,x==0 and 4 or 8,0,sy(82));f.Size=UDim2.new(.5,-12,0,sy(112));f.BackgroundColor3=card;f.BorderSizePixel=0;f.Parent=parent;corner(f,14)
  local st=Instance.new("UIStroke",f);st.Color=gold;st.Transparency=.2
  txt(f,title,UDim2.fromOffset(16,sy(14)),UDim2.new(1,-32,0,sy(24)),15,true)
  txt(f,sub,UDim2.fromOffset(16,sy(38)),UDim2.new(1,-32,0,sy(20)),11,false,dim)
- local v=txt(f,"0",UDim2.fromOffset(16,sy(69)),UDim2.new(1,-32,0,sy(42)),25,true,gold)
+ local v=txt(f,"0",UDim2.fromOffset(16,sy(64)),UDim2.new(1,-32,0,sy(42)),25,true,gold)
  return v
 end
 local homeWallet=balanceCard(home,"CARTEIRA","Ouro em mãos",0)
@@ -69,18 +69,18 @@ local homeBank=balanceCard(home,"NO BANCO","Ouro guardado",.5)
 local pageTitle=txt(transactPage,"DEPOSITAR OURO",UDim2.fromOffset(4,sy(5)),UDim2.new(1,-8,0,sy(32)),23,true)
 local pageSub=txt(transactPage,"Transfira ouro da carteira para o banco.",UDim2.fromOffset(4,sy(36)),UDim2.new(1,-8,0,sy(22)),11,false,dim)
 
-local summary=Instance.new("Frame");summary.Position=UDim2.fromOffset(4,sy(70));summary.Size=UDim2.new(1,-8,0,sy(62));summary.BackgroundColor3=card;summary.BorderSizePixel=0;summary.Parent=transactPage;corner(summary,11)
+local summary=Instance.new("Frame");summary.Position=UDim2.fromOffset(4,sy(62));summary.Size=UDim2.new(1,-8,0,sy(50));summary.BackgroundColor3=card;summary.BorderSizePixel=0;summary.Parent=transactPage;corner(summary,11)
 local available=txt(summary,"DISPONÍVEL  0 Ouro",UDim2.fromOffset(16,0),UDim2.new(1,-32,1,0),14,true,gold)
 
 local shortcuts={"25%","50%","MAX"};local shortcutButtons={}
-local row=Instance.new("Frame");row.Position=UDim2.fromOffset(4,sy(145));row.Size=UDim2.new(1,-8,0,sy(38));row.BackgroundTransparency=1;row.Parent=transactPage
+local row=Instance.new("Frame");row.Position=UDim2.fromOffset(4,sy(122));row.Size=UDim2.new(1,-8,0,sy(38));row.BackgroundTransparency=1;row.Parent=transactPage
 local rl=Instance.new("UIListLayout",row);rl.FillDirection=Enum.FillDirection.Horizontal;rl.Padding=UDim.new(0,8)
 for i,n in ipairs(shortcuts) do local b=Instance.new("TextButton");b.Size=UDim2.new(1/3,-6,1,0);b.BackgroundColor3=Color3.fromRGB(25,28,35);b.Text=n;b.TextColor3=Color3.fromRGB(215,218,225);b.Font=Enum.Font.GothamBold;b.TextSize=fs(12);b.BorderSizePixel=0;b.Parent=row;corner(b,9);shortcutButtons[i]=b end
 
-local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(4,sy(197));input.Size=UDim2.new(1,-8,0,sy(50));input.BackgroundColor3=Color3.fromRGB(18,21,27);input.TextColor3=Color3.new(1,1,1);input.PlaceholderColor3=dim;input.PlaceholderText="Digite a quantidade";input.Text="";input.ClearTextOnFocus=false;input.Font=Enum.Font.Gotham;input.TextSize=fs(14);input.BorderSizePixel=0;input.Parent=transactPage;corner(input,10)
+local input=Instance.new("TextBox");input.Position=UDim2.fromOffset(4,sy(170));input.Size=UDim2.new(1,-8,0,sy(44));input.BackgroundColor3=Color3.fromRGB(18,21,27);input.TextColor3=Color3.new(1,1,1);input.PlaceholderColor3=dim;input.PlaceholderText="Digite a quantidade";input.Text="";input.ClearTextOnFocus=false;input.Font=Enum.Font.Gotham;input.TextSize=fs(14);input.BorderSizePixel=0;input.Parent=transactPage;corner(input,10)
 
-local confirm=Instance.new("TextButton");confirm.Position=UDim2.fromOffset(4,sy(261));confirm.Size=UDim2.new(1,-8,0,sy(54));confirm.BackgroundColor3=gold;confirm.TextColor3=Color3.fromRGB(20,18,12);confirm.Text="CONFIRMAR DEPÓSITO";confirm.Font=Enum.Font.GothamBold;confirm.TextSize=fs(14);confirm.BorderSizePixel=0;confirm.Parent=transactPage;corner(confirm,11)
-local status=txt(transactPage,"",UDim2.fromOffset(4,sy(320)),UDim2.new(1,-8,0,sy(25)),10,false,dim,Enum.TextXAlignment.Center)
+local confirm=Instance.new("TextButton");confirm.Position=UDim2.fromOffset(4,sy(224));confirm.Size=UDim2.new(1,-8,0,sy(46));confirm.BackgroundColor3=gold;confirm.TextColor3=Color3.fromRGB(20,18,12);confirm.Text="CONFIRMAR DEPÓSITO";confirm.Font=Enum.Font.GothamBold;confirm.TextSize=fs(14);confirm.BorderSizePixel=0;confirm.Parent=transactPage;corner(confirm,11)
+local status=txt(transactPage,"",UDim2.fromOffset(4,sy(275)),UDim2.new(1,-8,0,sy(22)),10,false,dim,Enum.TextXAlignment.Center)
 
 local action="deposit"
 local function vals() local ls=player:FindFirstChild("leaderstats");return ls and ls:FindFirstChild("Ouro"),player:FindFirstChild("Banco") end
