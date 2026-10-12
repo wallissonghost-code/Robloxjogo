@@ -8,6 +8,8 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "GoldHUD"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
+gui.ScreenInsets = Enum.ScreenInsets.None
+gui.ClipToDeviceSafeArea = false
 gui.DisplayOrder = 20
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -74,7 +76,7 @@ amount.Parent = frame
 local hudRemote=RS:WaitForChild("HUDPosition")
 local hudX,hudY=0,6
 local ok,got,x,y=pcall(function() return hudRemote:InvokeServer("get") end)
-if ok and got then hudX=x or 0;hudY=y or 6 end
+if ok and got then hudX=math.min(x or 0,0);hudY=y or 6 end
 
 local function applyPosition()
 	frame.Position=UDim2.new(1,hudX,0,hudY)
