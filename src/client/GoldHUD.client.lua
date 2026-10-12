@@ -104,66 +104,81 @@ local gc=Instance.new("UICorner");gc.CornerRadius=UDim.new(1,0);gc.Parent=gear
 local hole=Instance.new("Frame");hole.AnchorPoint=Vector2.new(.5,.5);hole.Position=UDim2.fromScale(.5,.5);hole.Size=UDim2.fromOffset(6,6);hole.BackgroundColor3=Color3.fromRGB(13,15,18);hole.BorderSizePixel=0;hole.Parent=gear
 local hc=Instance.new("UICorner");hc.CornerRadius=UDim.new(1,0);hc.Parent=hole
 
-local panel=Instance.new("Frame");panel.Name="SettingsPanel";panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.5,.5);panel.Size=UDim2.fromScale(.68,.72);panel.BackgroundColor3=Color3.fromRGB(9,11,15);panel.BorderSizePixel=0;panel.Visible=false;panel.Parent=gui
-local limit=Instance.new("UISizeConstraint");limit.MinSize=Vector2.new(560,360);limit.MaxSize=Vector2.new(720,500);limit.Parent=panel
+local panel=Instance.new("Frame");panel.Name="SettingsPanel";panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.5,.5);panel.Size=UDim2.fromScale(.64,.68);panel.BackgroundColor3=Color3.fromRGB(9,11,15);panel.BorderSizePixel=0;panel.Visible=false;panel.Parent=gui
+local limit=Instance.new("UISizeConstraint");limit.MinSize=Vector2.new(520,340);limit.MaxSize=Vector2.new(680,460);limit.Parent=panel
 local pc=Instance.new("UICorner");pc.CornerRadius=UDim.new(0,16);pc.Parent=panel
 local ps=Instance.new("UIStroke");ps.Color=Color3.fromRGB(222,166,36);ps.Transparency=.12;ps.Thickness=1.5;ps.Parent=panel
 local function label(parent,t,pos,size,ts,bold,col)
  local l=Instance.new("TextLabel");l.BackgroundTransparency=1;l.Position=pos;l.Size=size;l.Text=t;l.TextColor3=col or Color3.fromRGB(238,240,244);l.Font=bold and Enum.Font.GothamBold or Enum.Font.Gotham;l.TextSize=ts;l.TextXAlignment=Enum.TextXAlignment.Left;l.TextYAlignment=Enum.TextYAlignment.Center;l.Parent=parent;return l
 end
-label(panel,"CONFIGURAÇÕES",UDim2.fromOffset(26,16),UDim2.new(1,-90,0,30),22,true)
-label(panel,"Personalize sua experiência",UDim2.fromOffset(26,46),UDim2.new(1,-90,0,20),12,false,Color3.fromRGB(145,151,164))
-local close=Instance.new("TextButton");close.AnchorPoint=Vector2.new(1,0);close.Position=UDim2.new(1,-18,0,18);close.Size=UDim2.fromOffset(36,36);close.BackgroundColor3=Color3.fromRGB(28,31,38);close.Text="×";close.TextColor3=Color3.new(1,1,1);close.TextSize=25;close.Font=Enum.Font.GothamBold;close.BorderSizePixel=0;close.Parent=panel
+label(panel,"CONFIGURAÇÕES",UDim2.fromOffset(24,14),UDim2.new(1,-80,0,28),21,true)
+label(panel,"Personalize sua experiência",UDim2.fromOffset(24,42),UDim2.new(1,-80,0,20),11,false,Color3.fromRGB(145,151,164))
+local close=Instance.new("TextButton");close.AnchorPoint=Vector2.new(1,0);close.Position=UDim2.new(1,-16,0,16);close.Size=UDim2.fromOffset(34,34);close.BackgroundColor3=Color3.fromRGB(28,31,38);close.Text="×";close.TextColor3=Color3.new(1,1,1);close.TextSize=24;close.Font=Enum.Font.GothamBold;close.BorderSizePixel=0;close.Parent=panel
 local cc=Instance.new("UICorner");cc.CornerRadius=UDim.new(0,9);cc.Parent=close
 
-local nav=Instance.new("Frame");nav.Position=UDim2.fromOffset(22,84);nav.Size=UDim2.new(0,150,1,-106);nav.BackgroundColor3=Color3.fromRGB(14,17,22);nav.BorderSizePixel=0;nav.Parent=panel
+local nav=Instance.new("Frame");nav.Position=UDim2.fromOffset(20,76);nav.Size=UDim2.new(0,142,1,-96);nav.BackgroundColor3=Color3.fromRGB(14,17,22);nav.BorderSizePixel=0;nav.Parent=panel
 local nc=Instance.new("UICorner");nc.CornerRadius=UDim.new(0,11);nc.Parent=nav
 local function navItem(text,y,active)
- local b=Instance.new("TextButton");b.Position=UDim2.fromOffset(8,y);b.Size=UDim2.new(1,-16,0,46);b.BackgroundColor3=active and Color3.fromRGB(255,195,43) or Color3.fromRGB(25,28,35);b.Text=text;b.TextColor3=active and Color3.fromRGB(18,18,18) or Color3.fromRGB(190,194,203);b.Font=Enum.Font.GothamBold;b.TextSize=12;b.BorderSizePixel=0;b.Parent=nav;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=b;return b
+ local bt=Instance.new("TextButton");bt.Position=UDim2.fromOffset(8,y);bt.Size=UDim2.new(1,-16,0,42);bt.BackgroundColor3=active and Color3.fromRGB(255,195,43) or Color3.fromRGB(25,28,35);bt.Text=text;bt.TextColor3=active and Color3.fromRGB(18,18,18) or Color3.fromRGB(190,194,203);bt.Font=Enum.Font.GothamBold;bt.TextSize=12;bt.BorderSizePixel=0;bt.Parent=nav;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt;return bt
 end
-navItem("HUD",10,true);navItem("ÁUDIO",64,false).AutoButtonColor=false;navItem("GRÁFICOS",118,false).AutoButtonColor=false
+navItem("HUD",8,true);navItem("ÁUDIO",58,false).AutoButtonColor=false;navItem("GRÁFICOS",108,false).AutoButtonColor=false
 
-local content=Instance.new("Frame");content.Position=UDim2.fromOffset(194,84);content.Size=UDim2.new(1,-218,1,-106);content.BackgroundTransparency=1;content.Parent=panel
-label(content,"CONFIGURAR HUD",UDim2.fromOffset(0,0),UDim2.new(1,0,0,25),18,true)
-label(content,"Ajuste cada elemento individualmente.",UDim2.fromOffset(0,28),UDim2.new(1,0,0,24),11,false,Color3.fromRGB(150,155,166))
-
-local profileTitle=label(content,"PERFIL",UDim2.fromOffset(0,60),UDim2.new(1,0,0,18),10,true,Color3.fromRGB(150,155,166))
-local profileRow=Instance.new("Frame");profileRow.Position=UDim2.fromOffset(0,82);profileRow.Size=UDim2.new(1,0,0,38);profileRow.BackgroundTransparency=1;profileRow.Parent=content
+local content=Instance.new("ScrollingFrame");content.Position=UDim2.fromOffset(178,76);content.Size=UDim2.new(1,-198,1,-96);content.BackgroundTransparency=1;content.BorderSizePixel=0;content.ScrollBarThickness=4;content.ScrollBarImageColor3=Color3.fromRGB(255,195,43);content.CanvasSize=UDim2.fromOffset(0,420);content.AutomaticCanvasSize=Enum.AutomaticSize.None;content.Parent=panel
+label(content,"CONFIGURAR HUD",UDim2.fromOffset(0,0),UDim2.new(1,-10,0,24),17,true)
+label(content,"Escolha um perfil e entre no modo de edição.",UDim2.fromOffset(0,25),UDim2.new(1,-10,0,22),10,false,Color3.fromRGB(150,155,166))
+label(content,"PERFIL",UDim2.fromOffset(0,56),UDim2.new(1,-10,0,18),10,true,Color3.fromRGB(150,155,166))
+local profileRow=Instance.new("Frame");profileRow.Position=UDim2.fromOffset(0,78);profileRow.Size=UDim2.new(1,-8,0,38);profileRow.BackgroundTransparency=1;profileRow.Parent=content
 local profileButtons={}
 for i,n in ipairs({"HUD 1","HUD 2"}) do
- local b=Instance.new("TextButton");b.Position=UDim2.new((i-1)*.5,0,0,0);b.Size=UDim2.new(.5,-6,1,0);b.BackgroundColor3=Color3.fromRGB(28,31,38);b.Text=n;b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=11;b.BorderSizePixel=0;b.Parent=profileRow;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=b;profileButtons[i]=b
+ local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.5,0,0,0);bt.Size=UDim2.new(.5,-5,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=n;bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=11;bt.BorderSizePixel=0;bt.Parent=profileRow;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt;profileButtons[i]=bt
 end
+label(content,"ELEMENTOS EDITÁVEIS",UDim2.fromOffset(0,128),UDim2.new(1,-10,0,18),10,true,Color3.fromRGB(150,155,166))
+local goldEdit=Instance.new("TextButton");goldEdit.Position=UDim2.fromOffset(0,150);goldEdit.Size=UDim2.new(1,-8,0,42);goldEdit.BackgroundColor3=Color3.fromRGB(255,195,43);goldEdit.Text="EDITAR OURO";goldEdit.TextColor3=Color3.fromRGB(18,18,18);goldEdit.Font=Enum.Font.GothamBold;goldEdit.TextSize=11;goldEdit.BorderSizePixel=0;goldEdit.Parent=content;local gec=Instance.new("UICorner");gec.CornerRadius=UDim.new(0,8);gec.Parent=goldEdit
+label(content,"Ao editar, o painel fecha. Toque no elemento e use os controles.",UDim2.fromOffset(0,198),UDim2.new(1,-12,0,34),10,false,Color3.fromRGB(150,155,166))
+local reset=Instance.new("TextButton");reset.Position=UDim2.fromOffset(0,246);reset.Size=UDim2.new(.48,-4,0,38);reset.BackgroundColor3=Color3.fromRGB(28,31,38);reset.Text="REDEFINIR HUD";reset.TextColor3=Color3.fromRGB(225,228,234);reset.Font=Enum.Font.GothamBold;reset.TextSize=10;reset.BorderSizePixel=0;reset.Parent=content;local rc=Instance.new("UICorner");rc.CornerRadius=UDim.new(0,8);rc.Parent=reset
+local save=Instance.new("TextButton");save.Position=UDim2.new(.52,0,0,246);save.Size=UDim2.new(.48,-8,0,38);save.BackgroundColor3=Color3.fromRGB(255,199,47);save.Text="SALVAR HUD";save.TextColor3=Color3.fromRGB(20,18,12);save.Font=Enum.Font.GothamBold;save.TextSize=10;save.BorderSizePixel=0;save.Parent=content;local sc=Instance.new("UICorner");sc.CornerRadius=UDim.new(0,8);sc.Parent=save
 
-label(content,"ELEMENTO",UDim2.fromOffset(0,128),UDim2.new(1,0,0,18),10,true,Color3.fromRGB(150,155,166))
-local element=Instance.new("TextButton");element.Position=UDim2.fromOffset(0,150);element.Size=UDim2.new(1,0,0,38);element.BackgroundColor3=Color3.fromRGB(255,195,43);element.Text="OURO";element.TextColor3=Color3.fromRGB(18,18,18);element.Font=Enum.Font.GothamBold;element.TextSize=11;element.BorderSizePixel=0;element.Parent=content;local ec=Instance.new("UICorner");ec.CornerRadius=UDim.new(0,8);ec.Parent=element
-
-local coord=label(content,"",UDim2.fromOffset(0,196),UDim2.new(1,0,0,20),11,true,Color3.fromRGB(255,199,47))
-local adjustRow=Instance.new("Frame");adjustRow.Position=UDim2.fromOffset(0,220);adjustRow.Size=UDim2.new(1,0,0,40);adjustRow.BackgroundTransparency=1;adjustRow.Parent=content
+local editor=Instance.new("Frame");editor.Name="HUDEditor";editor.AnchorPoint=Vector2.new(.5,1);editor.Position=UDim2.new(.5,0,1,-24);editor.Size=UDim2.fromOffset(430,104);editor.BackgroundColor3=Color3.fromRGB(9,11,15);editor.BorderSizePixel=0;editor.Visible=false;editor.Parent=gui
+local elimit=Instance.new("UISizeConstraint");elimit.MinSize=Vector2.new(330,104);elimit.MaxSize=Vector2.new(430,104);elimit.Parent=editor
+local edc=Instance.new("UICorner");edc.CornerRadius=UDim.new(0,14);edc.Parent=editor
+local eds=Instance.new("UIStroke");eds.Color=Color3.fromRGB(222,166,36);eds.Transparency=.12;eds.Thickness=1.5;eds.Parent=editor
+local editTitle=label(editor,"EDITANDO: OURO",UDim2.fromOffset(14,8),UDim2.new(1,-110,0,22),11,true,Color3.fromRGB(255,199,47))
+local editInfo=label(editor,"",UDim2.fromOffset(14,30),UDim2.new(1,-28,0,18),9,false,Color3.fromRGB(165,170,180))
+local controls=Instance.new("Frame");controls.Position=UDim2.fromOffset(12,54);controls.Size=UDim2.new(1,-24,0,38);controls.BackgroundTransparency=1;controls.Parent=editor
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
 for i,d in ipairs(defs) do
- local b=Instance.new("TextButton");b.Position=UDim2.new((i-1)*.25,0,0,0);b.Size=UDim2.new(.25,-6,1,0);b.BackgroundColor3=Color3.fromRGB(28,31,38);b.Text=d[1];b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=18;b.BorderSizePixel=0;b.Parent=adjustRow;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=b
- b.Activated:Connect(function()hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();coord.Text="POSIÇÃO  X "..hudX.."  Y "..hudY end)
+ local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=17;bt.BorderSizePixel=0;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
+ bt.Activated:Connect(function()hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
 end
-
 local sizeScale=1
-local sizeLabel=label(content,"TAMANHO  100%",UDim2.fromOffset(0,268),UDim2.new(.48,0,0,36),11,true)
-local minus=Instance.new("TextButton");minus.Position=UDim2.new(.50,0,0,268);minus.Size=UDim2.new(.23,-4,0,36);minus.BackgroundColor3=Color3.fromRGB(28,31,38);minus.Text="−";minus.TextColor3=Color3.new(1,1,1);minus.Font=Enum.Font.GothamBold;minus.TextSize=20;minus.BorderSizePixel=0;minus.Parent=content;local mc=Instance.new("UICorner");mc.CornerRadius=UDim.new(0,8);mc.Parent=minus
-local plus=Instance.new("TextButton");plus.Position=UDim2.new(.75,0,0,268);plus.Size=UDim2.new(.25,0,0,36);plus.BackgroundColor3=Color3.fromRGB(28,31,38);plus.Text="+";plus.TextColor3=Color3.new(1,1,1);plus.Font=Enum.Font.GothamBold;plus.TextSize=18;plus.BorderSizePixel=0;plus.Parent=content;local plc=Instance.new("UICorner");plc.CornerRadius=UDim.new(0,8);plc.Parent=plus
-local function applyScale() frame.Size=UDim2.fromOffset(math.max(86,112*sizeScale),38*sizeScale);sizeLabel.Text="TAMANHO  "..math.floor(sizeScale*100).."%";frame:SetAttribute("HUDScale",sizeScale) end
-minus.Activated:Connect(function()sizeScale=math.max(.7,sizeScale-.1);applyScale()end)
-plus.Activated:Connect(function()sizeScale=math.min(1.4,sizeScale+.1);applyScale()end)
-
-local reset=Instance.new("TextButton");reset.AnchorPoint=Vector2.new(0,1);reset.Position=UDim2.new(0,0,1,0);reset.Size=UDim2.new(.48,0,0,38);reset.BackgroundColor3=Color3.fromRGB(28,31,38);reset.Text="REDEFINIR HUD";reset.TextColor3=Color3.fromRGB(225,228,234);reset.Font=Enum.Font.GothamBold;reset.TextSize=10;reset.BorderSizePixel=0;reset.Parent=content;local rc=Instance.new("UICorner");rc.CornerRadius=UDim.new(0,8);rc.Parent=reset
-local save=Instance.new("TextButton");save.AnchorPoint=Vector2.new(1,1);save.Position=UDim2.new(1,0,1,0);save.Size=UDim2.new(.48,0,0,38);save.BackgroundColor3=Color3.fromRGB(255,199,47);save.Text="SALVAR HUD";save.TextColor3=Color3.fromRGB(20,18,12);save.Font=Enum.Font.GothamBold;save.TextSize=10;save.BorderSizePixel=0;save.Parent=content;local sc=Instance.new("UICorner");sc.CornerRadius=UDim.new(0,8);sc.Parent=save
+local function applyScale()
+ local baseW=math.max(86,frame:GetAttribute("BaseWidth") or 112)
+ frame.Size=UDim2.fromOffset(baseW*sizeScale,38*sizeScale);frame:SetAttribute("HUDScale",sizeScale)
+ editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%"
+end
+for i,d in ipairs({{"−",-.1},{"+",.1}}) do
+ local bt=Instance.new("TextButton");bt.Position=UDim2.new(.56+(i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=18;bt.BorderSizePixel=0;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
+ bt.Activated:Connect(function()sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
+end
+local done=Instance.new("TextButton");done.AnchorPoint=Vector2.new(1,0);done.Position=UDim2.new(1,0,0,0);done.Size=UDim2.new(.16,-2,1,0);done.BackgroundColor3=Color3.fromRGB(255,199,47);done.Text="OK";done.TextColor3=Color3.fromRGB(18,18,18);done.Font=Enum.Font.GothamBold;done.TextSize=11;done.BorderSizePixel=0;done.Parent=controls;local dc=Instance.new("UICorner");dc.CornerRadius=UDim.new(0,8);dc.Parent=done
 
 local function refreshSettings()
- coord.Text="POSIÇÃO  X "..hudX.."  Y "..hudY
- for i,b in ipairs(profileButtons) do local on=(activePreset==("hud"..i));b.BackgroundColor3=on and Color3.fromRGB(255,195,43) or Color3.fromRGB(28,31,38);b.TextColor3=on and Color3.fromRGB(18,18,18) or Color3.new(1,1,1) end
+ for i,bt in ipairs(profileButtons) do local on=(activePreset==("hud"..i));bt.BackgroundColor3=on and Color3.fromRGB(255,195,43) or Color3.fromRGB(28,31,38);bt.TextColor3=on and Color3.fromRGB(18,18,18) or Color3.new(1,1,1) end
 end
-for i,b in ipairs(profileButtons) do b.Activated:Connect(function()
+for i,bt in ipairs(profileButtons) do bt.Activated:Connect(function()
  local wanted="hud"..i;local pok,yes,newslot,nx,ny=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;applyPosition();refreshSettings()end
 end) end
+goldEdit.Activated:Connect(function()
+ panel.Visible=false;editor.Visible=true
+ editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%"
+end)
+-- The edited HUD itself can also be tapped while edit mode is active.
+frame.Active=true
+frame.InputBegan:Connect(function(input)
+ if editor.Visible and (input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1) then editTitle.Text="EDITANDO: OURO" end
+end)
+done.Activated:Connect(function()editor.Visible=false;panel.Visible=true;refreshSettings()end)
 save.Activated:Connect(function()
  local pok,yes,newslot,nx,ny=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;applyPosition();refreshSettings()end
@@ -172,7 +187,7 @@ reset.Activated:Connect(function()
  local pok,yes,newslot,nx,ny=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=1;applyPosition();applyScale();refreshSettings()end
 end)
-settingsButton.Activated:Connect(function()panel.Visible=not panel.Visible;refreshSettings()end)
+settingsButton.Activated:Connect(function()editor.Visible=false;panel.Visible=not panel.Visible;refreshSettings()end)
 close.Activated:Connect(function()panel.Visible=false end)
 
 local function formatNumber(n)
@@ -191,7 +206,7 @@ local function update()
 	local value = formatNumber(gold.Value)
 	amount.Text = value
 	local width = TextService:GetTextSize(value, amount.TextSize, amount.Font, Vector2.new(1000, 38)).X
-	frame.Size = UDim2.fromOffset(math.max(86, math.ceil(width) + 52), 38)
+	local baseWidth = math.max(86, math.ceil(width) + 52)\n\tframe:SetAttribute("BaseWidth", baseWidth)\n\tlocal scale = frame:GetAttribute("HUDScale") or 1\n\tframe.Size = UDim2.fromOffset(baseWidth * scale, 38 * scale)
 end
 
 update()
