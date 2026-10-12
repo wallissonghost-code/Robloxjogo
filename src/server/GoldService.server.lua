@@ -17,9 +17,9 @@ local function savePlayer(p)
  if not ok then warn("[Gold] Falha ao salvar "..p.Name..": "..tostring(err))end
 end
 local function setupPlayer(p)
- local hx,hy=0,6
+ local hx,hy=0,-4
  local hok,hdata=pcall(function()return HudStore:GetAsync(keyFor(p))end)
- if hok and type(hdata)=="table" then hx=math.clamp(math.floor(tonumber(hdata.x) or 0),-500,500);hy=math.clamp(math.floor(tonumber(hdata.y) or 6),-100,500) end
+ if hok and type(hdata)=="table" then hx=math.clamp(math.floor(tonumber(hdata.x) or 0),-500,500);hy=math.clamp(math.floor(tonumber(hdata.y) or -4),-100,500) end
  hudSessions[p]={x=hx,y=hy}
  local wallet,bank=0,0
  local ok,data=pcall(function()return GoldStore:GetAsync(keyFor(p))end)
@@ -36,7 +36,7 @@ local function setupPlayer(p)
 end
 hudRemote.OnServerInvoke=function(p,action,x,y)
  local h=hudSessions[p]
- if not h then return false,0,6 end
+ if not h then return false,0,-4 end
  if action=="get" then return true,h.x,h.y end
  if action=="save" then
   x=math.clamp(math.floor(tonumber(x) or 0),-500,500);y=math.clamp(math.floor(tonumber(y) or 6),-100,500)
