@@ -212,13 +212,12 @@ local function refresh()
 	bankValue.Text=(bank and tostring(bank.Value) or "—").." Ouro"
 end
 
+local selectedAction="deposit"
+
 local function openATM()
 	refresh()
-	selectAction(selectedAction)
 	shade.Visible=true
 end
-
-local selectedAction="deposit"
 local busy=false
 local function transact(action)
 	if busy then return end
