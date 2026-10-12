@@ -3,7 +3,7 @@ local DataStoreService=game:GetService("DataStoreService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local GOLD_PER_SECOND,SAVE_INTERVAL=1,30
 local GoldStore=DataStoreService:GetDataStore("PlayerGold_v1")
-local HudStore=DataStoreService:GetDataStore("PlayerHUD_v1")
+local HudStore=DataStoreService:GetDataStore("PlayerHUD_v2")
 local remote=ReplicatedStorage:FindFirstChild("ATMTransaction") or Instance.new("RemoteFunction")
 remote.Name="ATMTransaction"; remote.Parent=ReplicatedStorage
 local hudRemote=ReplicatedStorage:FindFirstChild("HUDPosition") or Instance.new("RemoteFunction")
@@ -17,10 +17,15 @@ local function savePlayer(p)
  if not ok then warn("[Gold] Falha ao salvar "..p.Name..": "..tostring(err))end
 end
 local function setupPlayer(p)
- local hx,hy=0,-4
+ local presets={hud1={x=0,y=-4},hud2={x=0,y=-4}}
+ local active="hud1"
  local hok,hdata=pcall(function()return HudStore:GetAsync(keyFor(p))end)
- if hok and type(hdata)=="table" then hx=math.clamp(math.floor(tonumber(hdata.x) or 0),-500,500);hy=math.clamp(math.floor(tonumber(hdata.y) or -4),-100,500) end
- hudSessions[p]={x=hx,y=hy}
+ if hok and type(hdata)=="table" then
+  if hdata.hud1 then presets.hud1={x=math.clamp(math.floor(tonumber(hdata.hud1.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud1.y) or -4),-100,500)} end
+  if hdata.hud2 then presets.hud2={x=math.clamp(math.floor(tonumber(hdata.hud2.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud2.y) or -4),-100,500)} end
+  if hdata.active=="hud2" then active="hud2" end
+ end
+ hudSessions[p]={presets=presets,active=active}
  local wallet,bank=0,0
  local ok,data=pcall(function()return GoldStore:GetAsync(keyFor(p))end)
  if ok then
@@ -34,17 +39,28 @@ local function setupPlayer(p)
  task.spawn(function()while p.Parent==Players and sessions[p]do task.wait(1);local s=sessions[p];if s then s.wallet+=GOLD_PER_SECOND;s.goldValue.Value=s.wallet end end end)
  task.spawn(function()while p.Parent==Players and sessions[p]do task.wait(SAVE_INTERVAL);if sessions[p]then savePlayer(p)end end end)
 end
-hudRemote.OnServerInvoke=function(p,action,x,y)
+hudRemote.OnServerInvoke=function(p,action,a,b,c)
  local h=hudSessions[p]
- if not h then return false,0,-4 end
- if action=="get" then return true,h.x,h.y end
+ if not h then return false,"hud1",0,-4 end
+ if action=="get" then local q=h.presets[h.active];return true,h.active,q.x,q.y end
  if action=="save" then
-  x=math.clamp(math.floor(tonumber(x) or 0),-500,500);y=math.clamp(math.floor(tonumber(y) or 6),-100,500)
-  h.x=x;h.y=y
-  local ok=pcall(function()HudStore:SetAsync(keyFor(p),{x=x,y=y})end)
-  return ok,x,y
+  local slot=(a=="hud2") and "hud2" or "hud1"
+  local x=math.clamp(math.floor(tonumber(b) or 0),-500,0)
+  local y=math.clamp(math.floor(tonumber(c) or -4),-100,500)
+  h.presets[slot]={x=x,y=y};h.active=slot
+  local ok=pcall(function()HudStore:SetAsync(keyFor(p),{active=h.active,hud1=h.presets.hud1,hud2=h.presets.hud2})end)
+  return ok,slot,x,y
  end
- return false,h.x,h.y
+ if action=="load" then
+  local slot=(a=="hud2") and "hud2" or "hud1";h.active=slot;local q=h.presets[slot]
+  return true,slot,q.x,q.y
+ end
+ if action=="reset" then
+  local slot=(a=="hud2") and "hud2" or "hud1";h.presets[slot]={x=0,y=-4};h.active=slot
+  local ok=pcall(function()HudStore:SetAsync(keyFor(p),{active=h.active,hud1=h.presets.hud1,hud2=h.presets.hud2})end)
+  return ok,slot,0,-4
+ end
+ return false,h.active,0,-4
 end
 
 remote.OnServerInvoke=function(p,action,raw)
