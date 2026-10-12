@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TextService = game:GetService("TextService")
 local GuiService = game:GetService("GuiService")
+local RS = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local gui = Instance.new("ScreenGui")
@@ -70,16 +71,31 @@ amount.TextYAlignment = Enum.TextYAlignment.Center
 amount.Parent = frame
 
 
-local function alignToPhysicalRight()
-	-- ScreenGui already ignores the normal top-bar inset. On devices where
-	-- Roblox still reports a right safe-zone, compensate only that right edge.
-	local topLeftInset, bottomRightInset = GuiService:GetGuiInset()
-	local rightInset = bottomRightInset.X
-	frame.Position = UDim2.new(1, rightInset, 0, 6)
-end
+local hudRemote=RS:WaitForChild("HUDPosition")
+local hudX,hudY=0,6
+local ok,got,x,y=pcall(function() return hudRemote:InvokeServer("get") end)
+if ok and got then hudX=x or 0;hudY=y or 6 end
 
-alignToPhysicalRight()
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(alignToPhysicalRight)
+local function applyPosition()
+	frame.Position=UDim2.new(1,hudX,0,hudY)
+	frame:SetAttribute("HUDX",hudX)
+	frame:SetAttribute("HUDY",hudY)
+end
+applyPosition()
+
+local function moveEvent()
+	local ev=gui:FindFirstChild("HUDMove") or Instance.new("BindableEvent")
+	ev.Name="HUDMove";ev.Parent=gui
+	return ev
+end
+local mover=moveEvent()
+mover.Event:Connect(function(dx,dy,save)
+	hudX=math.clamp(hudX+dx,-500,500);hudY=math.clamp(hudY+dy,-100,500);applyPosition()
+	if save then
+		local sok,saved,sx,sy=pcall(function()return hudRemote:InvokeServer("save",hudX,hudY)end)
+		if sok and saved then hudX=sx;hudY=sy;applyPosition() end
+	end
+end)
 
 local function formatNumber(n)
 	local s = tostring(math.floor(n))
