@@ -134,10 +134,13 @@ local shortcuts={"25%","50%","MAX"}
 local shortcutButtons={}
 for i,name in ipairs(shortcuts) do
 	local b=Instance.new("TextButton")
+	local left=24
+	local right=24
 	local gap=8
-	local innerScale=1/3
-	b.Position=UDim2.new((i-1)*innerScale,24 + (i-1)*gap/3,0,236)
-	b.Size=UDim2.new(innerScale,-(16 + gap/3),0,32)
+	local widthScale=1/3
+	local offsetX=left + (i-1)*gap/3
+	b.Position=UDim2.new((i-1)*widthScale,offsetX,0,236)
+	b.Size=UDim2.new(widthScale,-((left+right+2*gap)/3),0,32)
 	b.BackgroundColor3=Color3.fromRGB(28,31,38)
 	b.TextColor3=Color3.fromRGB(190,194,202)
 	b.Text=name
@@ -177,7 +180,6 @@ local function values()
 end
 
 local function refresh()
-selectAction("deposit")
 	local gold,bank=values()
 	walletValue.Text=(gold and tostring(gold.Value) or "—").." Ouro"
 	bankValue.Text=(bank and tostring(bank.Value) or "—").." Ouro"
@@ -251,4 +253,5 @@ local liveGold=leaderstats:WaitForChild("Ouro")
 local liveBank=player:WaitForChild("Banco")
 liveGold:GetPropertyChangedSignal("Value"):Connect(refresh)
 liveBank:GetPropertyChangedSignal("Value"):Connect(refresh)
+selectAction("deposit")
 refresh()
