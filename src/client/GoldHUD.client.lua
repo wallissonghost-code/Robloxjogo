@@ -74,6 +74,7 @@ amount.Parent = frame
 
 
 local hudRemote=RS:WaitForChild("HUDPosition")
+local settingsX,settingsY=-122,6
 local hudX,hudY,activePreset=0,-4,"hud1"
 local ok,got,slot,x,y=pcall(function() return hudRemote:InvokeServer("get") end)
 if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4 end
@@ -87,8 +88,15 @@ applyPosition()
 -- Settings button is intentionally fixed to the screen, never parented to movable HUD.
 local settingsButton=Instance.new("TextButton")
 settingsButton.Name="SettingsButton";settingsButton.AnchorPoint=Vector2.new(1,0)
-settingsButton.Position=UDim2.new(1,-122,0,6);settingsButton.Size=UDim2.fromOffset(38,38)
+settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38,38)
 settingsButton.BackgroundColor3=Color3.fromRGB(13,15,18);settingsButton.Text="";settingsButton.BorderSizePixel=0;settingsButton.Parent=gui
+local settingsMove=Instance.new("BindableEvent");settingsMove.Name="SettingsMove";settingsMove.Parent=gui
+settingsMove.Event:Connect(function(dx,dy)
+ settingsX=math.clamp(settingsX+dx,-500,-38);settingsY=math.clamp(settingsY+dy,0,500)
+ settingsButton.Position=UDim2.new(1,settingsX,0,settingsY)
+ settingsButton:SetAttribute("HUDX",settingsX);settingsButton:SetAttribute("HUDY",settingsY)
+end)
+settingsButton:SetAttribute("HUDX",settingsX);settingsButton:SetAttribute("HUDY",settingsY)
 local sbc=Instance.new("UICorner");sbc.CornerRadius=UDim.new(0,10);sbc.Parent=settingsButton
 local sbs=Instance.new("UIStroke");sbs.Color=Color3.fromRGB(255,194,45);sbs.Transparency=.25;sbs.Thickness=1;sbs.Parent=settingsButton
 local gear=Instance.new("Frame");gear.AnchorPoint=Vector2.new(.5,.5);gear.Position=UDim2.fromScale(.5,.5);gear.Size=UDim2.fromOffset(15,15);gear.BackgroundColor3=Color3.fromRGB(255,199,47);gear.BorderSizePixel=0;gear.Parent=settingsButton
