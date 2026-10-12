@@ -146,7 +146,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V28")
+root:SetAttribute("ServerBuild", "V29")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -159,7 +159,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V28"
+txt.Text = "BUILD V29"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
