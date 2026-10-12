@@ -74,9 +74,9 @@ amount.Parent = frame
 
 
 local hudRemote=RS:WaitForChild("HUDPosition")
-local hudX,hudY=0,6
+local hudX,hudY=0,-4
 local ok,got,x,y=pcall(function() return hudRemote:InvokeServer("get") end)
-if ok and got then hudX=math.min(x or 0,0);hudY=y or 6 end
+if ok and got then hudX=math.min(x or 0,0);hudY=y or -4 end
 
 local function applyPosition()
 	frame.Position=UDim2.new(1,hudX,0,hudY)
