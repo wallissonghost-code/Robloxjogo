@@ -123,7 +123,7 @@ local walletValue=balanceCard("CARTEIRA",0)
 local bankValue=balanceCard("NO BANCO",.5)
 
 local input=Instance.new("TextBox")
-input.Position=UDim2.fromOffset(24,178)
+input.Position=UDim2.fromOffset(24,sy(178))
 input.Size=UDim2.new(1,-48,0,sh(46))
 input.BackgroundColor3=Color3.fromRGB(24,27,33)
 input.TextColor3=Color3.fromRGB(245,246,248)
@@ -148,7 +148,7 @@ for i,name in ipairs(shortcuts) do
 	local widthScale=1/3
 	local offsetX=left + (i-1)*gap/3
 	b.Position=UDim2.new((i-1)*widthScale,offsetX,0,sy(236))
-	b.Size=UDim2.new(widthScale,-((left+right+2*gap)/3),0,32)
+	b.Size=UDim2.new(widthScale,-((left+right+2*gap)/3),0,sh(32))
 	b.BackgroundColor3=Color3.fromRGB(28,31,38)
 	b.TextColor3=Color3.fromRGB(190,194,202)
 	b.Text=name
