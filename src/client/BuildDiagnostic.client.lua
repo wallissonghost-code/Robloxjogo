@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V36"
+local BUILD_VERSION = "V37"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -25,7 +25,7 @@ button.Parent = gui
 local bc=Instance.new("UICorner"); bc.CornerRadius=UDim.new(0,9); bc.Parent=button
 
 local panel=Instance.new("Frame")
-panel.Size=UDim2.fromOffset(370,450)
+panel.Size=UDim2.fromOffset(280,330)
 panel.Position=UDim2.fromOffset(12,54)
 panel.BackgroundColor3=Color3.fromRGB(16,16,19)
 panel.BackgroundTransparency=.04
@@ -39,7 +39,7 @@ title.BackgroundTransparency=1
 title.Position=UDim2.fromOffset(14,10)
 title.Size=UDim2.new(1,-28,0,30)
 title.Font=Enum.Font.GothamBold
-title.TextSize=22
+title.TextSize=16
 title.TextColor3=Color3.fromRGB(255,211,74)
 title.TextXAlignment=Enum.TextXAlignment.Left
 title.Text="BUILD "..BUILD_VERSION
@@ -47,10 +47,10 @@ title.Parent=panel
 
 local info=Instance.new("TextLabel")
 info.BackgroundTransparency=1
-info.Position=UDim2.fromOffset(14,44)
-info.Size=UDim2.new(1,-28,1,-112)
+info.Position=UDim2.fromOffset(14,40)
+info.Size=UDim2.new(1,-28,0,150)
 info.Font=Enum.Font.Code
-info.TextSize=13
+info.TextSize=10
 info.TextColor3=Color3.fromRGB(225,225,230)
 info.TextWrapped=true
 info.TextXAlignment=Enum.TextXAlignment.Left
@@ -132,10 +132,26 @@ local function refresh()
 	info.Text=reportText
 end
 
+local adjust=Instance.new("Frame")
+adjust.Position=UDim2.fromOffset(14,198)
+adjust.Size=UDim2.new(1,-28,0,76)
+adjust.BackgroundColor3=Color3.fromRGB(28,28,33)
+adjust.BorderSizePixel=0
+adjust.Parent=panel
+local ac=Instance.new("UICorner");ac.CornerRadius=UDim.new(0,8);ac.Parent=adjust
+local coord=Instance.new("TextLabel");coord.BackgroundTransparency=1;coord.Position=UDim2.fromOffset(6,3);coord.Size=UDim2.new(1,-12,0,18);coord.TextColor3=Color3.fromRGB(255,211,74);coord.Font=Enum.Font.GothamBold;coord.TextSize=10;coord.Parent=adjust
+local function hudFrame()local g=player.PlayerGui:FindFirstChild("GoldHUD");return g and g:FindFirstChild("Balance")end
+local function updateCoord()local h=hudFrame();coord.Text=h and ("HUD X "..tostring(h:GetAttribute("HUDX") or 0).."  Y "..tostring(h:GetAttribute("HUDY") or 6)) or "HUD indisponivel"end
+local function move(dx,dy,save)local g=player.PlayerGui:FindFirstChild("GoldHUD");local e=g and g:FindFirstChild("HUDMove");if e then e:Fire(dx,dy,save);task.delay(.05,updateCoord)end end
+local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
+for i,d in ipairs(defs) do local b=Instance.new("TextButton");b.Position=UDim2.fromOffset(6+(i-1)*45,27);b.Size=UDim2.fromOffset(39,25);b.BackgroundColor3=Color3.fromRGB(48,48,56);b.Text=d[1];b.TextColor3=Color3.new(1,1,1);b.Font=Enum.Font.GothamBold;b.TextSize=14;b.BorderSizePixel=0;b.Parent=adjust;local cc=Instance.new("UICorner");cc.CornerRadius=UDim.new(0,6);cc.Parent=b;b.Activated:Connect(function()move(d[2],d[3],false)end)end
+local save=Instance.new("TextButton");save.Position=UDim2.new(1,-62,0,27);save.Size=UDim2.fromOffset(56,25);save.BackgroundColor3=Color3.fromRGB(255,199,47);save.TextColor3=Color3.fromRGB(20,20,20);save.Text="SALVAR";save.Font=Enum.Font.GothamBold;save.TextSize=9;save.BorderSizePixel=0;save.Parent=adjust;local sc=Instance.new("UICorner");sc.CornerRadius=UDim.new(0,6);sc.Parent=save
+save.Activated:Connect(function()move(0,0,true)end)
+
 local copyBox=Instance.new("TextBox")
 copyBox.Name="CopyDiagnostic"
-copyBox.Position=UDim2.new(0,14,1,-52)
-copyBox.Size=UDim2.new(1,-28,0,38)
+copyBox.Position=UDim2.new(0,14,1,-42)
+copyBox.Size=UDim2.new(1,-28,0,30)
 copyBox.BackgroundColor3=Color3.fromRGB(35,35,41)
 copyBox.TextColor3=Color3.fromRGB(255,255,255)
 copyBox.PlaceholderText="COPIAR DIAGNOSTICO"
@@ -163,5 +179,5 @@ end)
 button.Activated:Connect(function()
 	panel.Visible=not panel.Visible
 	button.Text=panel.Visible and "FECHAR" or "DIAGNOSTICO"
-	if panel.Visible then refresh() end
+	if panel.Visible then refresh();updateCoord() end
 end)
