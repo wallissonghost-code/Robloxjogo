@@ -35,7 +35,7 @@ local panel=Instance.new("Frame")
 panel.Name="ATMPanel"
 panel.AnchorPoint=Vector2.new(.5,.5)
 panel.Position=UDim2.fromScale(.5,compact and .54 or .53)
-panel.Size=compact and UDim2.new(.70,0,0,310) or UDim2.new(.78,0,0,400)
+panel.Size=compact and UDim2.new(.68,0,0,330) or UDim2.new(.76,0,0,420)
 panel.BackgroundColor3=Color3.fromRGB(12,14,18)
 panel.BorderSizePixel=0
 panel.ZIndex=20
@@ -47,8 +47,8 @@ stroke.Transparency=.35
 stroke.Thickness=1
 
 local sizeConstraint=Instance.new("UISizeConstraint",panel)
-sizeConstraint.MaxSize=compact and Vector2.new(610,310) or Vector2.new(720,400)
-sizeConstraint.MinSize=compact and Vector2.new(300,290) or Vector2.new(320,380)
+sizeConstraint.MaxSize=compact and Vector2.new(580,330) or Vector2.new(700,420)
+sizeConstraint.MinSize=compact and Vector2.new(300,310) or Vector2.new(320,400)
 
 local function sy(y) return compact and math.floor(y*.74) or y end
 local function sh(h) return compact and math.floor(h*.78) or h end
@@ -140,46 +140,65 @@ Instance.new("UICorner",input).CornerRadius=UDim.new(0,12)
 
 local shortcuts={"25%","50%","MAX"}
 local shortcutButtons={}
+local shortcutRow=Instance.new("Frame")
+shortcutRow.Position=UDim2.fromOffset(24,sy(236))
+shortcutRow.Size=UDim2.new(1,-48,0,sh(32))
+shortcutRow.BackgroundTransparency=1
+shortcutRow.ZIndex=21
+shortcutRow.Parent=panel
+local rowLayout=Instance.new("UIListLayout",shortcutRow)
+rowLayout.FillDirection=Enum.FillDirection.Horizontal
+rowLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+rowLayout.VerticalAlignment=Enum.VerticalAlignment.Center
+rowLayout.Padding=UDim.new(0,8)
 for i,name in ipairs(shortcuts) do
 	local b=Instance.new("TextButton")
-	local left=24
-	local right=24
-	local gap=8
-	local widthScale=1/3
-	local offsetX=left + (i-1)*gap/3
-	b.Position=UDim2.new((i-1)*widthScale,offsetX,0,sy(236))
-	b.Size=UDim2.new(widthScale,-((left+right+2*gap)/3),0,sh(32))
+	b.Size=UDim2.new(1/3,-6,1,0)
 	b.BackgroundColor3=Color3.fromRGB(28,31,38)
 	b.TextColor3=Color3.fromRGB(190,194,202)
 	b.Text=name
 	b.Font=Enum.Font.GothamBold
-	b.TextSize=12
+	b.TextSize=fs(12)
 	b.BorderSizePixel=0
 	b.ZIndex=22
-	b.Parent=panel
+	b.Parent=shortcutRow
 	Instance.new("UICorner",b).CornerRadius=UDim.new(0,9)
 	shortcutButtons[i]=b
 end
 
-local function actionButton(name,x)
+local function modeButton(name,x)
 	local b=Instance.new("TextButton")
-	b.Position=UDim2.new(x,x==0 and 24 or 8,0,sy(280))
-	b.Size=UDim2.new(.5,-32,0,sh(50))
-	b.BackgroundColor3=Color3.fromRGB(255,197,47)
-	b.TextColor3=Color3.fromRGB(22,22,24)
+	b.Position=UDim2.new(x,x==0 and 24 or 4,0,sy(280))
+	b.Size=UDim2.new(.5,-28,0,sh(34))
+	b.BackgroundColor3=Color3.fromRGB(34,37,44)
+	b.TextColor3=Color3.fromRGB(205,208,216)
 	b.Text=name
 	b.Font=Enum.Font.GothamBold
-	b.TextSize=15
+	b.TextSize=fs(12)
 	b.BorderSizePixel=0
 	b.ZIndex=22
 	b.Parent=panel
-	Instance.new("UICorner",b).CornerRadius=UDim.new(0,13)
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,10)
 	return b
 end
 
-local deposit=actionButton("DEPOSITAR",0)
-local withdraw=actionButton("SACAR",.5)
-local status=text(panel,"Pronto para transacionar",UDim2.fromOffset(24,sy(344)),UDim2.new(1,-48,0,28),12,false,Color3.fromRGB(135,141,151))
+local depositMode=modeButton("DEPOSITAR",0)
+local withdrawMode=modeButton("SACAR",.5)
+
+local confirm=Instance.new("TextButton")
+confirm.Position=UDim2.fromOffset(24,sy(326))
+confirm.Size=UDim2.new(1,-48,0,sh(48))
+confirm.BackgroundColor3=Color3.fromRGB(255,197,47)
+confirm.TextColor3=Color3.fromRGB(22,22,24)
+confirm.Text="CONFIRMAR DEPÓSITO"
+confirm.Font=Enum.Font.GothamBold
+confirm.TextSize=fs(14)
+confirm.BorderSizePixel=0
+confirm.ZIndex=22
+confirm.Parent=panel
+Instance.new("UICorner",confirm).CornerRadius=UDim.new(0,13)
+
+local status=text(panel,"",UDim2.fromOffset(24,sy(382)),UDim2.new(1,-48,0,20),fs(11),false,Color3.fromRGB(135,141,151))
 status.TextXAlignment=Enum.TextXAlignment.Center
 
 local function values()
@@ -195,7 +214,7 @@ end
 
 local function openATM()
 	refresh()
-	status.Text="Pronto para transacionar"
+	selectAction(selectedAction)
 	shade.Visible=true
 end
 
@@ -233,26 +252,27 @@ end)
 
 local function selectAction(action)
 	selectedAction=action
+	input.Text=""
 	if action=="deposit" then
-		deposit.BackgroundColor3=Color3.fromRGB(255,197,47)
-		withdraw.BackgroundColor3=Color3.fromRGB(48,52,61)
-		withdraw.TextColor3=Color3.fromRGB(220,223,230)
-		status.Text="Modo depósito — atalhos usam sua carteira."
+		depositMode.BackgroundColor3=Color3.fromRGB(255,197,47)
+		depositMode.TextColor3=Color3.fromRGB(22,22,24)
+		withdrawMode.BackgroundColor3=Color3.fromRGB(34,37,44)
+		withdrawMode.TextColor3=Color3.fromRGB(205,208,216)
+		confirm.Text="CONFIRMAR DEPÓSITO"
+		status.Text="Os atalhos usam o saldo da carteira."
 	else
-		withdraw.BackgroundColor3=Color3.fromRGB(255,197,47)
-		withdraw.TextColor3=Color3.fromRGB(22,22,24)
-		deposit.BackgroundColor3=Color3.fromRGB(48,52,61)
-		deposit.TextColor3=Color3.fromRGB(220,223,230)
-		status.Text="Modo saque — atalhos usam seu banco."
+		withdrawMode.BackgroundColor3=Color3.fromRGB(255,197,47)
+		withdrawMode.TextColor3=Color3.fromRGB(22,22,24)
+		depositMode.BackgroundColor3=Color3.fromRGB(34,37,44)
+		depositMode.TextColor3=Color3.fromRGB(205,208,216)
+		confirm.Text="CONFIRMAR SAQUE"
+		status.Text="Os atalhos usam o saldo do banco."
 	end
 end
 
-deposit.Activated:Connect(function()
-	if selectedAction~="deposit" then selectAction("deposit") else transact("deposit") end
-end)
-withdraw.Activated:Connect(function()
-	if selectedAction~="withdraw" then selectAction("withdraw") else transact("withdraw") end
-end)
+depositMode.Activated:Connect(function() selectAction("deposit") end)
+withdrawMode.Activated:Connect(function() selectAction("withdraw") end)
+confirm.Activated:Connect(function() transact(selectedAction) end)
 close.Activated:Connect(function() shade.Visible=false end)
 openEvent.OnClientEvent:Connect(openATM)
 
