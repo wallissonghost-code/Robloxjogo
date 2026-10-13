@@ -4,7 +4,7 @@ local InsertService = game:GetService("InsertService")
 local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931");if oldHalloween then oldHalloween:Destroy() end
 local oldBase=workspace:FindFirstChild("Baseplate");if oldBase then oldBase:Destroy() end
 local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor");if oldFloor then oldFloor:Destroy() end
-local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(360,1,360);floor.Position=Vector3.new(0,0,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
+local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(math.max(360,#items*24+80),1,100);floor.Position=Vector3.new(0,0,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
 
 local okHalloween,pack=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if okHalloween and pack then
@@ -25,11 +25,9 @@ if okHalloween and pack then
  for _,o in ipairs(pack:GetChildren()) do
   if o:IsA("Model") and not table.find(items,o) then o:Destroy() end
  end
- local cols=12
  local gap=24
  for i,m in ipairs(items) do
-  local row=math.floor((i-1)/cols);local col=(i-1)%cols
-  local x=(col-(cols-1)/2)*gap;local z=(row*gap)-145
+  local x=(i-1)*gap;local z=0
   m:PivotTo(CFrame.new(x,0.5,z))
   m.Name=string.format("ITEM_%03d",i)
   local adornee=m:FindFirstChildWhichIsA("BasePart",true)
@@ -189,7 +187,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V78")
+root:SetAttribute("ServerBuild", "V79")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -202,7 +200,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V78"
+txt.Text = "BUILD V79"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
