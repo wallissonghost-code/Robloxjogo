@@ -9,6 +9,24 @@ local lobby=Instance.new("Part");lobby.Name="HalloweenLobbyFloor";lobby.Anchored
 local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if halloweenOk and halloween then
  halloween.Name="Halloween_113280926555931";halloween.Parent=workspace
+ -- V76: remove catalog/showcase altar geometry before using props
+ local altarWords={"lighting","ligitchuing","pumpkins","architecture","nature","graveyard"}
+ local remove={}
+ for _,o in ipairs(halloween:GetDescendants()) do
+  local n=string.lower(o.Name)
+  local named=false
+  for _,w in ipairs(altarWords) do if string.find(n,w,1,true) and string.match(n,"%d+") then named=true break end end
+  if named then
+   for _,d in ipairs(o:GetDescendants()) do
+    if d:IsA("BasePart") then
+     local flat=d.Size.Y<=3 and (d.Size.X>=12 or d.Size.Z>=12)
+     local neon=d.Material==Enum.Material.Neon
+     if flat or neon then table.insert(remove,d) end
+    elseif d:IsA("SurfaceGui") or d:IsA("BillboardGui") then table.insert(remove,d) end
+   end
+  end
+ end
+ for _,o in ipairs(remove) do if o.Parent then o:Destroy() end end
  local usable={}
  for _,o in ipairs(halloween:GetDescendants()) do
   if o:IsA("Model") then
@@ -187,7 +205,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V75")
+root:SetAttribute("ServerBuild", "V76")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -200,7 +218,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V75"
+txt.Text = "BUILD V76"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
