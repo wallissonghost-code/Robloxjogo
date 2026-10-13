@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V59"
+local BUILD_VERSION = "V60"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -127,7 +127,14 @@ local function refresh()
 		"Fallback V21: " .. tostring(atmGui and atmGui:FindFirstChild("ATMV21Fallback") ~= nil),
 		"Prompt Triggered: " .. tostring(atm:GetAttribute("PromptTriggerCount") or 0),
 		"ATMOpen enviado: " .. tostring(atm:GetAttribute("ATMOpenFireCount") or 0),
-		"ATMOpen recebido: " .. tostring(atmOpenReceived)
+		"ATMOpen recebido: " .. tostring(atmOpenReceived),
+		"--- PULO MOBILE ---",
+		"TouchEnabled: " .. tostring(game:GetService("UserInputService").TouchEnabled),
+		"CustomJump script: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("CustomJump") ~= nil),
+		"CustomJumpHUD: " .. tostring(player.PlayerGui:FindFirstChild("CustomJumpHUD") ~= nil),
+		"Nosso JumpButton: " .. tostring(player.PlayerGui:FindFirstChild("CustomJumpHUD") and player.PlayerGui.CustomJumpHUD:FindFirstChild("JumpButton") ~= nil),
+		"TouchGui: " .. tostring(player.PlayerGui:FindFirstChild("TouchGui") ~= nil),
+		"Jump nativo: " .. tostring(player.PlayerGui:FindFirstChild("TouchGui") and player.PlayerGui.TouchGui:FindFirstChild("JumpButton",true) ~= nil)
 	}, "\n")
 	info.Text=reportText
 end
