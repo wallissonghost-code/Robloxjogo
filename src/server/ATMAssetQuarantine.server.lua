@@ -9,6 +9,24 @@ local lobby=Instance.new("Part");lobby.Name="HalloweenLobbyFloor";lobby.Anchored
 local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if halloweenOk and halloween then
  halloween.Name="Halloween_113280926555931";halloween.Parent=workspace
+ -- V77: delete the showcase shell itself, preserving its displayed props
+ local showcaseWords={"lighting","architecture","nature","graveyard","pumpkins","witchcraft"}
+ for _,cat in ipairs(halloween:GetDescendants()) do
+  if cat:IsA("Model") then
+   local n=string.lower(cat.Name)
+   local showcase=string.match(n,"%d+")~=nil
+   if showcase then
+    local hit=false
+    for _,w in ipairs(showcaseWords) do if string.find(n,w,1,true) then hit=true break end end
+    if hit then
+     for _,child in ipairs(cat:GetChildren()) do
+      if child:IsA("Model") then child.Parent=halloween end
+     end
+     cat:Destroy()
+    end
+   end
+  end
+ end
  -- V76: remove catalog/showcase altar geometry before using props
  local altarWords={"lighting","ligitchuing","pumpkins","architecture","nature","graveyard"}
  local remove={}
@@ -205,7 +223,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V76")
+root:SetAttribute("ServerBuild", "V77")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -218,7 +236,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V76"
+txt.Text = "BUILD V77"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
