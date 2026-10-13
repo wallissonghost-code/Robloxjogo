@@ -57,9 +57,8 @@ local function jump()
  local hum=char and char:FindFirstChildOfClass("Humanoid")
  if hum and hum.Health>0 and hum:GetState()~=Enum.HumanoidStateType.Dead then
   hum.Jump=true
+  hum:ChangeState(Enum.HumanoidStateType.Jumping)
  end
 end
 b.Activated:Connect(jump)
-b.InputBegan:Connect(function(input)
- if input.UserInputType==Enum.UserInputType.Touch then jump() end
-end)
+
