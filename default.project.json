@@ -43,6 +43,9 @@
         },
         "SafeATM": {
           "$path": "src/client/SafeATM.client.lua"
+        },
+        "CustomJump": {
+          "$path": "src/client/CustomJump.client.lua"
         }
       }
     }
