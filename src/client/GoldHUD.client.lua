@@ -133,23 +133,23 @@ local profileButtons={}
 for i,n in ipairs({"HUD 1","HUD 2"}) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.5,0,0,0);bt.Size=UDim2.new(.5,-5,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=n;bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=11;bt.BorderSizePixel=0;bt.Parent=profileRow;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt;profileButtons[i]=bt
 end
-label(content,"ELEMENTOS EDITÁVEIS",UDim2.fromOffset(0,128),UDim2.new(1,-10,0,18),10,true,Color3.fromRGB(150,155,166))
-local goldEdit=Instance.new("TextButton");goldEdit.Position=UDim2.fromOffset(0,150);goldEdit.Size=UDim2.new(1,-8,0,42);goldEdit.BackgroundColor3=Color3.fromRGB(255,195,43);goldEdit.Text="EDITAR OURO";goldEdit.TextColor3=Color3.fromRGB(18,18,18);goldEdit.Font=Enum.Font.GothamBold;goldEdit.TextSize=11;goldEdit.BorderSizePixel=0;goldEdit.Parent=content;local gec=Instance.new("UICorner");gec.CornerRadius=UDim.new(0,8);gec.Parent=goldEdit
-label(content,"Ao editar, o painel fecha. Toque no elemento e use os controles.",UDim2.fromOffset(0,198),UDim2.new(1,-12,0,34),10,false,Color3.fromRGB(150,155,166))
-local reset=Instance.new("TextButton");reset.Position=UDim2.fromOffset(0,246);reset.Size=UDim2.new(.48,-4,0,38);reset.BackgroundColor3=Color3.fromRGB(28,31,38);reset.Text="REDEFINIR HUD";reset.TextColor3=Color3.fromRGB(225,228,234);reset.Font=Enum.Font.GothamBold;reset.TextSize=10;reset.BorderSizePixel=0;reset.Parent=content;local rc=Instance.new("UICorner");rc.CornerRadius=UDim.new(0,8);rc.Parent=reset
-local save=Instance.new("TextButton");save.Position=UDim2.new(.52,0,0,246);save.Size=UDim2.new(.48,-8,0,38);save.BackgroundColor3=Color3.fromRGB(255,199,47);save.Text="SALVAR AGORA";save.TextColor3=Color3.fromRGB(20,18,12);save.Font=Enum.Font.GothamBold;save.TextSize=10;save.BorderSizePixel=0;save.Parent=content;local sc=Instance.new("UICorner");sc.CornerRadius=UDim.new(0,8);sc.Parent=save
-
+label(content,"EDIÇÃO",UDim2.fromOffset(0,128),UDim2.new(1,-10,0,18),10,true,Color3.fromRGB(150,155,166))
+local modify=Instance.new("TextButton");modify.Position=UDim2.fromOffset(0,150);modify.Size=UDim2.new(1,-8,0,42);modify.BackgroundColor3=Color3.fromRGB(255,195,43);modify.Text="MODIFICAR HUD";modify.TextColor3=Color3.fromRGB(18,18,18);modify.Font=Enum.Font.GothamBold;modify.TextSize=11;modify.BorderSizePixel=0;modify.Parent=content;local mc=Instance.new("UICorner");mc.CornerRadius=UDim.new(0,8);mc.Parent=modify
+label(content,"Entre no modo de edição e toque no elemento que deseja ajustar.",UDim2.fromOffset(0,198),UDim2.new(1,-12,0,34),10,false,Color3.fromRGB(150,155,166))
+local reset=Instance.new("TextButton");reset.Position=UDim2.fromOffset(0,246);reset.Size=UDim2.new(1,-8,0,38);reset.BackgroundColor3=Color3.fromRGB(28,31,38);reset.Text="REDEFINIR HUD";reset.TextColor3=Color3.fromRGB(225,228,234);reset.Font=Enum.Font.GothamBold;reset.TextSize=10;reset.BorderSizePixel=0;reset.Parent=content;local rc=Instance.new("UICorner");rc.CornerRadius=UDim.new(0,8);rc.Parent=reset
 local editor=Instance.new("Frame");editor.Name="HUDEditor";editor.AnchorPoint=Vector2.new(.5,1);editor.Position=UDim2.new(.5,0,1,-24);editor.Size=UDim2.fromOffset(430,104);editor.BackgroundColor3=Color3.fromRGB(9,11,15);editor.BorderSizePixel=0;editor.Visible=false;editor.Parent=gui
 local elimit=Instance.new("UISizeConstraint");elimit.MinSize=Vector2.new(330,104);elimit.MaxSize=Vector2.new(430,104);elimit.Parent=editor
 local edc=Instance.new("UICorner");edc.CornerRadius=UDim.new(0,14);edc.Parent=editor
 local eds=Instance.new("UIStroke");eds.Color=Color3.fromRGB(222,166,36);eds.Transparency=.12;eds.Thickness=1.5;eds.Parent=editor
-local editTitle=label(editor,"EDITANDO: OURO",UDim2.fromOffset(14,8),UDim2.new(1,-110,0,22),11,true,Color3.fromRGB(255,199,47))
+local editTitle=label(editor,"TOQUE EM UM ELEMENTO",UDim2.fromOffset(14,8),UDim2.new(1,-110,0,22),11,true,Color3.fromRGB(255,199,47))
 local editInfo=label(editor,"",UDim2.fromOffset(14,30),UDim2.new(1,-28,0,18),9,false,Color3.fromRGB(165,170,180))
+local selectedElement=nil
+local selectionStroke=Instance.new("UIStroke");selectionStroke.Name="EditSelection";selectionStroke.Color=Color3.fromRGB(70,255,120);selectionStroke.Thickness=2.5;selectionStroke.Transparency=1;selectionStroke.Parent=frame
 local controls=Instance.new("Frame");controls.Position=UDim2.fromOffset(12,54);controls.Size=UDim2.new(1,-24,0,38);controls.BackgroundTransparency=1;controls.Parent=editor
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
 for i,d in ipairs(defs) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=17;bt.BorderSizePixel=0;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function()hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
+ bt.Activated:Connect(function()if selectedElement~="gold" then return end;hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
 end
 local function applyScale()
  local baseW=math.max(86,frame:GetAttribute("BaseWidth") or 112)
@@ -158,7 +158,7 @@ local function applyScale()
 end
 for i,d in ipairs({{"−",-.1},{"+",.1}}) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new(.56+(i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=18;bt.BorderSizePixel=0;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function()sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
+ bt.Activated:Connect(function()if selectedElement~="gold" then return end;sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
 end
 local done=Instance.new("TextButton");done.AnchorPoint=Vector2.new(1,0);done.Position=UDim2.new(1,0,0,0);done.Size=UDim2.new(.16,-2,1,0);done.BackgroundColor3=Color3.fromRGB(255,199,47);done.Text="OK";done.TextColor3=Color3.fromRGB(18,18,18);done.Font=Enum.Font.GothamBold;done.TextSize=11;done.BorderSizePixel=0;done.Parent=controls;local dc=Instance.new("UICorner");dc.CornerRadius=UDim.new(0,8);dc.Parent=done
 
@@ -169,29 +169,28 @@ for i,bt in ipairs(profileButtons) do bt.Activated:Connect(function()
  local wanted="hud"..i;local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);applyPosition();applyScale();refreshSettings()end
 end) end
-goldEdit.Activated:Connect(function()
- panel.Visible=false;editor.Visible=true
- editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%"
+modify.Activated:Connect(function()
+ panel.Visible=false;editor.Visible=true;selectedElement=nil;selectionStroke.Transparency=1
+ editTitle.Text="TOQUE EM UM ELEMENTO";editInfo.Text="Selecione um HUD na tela para editar"
 end)
 -- The edited HUD itself can also be tapped while edit mode is active.
 frame.Active=true
 frame.InputBegan:Connect(function(input)
- if editor.Visible and (input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1) then editTitle.Text="EDITANDO: OURO" end
+ if editor.Visible and (input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1) then selectedElement="gold";selectionStroke.Transparency=0;editTitle.Text="EDITANDO: OURO";editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%" end
 end)
 done.Activated:Connect(function()
+ if selectedElement~="gold" then editor.Visible=false;panel.Visible=true;selectionStroke.Transparency=1;refreshSettings();return end
  local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale()end
- editor.Visible=false;panel.Visible=true;refreshSettings()
+ editor.Visible=false;panel.Visible=true;selectedElement=nil;selectionStroke.Transparency=1;refreshSettings()
 end)
-save.Activated:Connect(function()
- local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale)end)
- if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale();refreshSettings()end
-end)
+-- legacy save removed
+local save={Activated={Connect=function()end}}
 reset.Activated:Connect(function()
  local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);applyPosition();applyScale();refreshSettings()end
 end)
-settingsButton.Activated:Connect(function()editor.Visible=false;panel.Visible=not panel.Visible;refreshSettings()end)
+settingsButton.Activated:Connect(function()editor.Visible=false;selectedElement=nil;selectionStroke.Transparency=1;panel.Visible=not panel.Visible;refreshSettings()end)
 close.Activated:Connect(function()panel.Visible=false end)
 
 local function formatNumber(n)
