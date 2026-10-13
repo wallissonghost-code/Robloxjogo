@@ -56,7 +56,7 @@ hudRemote.OnServerInvoke=function(p,action,a,b,c,d,e,f,g,jx,jy,js)
  end
  if action=="load" then
   local slot=(a=="hud2") and "hud2" or "hud1";h.active=slot;local q=h.presets[slot]
-  return true,slot,q.x,q.y,q.scale,q.sx,q.sy,q.ss
+  return true,slot,q.x,q.y,q.scale,q.sx,q.sy,q.ss,q.jx,q.jy,q.js
  end
  if action=="reset" then
   local slot=(a=="hud2") and "hud2" or "hud1";h.presets[slot]={x=0,y=-4,scale=1,sx=-87,sy=0,ss=1,jx=-28,jy=-110,js=1};h.active=slot
