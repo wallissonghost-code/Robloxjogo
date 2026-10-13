@@ -4,7 +4,7 @@ local InsertService = game:GetService("InsertService")
 local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931");if oldHalloween then oldHalloween:Destroy() end
 local oldBase=workspace:FindFirstChild("Baseplate");if oldBase then oldBase:Destroy() end
 local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor");if oldFloor then oldFloor:Destroy() end
-local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(math.max(360,#items*24+80),1,100);floor.Position=Vector3.new(0,0,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
+local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(4000,1,100);floor.Position=Vector3.new(1900,0,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
 
 local okHalloween,pack=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if okHalloween and pack then
