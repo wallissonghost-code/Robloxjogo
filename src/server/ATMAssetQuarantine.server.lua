@@ -1,42 +1,42 @@
 local InsertService = game:GetService("InsertService")
 
--- Halloween lobby V73
+-- Halloween lobby V74: unpack showcase categories into individual props
 local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931")
 if oldHalloween then oldHalloween:Destroy() end
 local oldBase=workspace:FindFirstChild("Baseplate")
 if oldBase then oldBase:Destroy() end
+local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor")
+if oldFloor then oldFloor:Destroy() end
 
 local lobby=Instance.new("Part")
-lobby.Name="HalloweenLobbyFloor"
-lobby.Anchored=true
-lobby.Size=Vector3.new(180,1,180)
-lobby.Position=Vector3.new(0,0,0)
-lobby.Material=Enum.Material.Slate
-lobby.Color=Color3.fromRGB(34,28,42)
-lobby.Parent=workspace
+lobby.Name="HalloweenLobbyFloor";lobby.Anchored=true;lobby.Size=Vector3.new(220,1,220)
+lobby.Position=Vector3.new(0,0,0);lobby.Material=Enum.Material.Slate
+lobby.Color=Color3.fromRGB(30,24,38);lobby.Parent=workspace
 
 local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if halloweenOk and halloween then
- halloween.Name="Halloween_113280926555931"
- halloween.Parent=workspace
- local objects={}
- for _,o in ipairs(halloween:GetChildren()) do
-  if o:IsA("Model") or o:IsA("BasePart") then
-   if o:IsA("BasePart") and math.max(o.Size.X,o.Size.Y,o.Size.Z)>70 then o:Destroy()
-   else table.insert(objects,o) end
+ halloween.Name="Halloween_113280926555931";halloween.Parent=workspace
+ local props={}
+ for _,category in ipairs(halloween:GetChildren()) do
+  if category:IsA("Model") then
+   for _,prop in ipairs(category:GetChildren()) do
+    if prop:IsA("Model") then table.insert(props,prop) end
+   end
   end
  end
- local spots={
-  {-68,-58,20},{-42,-64,-15},{-12,-70,8},{22,-66,-12},{55,-58,18},
-  {-72,-30,-18},{-48,-38,12},{-18,-44,-22},{18,-42,18},{48,-38,-8},{72,-28,15},
-  {-70,5,12},{-48,12,-16},{-25,5,20},{25,7,-18},{50,12,16},{70,5,-10},
-  {-65,40,-15},{-38,48,18},{-10,58,-8},{18,54,14},{45,48,-18},{68,40,10},
-  {-48,70,8},{0,72,-12},{48,70,16}
- }
- for i,o in ipairs(objects) do
-  local p=spots[((i-1)%#spots)+1]
-  local cf=CFrame.new(p[1],1,p[2])*CFrame.Angles(0,math.rad(p[3]*7),0)
-  if o:IsA("Model") then o:PivotTo(cf) else o.CFrame=cf end
+ local ring={30,42,54,66,78,90}
+ for i,prop in ipairs(props) do
+  local r=ring[((i-1)%#ring)+1]
+  local angle=math.rad((i*137.5)%360)
+  local x=math.cos(angle)*r
+  local z=math.sin(angle)*r
+  local y=0.5
+  local cf=CFrame.new(x,y,z)*CFrame.Angles(0,-angle+math.rad((i*31)%80-40),0)
+  prop.Parent=halloween
+  prop:PivotTo(cf)
+ end
+ for _,category in ipairs(halloween:GetChildren()) do
+  if category:IsA("Model") and #category:GetChildren()==0 then category:Destroy() end
  end
 end
 
