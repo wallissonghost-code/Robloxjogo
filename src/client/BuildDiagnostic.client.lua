@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V63"
+local BUILD_VERSION = "V64"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
@@ -132,7 +132,7 @@ local function refresh()
 		"TouchEnabled: " .. tostring(game:GetService("UserInputService").TouchEnabled),
 		"CustomJump script: " .. tostring(player:FindFirstChild("PlayerScripts") and player.PlayerScripts:FindFirstChild("CustomJump") ~= nil),
 		"CustomJumpHUD: " .. tostring(player.PlayerGui:FindFirstChild("CustomJumpHUD") ~= nil),
-		"Nosso JumpButton: " .. tostring(player.PlayerGui:FindFirstChild("CustomJumpHUD") and player.PlayerGui.CustomJumpHUD:FindFirstChild("JumpButton") ~= nil),
+		"Nosso JumpButton: " .. tostring(player.PlayerGui:FindFirstChild("CustomJumpHUD") and player.PlayerGui.CustomJumpHUD:FindFirstChild("CustomJumpButton") ~= nil),
 		"TouchGui: " .. tostring(player.PlayerGui:FindFirstChild("TouchGui") ~= nil),
 		"Jump nativo: " .. tostring(player.PlayerGui:FindFirstChild("TouchGui") and player.PlayerGui.TouchGui:FindFirstChild("JumpButton",true) ~= nil)
 	}, "\n")
