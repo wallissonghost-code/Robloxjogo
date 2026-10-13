@@ -77,6 +77,7 @@ local hudRemote=RS:WaitForChild("HUDPosition")
 local settingsX,settingsY=-87,0
 local hudX,hudY,activePreset=0,-4,"hud1"
 local sizeScale=1
+local settingsScale=1
 local ok,got,slot,x,y,savedScale=pcall(function() return hudRemote:InvokeServer("get") end)
 if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4;sizeScale=math.clamp(tonumber(savedScale) or 1,.7,1.4) end
 
@@ -89,7 +90,7 @@ applyPosition()
 -- Settings button is intentionally fixed to the screen, never parented to movable HUD.
 local settingsButton=Instance.new("TextButton")
 settingsButton.Name="SettingsButton";settingsButton.AnchorPoint=Vector2.new(1,0)
-settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38,38)
+settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale)
 settingsButton.BackgroundColor3=Color3.fromRGB(13,15,18);settingsButton.Text="";settingsButton.BorderSizePixel=0;settingsButton.Parent=gui
 local settingsMove=Instance.new("BindableEvent");settingsMove.Name="SettingsMove";settingsMove.Parent=gui
 settingsMove.Event:Connect(function(dx,dy)
@@ -137,7 +138,7 @@ label(content,"EDIÇÃO",UDim2.fromOffset(0,128),UDim2.new(1,-10,0,18),10,true,C
 local modify=Instance.new("TextButton");modify.Position=UDim2.fromOffset(0,150);modify.Size=UDim2.new(1,-8,0,42);modify.BackgroundColor3=Color3.fromRGB(255,195,43);modify.Text="MODIFICAR HUD";modify.TextColor3=Color3.fromRGB(18,18,18);modify.Font=Enum.Font.GothamBold;modify.TextSize=11;modify.BorderSizePixel=0;modify.Parent=content;local mc=Instance.new("UICorner");mc.CornerRadius=UDim.new(0,8);mc.Parent=modify
 label(content,"Entre no modo de edição e toque no elemento que deseja ajustar.",UDim2.fromOffset(0,198),UDim2.new(1,-12,0,34),10,false,Color3.fromRGB(150,155,166))
 local reset=Instance.new("TextButton");reset.Position=UDim2.fromOffset(0,246);reset.Size=UDim2.new(1,-8,0,38);reset.BackgroundColor3=Color3.fromRGB(28,31,38);reset.Text="REDEFINIR HUD";reset.TextColor3=Color3.fromRGB(225,228,234);reset.Font=Enum.Font.GothamBold;reset.TextSize=10;reset.BorderSizePixel=0;reset.Parent=content;local rc=Instance.new("UICorner");rc.CornerRadius=UDim.new(0,8);rc.Parent=reset
-local editShield=Instance.new("TextButton");editShield.Name="HUDEditShield";editShield.Position=UDim2.fromScale(0,0);editShield.Size=UDim2.fromScale(1,1);editShield.BackgroundTransparency=1;editShield.Text="";editShield.AutoButtonColor=false;editShield.Active=true;editShield.Modal=true;editShield.Visible=false;editShield.ZIndex=90;editShield.Parent=gui
+local editShield=Instance.new("TextButton");editShield.Name="HUDEditShield";editShield.Position=UDim2.fromScale(0,0);editShield.Size=UDim2.fromScale(1,1);editShield.BackgroundTransparency=1;editShield.Text="";editShield.AutoButtonColor=false;editShield.Active=true;editShield.Modal=true;editShield.ZIndex=90;editShield.Parent=gui
 local editor=Instance.new("Frame");editor.Name="HUDEditor";editor.ZIndex=100;editor.AnchorPoint=Vector2.new(.5,1);editor.Position=UDim2.new(.5,0,1,-24);editor.Size=UDim2.fromOffset(430,104);editor.BackgroundColor3=Color3.fromRGB(9,11,15);editor.BorderSizePixel=0;editor.Visible=false;editor.Parent=gui
 local elimit=Instance.new("UISizeConstraint");elimit.MinSize=Vector2.new(330,104);elimit.MaxSize=Vector2.new(430,104);elimit.Parent=editor
 local edc=Instance.new("UICorner");edc.CornerRadius=UDim.new(0,14);edc.Parent=editor
@@ -145,12 +146,24 @@ local eds=Instance.new("UIStroke");eds.Color=Color3.fromRGB(222,166,36);eds.Tran
 local editTitle=label(editor,"TOQUE EM UM ELEMENTO",UDim2.fromOffset(14,8),UDim2.new(1,-110,0,22),11,true,Color3.fromRGB(255,199,47))
 local editInfo=label(editor,"",UDim2.fromOffset(14,30),UDim2.new(1,-28,0,18),9,false,Color3.fromRGB(165,170,180))
 local selectedElement=nil
+local diagX,diagY,diagScale=12,12,1
+local buildX,buildY,buildScale=0,0,1
+local diagProxy=Instance.new("TextButton");diagProxy.Name="DiagnosticEditProxy";diagProxy.BackgroundTransparency=1;diagProxy.Text="";diagProxy.Visible=false;diagProxy.ZIndex=110;diagProxy.Parent=gui
+local buildProxy=Instance.new("TextButton");buildProxy.Name="BuildEditProxy";buildProxy.BackgroundTransparency=1;buildProxy.Text="";buildProxy.Visible=false;buildProxy.ZIndex=110;buildProxy.Parent=gui
+local function syncEditProxies()
+ local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic")
+ local db=dg and dg:FindFirstChild("OpenDiagnostic")
+ if db then diagProxy.Position=db.Position;diagProxy.Size=db.Size end
+ -- build tag is world-space, so we provide a screen editor target around its usual top-center visual area
+ buildProxy.AnchorPoint=Vector2.new(.5,0);buildProxy.Position=UDim2.new(.5,buildX,0,90+buildY);buildProxy.Size=UDim2.fromOffset(150*buildScale,34*buildScale)
+end
+
 local selectionStroke=Instance.new("UIStroke");selectionStroke.Name="EditSelection";selectionStroke.Color=Color3.fromRGB(70,255,120);selectionStroke.Thickness=2.5;selectionStroke.Transparency=1;selectionStroke.Parent=frame
 local controls=Instance.new("Frame");controls.Position=UDim2.fromOffset(12,54);controls.Size=UDim2.new(1,-24,0,38);controls.BackgroundTransparency=1;controls.ZIndex=101;controls.Parent=editor
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
 for i,d in ipairs(defs) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=17;bt.BorderSizePixel=0;bt.ZIndex=102;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function()if selectedElement=="settings" then settingsX=math.clamp(settingsX+d[2],-500,-38);settingsY=math.clamp(settingsY+d[3],0,500);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  fixo na tela";return elseif selectedElement~="gold" then return end;hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
+ bt.Activated:Connect(function()if selectedElement=="diagnostic" then diagX=math.clamp(diagX+d[2],0,1000);diagY=math.clamp(diagY+d[3],0,700);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Position=UDim2.fromOffset(diagX,diagY);diagProxy.Position=db.Position end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildX=buildX+d[2];buildY=buildY+d[3];syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="settings" then settingsX=math.clamp(settingsX+d[2],-500,-38);settingsY=math.clamp(settingsY+d[3],0,500);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
 end
 local function applyScale()
  local baseW=math.max(86,frame:GetAttribute("BaseWidth") or 112)
@@ -158,8 +171,8 @@ local function applyScale()
  editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%"
 end
 for i,d in ipairs({{"−",-.1},{"+",.1}}) do
- local bt=Instance.new("TextButton");bt.Position=UDim2.new(.56+(i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=18;bt.BorderSizePixel=0;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function()if selectedElement~="gold" then return end;sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
+ local bt=Instance.new("TextButton");bt.Position=UDim2.new(.56+(i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=18;bt.BorderSizePixel=0;bt.ZIndex=102;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
+ bt.Activated:Connect(function() if selectedElement=="diagnostic" then diagScale=math.clamp(diagScale+d[2],.7,1.4);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Size=UDim2.fromOffset(118*diagScale,34*diagScale);diagProxy.Size=db.Size end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildScale=math.clamp(buildScale+d[2],.7,1.4);syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="settings" then settingsScale=math.clamp(settingsScale+d[2],.7,1.4);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
 end
 local done=Instance.new("TextButton");done.AnchorPoint=Vector2.new(1,0);done.Position=UDim2.new(1,0,0,0);done.Size=UDim2.new(.16,-2,1,0);done.BackgroundColor3=Color3.fromRGB(255,199,47);done.Text="OK";done.TextColor3=Color3.fromRGB(18,18,18);done.Font=Enum.Font.GothamBold;done.TextSize=11;done.BorderSizePixel=0;done.ZIndex=102;done.Parent=controls;local dc=Instance.new("UICorner");dc.CornerRadius=UDim.new(0,8);dc.Parent=done
 
@@ -171,19 +184,21 @@ for i,bt in ipairs(profileButtons) do bt.Activated:Connect(function()
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);applyPosition();applyScale();refreshSettings()end
 end) end
 modify.Activated:Connect(function()
- panel.Visible=false;editor.Visible=true;editShield.Visible=true;frame.ZIndex=95;settingsButton.ZIndex=95;selectedElement=nil;selectionStroke.Transparency=1
- editTitle.Text="TOQUE EM UM ELEMENTO";editInfo.Text="Selecione um HUD na tela para editar"
+ panel.Visible=false;editor.Visible=true;frame.ZIndex=95;settingsButton.ZIndex=95;selectedElement=nil;selectionStroke.Transparency=1
+ syncEditProxies();diagProxy.Visible=true;buildProxy.Visible=true;editTitle.Text="TOQUE EM UM ELEMENTO";editInfo.Text="Selecione um HUD na tela para editar"
 end)
 -- The edited HUD itself can also be tapped while edit mode is active.
 frame.Active=true
 frame.InputBegan:Connect(function(input)
  if editor.Visible and (input.UserInputType==Enum.UserInputType.Touch or input.UserInputType==Enum.UserInputType.MouseButton1) then selectedElement="gold";selectionStroke.Transparency=0;editTitle.Text="EDITANDO: OURO";editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor(sizeScale*100).."%" end
 end)
+diagProxy.Activated:Connect(function() if editor.Visible then selectedElement="diagnostic";editTitle.Text="EDITANDO: DIAGNÓSTICO";editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%" end end)
+buildProxy.Activated:Connect(function() if editor.Visible then selectedElement="build";editTitle.Text="EDITANDO: BUILD";editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%" end end)
 done.Activated:Connect(function()
- if selectedElement=="settings" then editor.Visible=false;editShield.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;selectionStroke.Transparency=1;refreshSettings();return elseif selectedElement~="gold" then editor.Visible=false;editShield.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectionStroke.Transparency=1;refreshSettings();return end
+ if selectedElement=="settings" or selectedElement=="diagnostic" or selectedElement=="build" then editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;selectionStroke.Transparency=1;refreshSettings();return elseif selectedElement~="gold" then editor.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectionStroke.Transparency=1;refreshSettings();return end
  local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale()end
- editor.Visible=false;editShield.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;selectionStroke.Transparency=1;refreshSettings()
+ editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;selectionStroke.Transparency=1;refreshSettings()
 end)
 -- legacy save removed
 local save={Activated={Connect=function()end}}
@@ -192,7 +207,7 @@ reset.Activated:Connect(function()
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);applyPosition();applyScale();refreshSettings()end
 end)
 settingsButton.Activated:Connect(function()
- if editor.Visible then selectedElement="settings";selectionStroke.Transparency=1;editTitle.Text="EDITANDO: CONFIGURAÇÕES";editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  fixo na tela";return end
+ if editor.Visible then selectedElement="settings";selectionStroke.Transparency=1;editTitle.Text="EDITANDO: CONFIGURAÇÕES";editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return end
  editor.Visible=false;selectedElement=nil;selectionStroke.Transparency=1;panel.Visible=not panel.Visible;refreshSettings()
 end)
 close.Activated:Connect(function()panel.Visible=false end)
