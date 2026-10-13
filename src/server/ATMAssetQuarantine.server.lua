@@ -1,79 +1,45 @@
 local InsertService = game:GetService("InsertService")
 
--- Halloween lobby V75: dissolve showcase stands and build themed zones
+-- Halloween inventory V78: flatten visual models into a numbered grid
 local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931");if oldHalloween then oldHalloween:Destroy() end
 local oldBase=workspace:FindFirstChild("Baseplate");if oldBase then oldBase:Destroy() end
 local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor");if oldFloor then oldFloor:Destroy() end
-local lobby=Instance.new("Part");lobby.Name="HalloweenLobbyFloor";lobby.Anchored=true;lobby.Size=Vector3.new(240,1,240);lobby.Position=Vector3.new(0,0,0);lobby.Material=Enum.Material.Slate;lobby.Color=Color3.fromRGB(30,24,38);lobby.Parent=workspace
+local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(360,1,360);floor.Position=Vector3.new(0,0,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
 
-local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
-if halloweenOk and halloween then
- halloween.Name="Halloween_113280926555931";halloween.Parent=workspace
- -- V77: delete the showcase shell itself, preserving its displayed props
- local showcaseWords={"lighting","architecture","nature","graveyard","pumpkins","witchcraft"}
- for _,cat in ipairs(halloween:GetDescendants()) do
-  if cat:IsA("Model") then
-   local n=string.lower(cat.Name)
-   local showcase=string.match(n,"%d+")~=nil
-   if showcase then
-    local hit=false
-    for _,w in ipairs(showcaseWords) do if string.find(n,w,1,true) then hit=true break end end
-    if hit then
-     for _,child in ipairs(cat:GetChildren()) do
-      if child:IsA("Model") then child.Parent=halloween end
-     end
-     cat:Destroy()
-    end
+local okHalloween,pack=pcall(function() return InsertService:LoadAsset(113280926555931) end)
+if okHalloween and pack then
+ pack.Name="Halloween_113280926555931";pack.Parent=workspace
+ local items={}
+ for _,m in ipairs(pack:GetDescendants()) do
+  if m:IsA("Model") then
+   local childModel=false
+   local partCount=0
+   for _,d in ipairs(m:GetDescendants()) do
+    if d:IsA("Model") and d~=m then childModel=true end
+    if d:IsA("BasePart") then partCount+=1 end
    end
+   if partCount>0 and not childModel then table.insert(items,m) end
   end
  end
- -- V76: remove catalog/showcase altar geometry before using props
- local altarWords={"lighting","ligitchuing","pumpkins","architecture","nature","graveyard"}
- local remove={}
- for _,o in ipairs(halloween:GetDescendants()) do
-  local n=string.lower(o.Name)
-  local named=false
-  for _,w in ipairs(altarWords) do if string.find(n,w,1,true) and string.match(n,"%d+") then named=true break end end
-  if named then
-   for _,d in ipairs(o:GetDescendants()) do
-    if d:IsA("BasePart") then
-     local flat=d.Size.Y<=3 and (d.Size.X>=12 or d.Size.Z>=12)
-     local neon=d.Material==Enum.Material.Neon
-     if flat or neon then table.insert(remove,d) end
-    elseif d:IsA("SurfaceGui") or d:IsA("BillboardGui") then table.insert(remove,d) end
-   end
+ for _,m in ipairs(items) do m.Parent=pack end
+ for _,o in ipairs(pack:GetChildren()) do
+  if o:IsA("Model") and not table.find(items,o) then o:Destroy() end
+ end
+ local cols=12
+ local gap=24
+ for i,m in ipairs(items) do
+  local row=math.floor((i-1)/cols);local col=(i-1)%cols
+  local x=(col-(cols-1)/2)*gap;local z=(row*gap)-145
+  m:PivotTo(CFrame.new(x,0.5,z))
+  m.Name=string.format("ITEM_%03d",i)
+  local adornee=m:FindFirstChildWhichIsA("BasePart",true)
+  if adornee then
+   local tag=Instance.new("BillboardGui");tag.Name="ItemNumber";tag.Size=UDim2.fromOffset(100,28);tag.StudsOffset=Vector3.new(0,4,0);tag.AlwaysOnTop=true;tag.Adornee=adornee;tag.Parent=m
+   local t=Instance.new("TextLabel");t.Size=UDim2.fromScale(1,1);t.BackgroundColor3=Color3.fromRGB(10,10,12);t.BackgroundTransparency=.15;t.TextColor3=Color3.new(1,1,1);t.Font=Enum.Font.GothamBold;t.TextSize=14;t.Text=string.format("ITEM %03d",i);t.Parent=tag
   end
  end
- for _,o in ipairs(remove) do if o.Parent then o:Destroy() end end
- local usable={}
- for _,o in ipairs(halloween:GetDescendants()) do
-  if o:IsA("Model") then
-   local n=string.lower(o.Name)
-   local parts=0
-   for _,d in ipairs(o:GetDescendants()) do if d:IsA("BasePart") then parts+=1 end end
-   if parts>0 and parts<80 and not string.find(n,"nature") and not string.find(n,"graveyard") and not string.find(n,"lighting") then table.insert(usable,o) end
-  end
- end
- table.sort(usable,function(x,y) return #x:GetDescendants()<#y:GetDescendants() end)
- local originals={}
- for i,o in ipairs(usable) do
-  local nested=false
-  for _,q in ipairs(originals) do if o:IsDescendantOf(q) then nested=true break end end
-  if not nested then table.insert(originals,o) end
-  if #originals>=60 then break end
- end
- for _,o in ipairs(originals) do o.Parent=halloween end
- for _,o in ipairs(halloween:GetChildren()) do if o:IsA("Model") and not table.find(originals,o) then o:Destroy() end end
- local function place(src,x,z,rot)
-  local c=src:Clone();c.Parent=halloween;c:PivotTo(CFrame.new(x,0.5,z)*CFrame.Angles(0,math.rad(rot),0))
- end
- for i,o in ipairs(originals) do
-  local angle=math.rad((i*137.5)%360);local r=38+((i*17)%65)
-  o:PivotTo(CFrame.new(math.cos(angle)*r,0.5,math.sin(angle)*r)*CFrame.Angles(0,-angle,0))
- end
- if #originals>0 then
-  for i=1,36 do local o=originals[((i*7-1)%#originals)+1];local a=math.rad((i*47)%360);place(o,math.cos(a)*(55+(i%4)*12),math.sin(a)*(55+(i%4)*12),(i*31)%360) end
- end
+ pack:SetAttribute("ItemCount",#items)
+ print("[Halloween V78] Individual items:",#items)
 end
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -223,7 +189,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V77")
+root:SetAttribute("ServerBuild", "V78")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -236,7 +202,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V77"
+txt.Text = "BUILD V78"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
