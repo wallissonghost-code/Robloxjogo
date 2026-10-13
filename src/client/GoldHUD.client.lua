@@ -202,7 +202,7 @@ end)
 task.spawn(function()
  local jg=player.PlayerGui:WaitForChild("CustomJumpHUD",10);local jb=jg and jg:FindFirstChild("CustomJumpButton")
  if jb then
-  jumpSelection=Instance.new("UIStroke");jumpSelection.Name="EditSelection";jumpSelection.Color=Color3.fromRGB(255,199,47);jumpSelection.Thickness=4;jumpSelection.Transparency=1;jumpSelection.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;jumpSelection.Parent=jb
+  jumpSelection=Instance.new("UIStroke");jumpSelection.Name="EditSelection";jumpSelection.Color=Color3.fromRGB(70,255,120);jumpSelection.Thickness=3;jumpSelection.Transparency=1;jumpSelection.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;jumpSelection.Parent=jb
   jb.Activated:Connect(function()if editor.Visible then clearSelection();selectedElement="jump";jumpSelection.Transparency=0;editTitle.Text="EDITANDO: PULO";editInfo.Text="X "..jumpX.."  Y "..jumpY.."  •  tamanho "..math.floor(jumpScale*100).."%" end end)
  end
 end)
