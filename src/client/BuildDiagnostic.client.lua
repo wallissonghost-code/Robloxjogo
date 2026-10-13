@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 
-local BUILD_VERSION = "V48"
+local BUILD_VERSION = "V49"
 local ASSET_ID = 119678628566456
 local ATM_NAME = "QuarantinedATM_" .. ASSET_ID
 
