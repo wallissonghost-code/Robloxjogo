@@ -1,20 +1,45 @@
 local InsertService = game:GetService("InsertService")
 
--- Halloween V71
-local halloweenOk, halloween = pcall(function() return InsertService:LoadAsset(113280926555931) end)
+-- Halloween lobby V73
+local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931")
+if oldHalloween then oldHalloween:Destroy() end
+local oldBase=workspace:FindFirstChild("Baseplate")
+if oldBase then oldBase:Destroy() end
+
+local lobby=Instance.new("Part")
+lobby.Name="HalloweenLobbyFloor"
+lobby.Anchored=true
+lobby.Size=Vector3.new(180,1,180)
+lobby.Position=Vector3.new(0,0,0)
+lobby.Material=Enum.Material.Slate
+lobby.Color=Color3.fromRGB(34,28,42)
+lobby.Parent=workspace
+
+local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if halloweenOk and halloween then
- halloween.Name = "Halloween_113280926555931"
- halloween.Parent = workspace
- local hs={CFrame.new(-24,2,-20),CFrame.new(0,2,-28),CFrame.new(24,2,-20),CFrame.new(-28,2,0),CFrame.new(28,2,0),CFrame.new(-24,2,20),CFrame.new(0,2,28),CFrame.new(24,2,20)}
- local n=0
+ halloween.Name="Halloween_113280926555931"
+ halloween.Parent=workspace
+ local objects={}
  for _,o in ipairs(halloween:GetChildren()) do
   if o:IsA("Model") or o:IsA("BasePart") then
-   n=n+1
-   local cf=hs[((n-1)%#hs)+1]
-   if o:IsA("Model") then o:PivotTo(cf) else o.CFrame=cf end
+   if o:IsA("BasePart") and math.max(o.Size.X,o.Size.Y,o.Size.Z)>70 then o:Destroy()
+   else table.insert(objects,o) end
   end
  end
+ local spots={
+  {-68,-58,20},{-42,-64,-15},{-12,-70,8},{22,-66,-12},{55,-58,18},
+  {-72,-30,-18},{-48,-38,12},{-18,-44,-22},{18,-42,18},{48,-38,-8},{72,-28,15},
+  {-70,5,12},{-48,12,-16},{-25,5,20},{25,7,-18},{50,12,16},{70,5,-10},
+  {-65,40,-15},{-38,48,18},{-10,58,-8},{18,54,14},{45,48,-18},{68,40,10},
+  {-48,70,8},{0,72,-12},{48,70,16}
+ }
+ for i,o in ipairs(objects) do
+  local p=spots[((i-1)%#spots)+1]
+  local cf=CFrame.new(p[1],1,p[2])*CFrame.Angles(0,math.rad(p[3]*7),0)
+  if o:IsA("Model") then o:PivotTo(cf) else o.CFrame=cf end
+ end
 end
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ASSET_ID = 119678628566456
