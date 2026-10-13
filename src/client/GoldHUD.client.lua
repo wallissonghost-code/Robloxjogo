@@ -100,7 +100,7 @@ settingsMove.Event:Connect(function(dx,dy)
 end)
 settingsButton:SetAttribute("HUDX",settingsX);settingsButton:SetAttribute("HUDY",settingsY)
 local sbc=Instance.new("UICorner");sbc.CornerRadius=UDim.new(0,10);sbc.Parent=settingsButton
-local sbs=Instance.new("UIStroke");sbs.Color=Color3.fromRGB(255,194,45);sbs.Transparency=.25;sbs.Thickness=1;sbs.Parent=settingsButton
+local sbs=Instance.new("UIStroke");sbs.Color=Color3.fromRGB(72,76,84);sbs.Transparency=.45;sbs.Thickness=1;sbs.Parent=settingsButton
 local gear=Instance.new("Frame");gear.AnchorPoint=Vector2.new(.5,.5);gear.Position=UDim2.fromScale(.5,.5);gear.Size=UDim2.fromOffset(15,15);gear.BackgroundColor3=Color3.fromRGB(255,199,47);gear.BorderSizePixel=0;gear.Parent=settingsButton
 local gc=Instance.new("UICorner");gc.CornerRadius=UDim.new(1,0);gc.Parent=gear
 local hole=Instance.new("Frame");hole.AnchorPoint=Vector2.new(.5,.5);hole.Position=UDim2.fromScale(.5,.5);hole.Size=UDim2.fromOffset(6,6);hole.BackgroundColor3=Color3.fromRGB(13,15,18);hole.BorderSizePixel=0;hole.Parent=gear
@@ -159,7 +159,7 @@ local function syncEditProxies()
 end
 
 local selectionStroke=Instance.new("UIStroke");selectionStroke.Name="EditSelection";selectionStroke.Color=Color3.fromRGB(70,255,120);selectionStroke.Thickness=2.5;selectionStroke.Transparency=1;selectionStroke.Parent=frame
-local settingsSelection=Instance.new("UIStroke");settingsSelection.Name="EditSelection";settingsSelection.Color=Color3.fromRGB(70,255,120);settingsSelection.Thickness=2.5;settingsSelection.Transparency=1;settingsSelection.Parent=settingsButton
+local settingsSelection=Instance.new("UIStroke");settingsSelection.Name="EditSelection";settingsSelection.Color=Color3.fromRGB(70,255,120);settingsSelection.Thickness=3;settingsSelection.Transparency=1;settingsSelection.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;settingsSelection.Parent=settingsButton
 local function clearSelection() selectionStroke.Transparency=1;settingsSelection.Transparency=1 end
 local controls=Instance.new("Frame");controls.Position=UDim2.fromOffset(12,54);controls.Size=UDim2.new(1,-24,0,38);controls.BackgroundTransparency=1;controls.ZIndex=101;controls.Parent=editor
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
@@ -205,8 +205,14 @@ end)
 -- legacy save removed
 local save={Activated={Connect=function()end}}
 reset.Activated:Connect(function()
- local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
- if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);applyPosition();applyScale();refreshSettings()end
+ hudX,hudY,sizeScale=0,-4,1
+ applyPosition();applyScale()
+ reset.Text="REDEFINIDO"
+ task.delay(.7,function() if reset and reset.Parent then reset.Text="REDEFINIR HUD" end end)
+ task.spawn(function()
+  local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
+  if pok and yes then activePreset=newslot or activePreset;hudX=nx or hudX;hudY=ny or hudY;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale();refreshSettings() end
+ end)
 end)
 settingsButton.Activated:Connect(function()
  if editor.Visible then selectedElement="settings";clearSelection();settingsSelection.Transparency=0;editTitle.Text="EDITANDO: CONFIGURAÇÕES";editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return end
