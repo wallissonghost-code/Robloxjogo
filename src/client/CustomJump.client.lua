@@ -9,7 +9,7 @@ local function hideNative()
  if not touch then return false end
  local found=false
  for _,obj in ipairs(touch:GetDescendants()) do
-  if obj:IsA("GuiObject") and (obj.Name=="JumpButton" or string.find(string.lower(obj.Name),"jump")) then
+  if obj:IsA("GuiObject") and obj.Name=="JumpButton" then
    obj.Visible=false
    obj.Active=false
    found=true
@@ -24,7 +24,7 @@ task.spawn(function()
  end
 end)
 pg.DescendantAdded:Connect(function(obj)
- if obj:IsA("GuiObject") and (obj.Name=="JumpButton" or string.find(string.lower(obj.Name),"jump")) then
+ if obj:IsA("GuiObject") and obj.Name=="JumpButton" and not obj:IsDescendantOf(gui) then
   task.defer(function() if obj.Parent then obj.Visible=false;obj.Active=false end end)
  end
 end)
