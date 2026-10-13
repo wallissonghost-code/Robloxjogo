@@ -18,7 +18,7 @@ local function hideNative()
  return found
 end
 task.spawn(function()
- while gui==nil or gui.Parent~=nil do
+ while true do
   hideNative()
   task.wait(.25)
  end
