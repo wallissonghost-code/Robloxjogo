@@ -6,15 +6,28 @@ local pg=player:WaitForChild("PlayerGui")
 
 local function hideNative()
  local touch=pg:FindFirstChild("TouchGui")
- if not touch then return end
- local frame=touch:FindFirstChild("TouchControlFrame")
- local jump=frame and frame:FindFirstChild("JumpButton")
- if jump then jump.Visible=false end
+ if not touch then return false end
+ local found=false
+ for _,obj in ipairs(touch:GetDescendants()) do
+  if obj:IsA("GuiObject") and (obj.Name=="JumpButton" or string.find(string.lower(obj.Name),"jump")) then
+   obj.Visible=false
+   obj.Active=false
+   found=true
+  end
+ end
+ return found
 end
 task.spawn(function()
- for _=1,30 do hideNative();task.wait(.2) end
+ while gui==nil or gui.Parent~=nil do
+  hideNative()
+  task.wait(.25)
+ end
 end)
-pg.ChildAdded:Connect(function(c) if c.Name=="TouchGui" then task.wait(.2);hideNative() end end)
+pg.DescendantAdded:Connect(function(obj)
+ if obj:IsA("GuiObject") and (obj.Name=="JumpButton" or string.find(string.lower(obj.Name),"jump")) then
+  task.defer(function() if obj.Parent then obj.Visible=false;obj.Active=false end end)
+ end
+end)
 
 local gui=Instance.new("ScreenGui")
 gui.Name="CustomJumpHUD";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=true;gui.ScreenInsets=Enum.ScreenInsets.None;gui.DisplayOrder=21;gui.Parent=pg
