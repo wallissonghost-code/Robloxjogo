@@ -79,8 +79,8 @@ local hudX,hudY,activePreset=0,-4,"hud1"
 local sizeScale=1
 local settingsScale=1
 local localPresets={hud1={x=0,y=-4,scale=1},hud2={x=0,y=-4,scale=1}}
-local ok,got,slot,x,y,savedScale=pcall(function() return hudRemote:InvokeServer("get") end)
-if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4;sizeScale=math.clamp(tonumber(savedScale) or 1,.7,1.4);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale} end
+local ok,got,slot,x,y,savedScale,savedSX,savedSY,savedSS=pcall(function() return hudRemote:InvokeServer("get") end)
+if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4;sizeScale=math.clamp(tonumber(savedScale) or 1,.7,1.4);settingsX=savedSX or -87;settingsY=savedSY or 0;settingsScale=math.clamp(tonumber(savedSS) or 1,.7,1.4);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale} end
 
 local function applyPosition()
  frame.Position=UDim2.new(1,hudX,0,hudY)
@@ -183,8 +183,8 @@ local function refreshSettings()
  for i,bt in ipairs(profileButtons) do local on=(activePreset==("hud"..i));bt.BackgroundColor3=on and Color3.fromRGB(255,195,43) or Color3.fromRGB(28,31,38);bt.TextColor3=on and Color3.fromRGB(18,18,18) or Color3.new(1,1,1) end
 end
 for i,bt in ipairs(profileButtons) do bt.Activated:Connect(function()
- localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};local wanted="hud"..i;local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
- if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};applyPosition();applyScale();refreshSettings()end
+ localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};local wanted="hud"..i;local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
+ if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);settingsX=nsx or -87;settingsY=nsy or 0;settingsScale=math.clamp(tonumber(nss) or 1,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};applyPosition();applyScale();refreshSettings()end
 end) end
 modify.Activated:Connect(function()
  panel.Visible=false;editor.Visible=true;selectedElement=nil;clearSelection()
@@ -199,7 +199,7 @@ diagProxy.Activated:Connect(function() if editor.Visible then selectedElement="d
 buildProxy.Activated:Connect(function() if editor.Visible then selectedElement="build";editTitle.Text="EDITANDO: BUILD";editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%" end end)
 done.Activated:Connect(function()
  if selectedElement=="settings" or selectedElement=="diagnostic" or selectedElement=="build" then editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings();return elseif selectedElement~="gold" then editor.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;clearSelection();refreshSettings();return end
- local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale)end)
+ local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale,settingsX,settingsY,settingsScale)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale()end
  editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings()
 end)
@@ -207,13 +207,15 @@ end)
 local save={Activated={Connect=function()end}}
 reset.Activated:Connect(function()
  hudX,hudY,sizeScale=0,-4,1
+ settingsX,settingsY,settingsScale=-87,0,1
+ settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38,38)
  localPresets[activePreset]={x=0,y=-4,scale=1}
  applyPosition();applyScale()
  reset.Text="REDEFINIDO"
  task.delay(.7,function() if reset and reset.Parent then reset.Text="REDEFINIR HUD" end end)
  task.spawn(function()
-  local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
-  if pok and yes then activePreset=newslot or activePreset;hudX=nx or hudX;hudY=ny or hudY;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale();refreshSettings() end
+  local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
+  if pok and yes then activePreset=newslot or activePreset;hudX=nx or hudX;hudY=ny or hudY;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);settingsX=nsx or settingsX;settingsY=nsy or settingsY;settingsScale=math.clamp(tonumber(nss) or settingsScale,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);applyPosition();applyScale();refreshSettings() end
  end)
 end)
 settingsButton.Activated:Connect(function()
