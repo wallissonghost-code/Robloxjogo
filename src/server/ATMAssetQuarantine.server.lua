@@ -5,7 +5,15 @@ local halloweenOk, halloween = pcall(function() return InsertService:LoadAsset(1
 if halloweenOk and halloween then
  halloween.Name = "Halloween_113280926555931"
  halloween.Parent = workspace
- halloween:PivotTo(CFrame.new(14,4,-6))
+ local hs={CFrame.new(-24,2,-20),CFrame.new(0,2,-28),CFrame.new(24,2,-20),CFrame.new(-28,2,0),CFrame.new(28,2,0),CFrame.new(-24,2,20),CFrame.new(0,2,28),CFrame.new(24,2,20)}
+ local n=0
+ for _,o in ipairs(halloween:GetChildren()) do
+  if o:IsA("Model") or o:IsA("BasePart") then
+   n=n+1
+   local cf=hs[((n-1)%#hs)+1]
+   if o:IsA("Model") then o:PivotTo(cf) else o.CFrame=cf end
+  end
+ end
 end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
