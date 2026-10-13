@@ -56,8 +56,11 @@ local function jump()
  local char=player.Character
  local hum=char and char:FindFirstChildOfClass("Humanoid")
  if hum and hum.Health>0 and hum:GetState()~=Enum.HumanoidStateType.Dead then
-  hum.Jump=true
-  hum:ChangeState(Enum.HumanoidStateType.Jumping)
+  local state=hum:GetState()
+  local grounded=hum.FloorMaterial~=Enum.Material.Air
+  if grounded and state~=Enum.HumanoidStateType.Freefall and state~=Enum.HumanoidStateType.Jumping then
+   hum.Jump=true
+  end
  end
 end
 b.Activated:Connect(jump)
