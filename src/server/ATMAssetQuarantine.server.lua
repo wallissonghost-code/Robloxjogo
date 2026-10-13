@@ -1,42 +1,42 @@
 local InsertService = game:GetService("InsertService")
 
--- Halloween lobby V74: unpack showcase categories into individual props
-local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931")
-if oldHalloween then oldHalloween:Destroy() end
-local oldBase=workspace:FindFirstChild("Baseplate")
-if oldBase then oldBase:Destroy() end
-local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor")
-if oldFloor then oldFloor:Destroy() end
-
-local lobby=Instance.new("Part")
-lobby.Name="HalloweenLobbyFloor";lobby.Anchored=true;lobby.Size=Vector3.new(220,1,220)
-lobby.Position=Vector3.new(0,0,0);lobby.Material=Enum.Material.Slate
-lobby.Color=Color3.fromRGB(30,24,38);lobby.Parent=workspace
+-- Halloween lobby V75: dissolve showcase stands and build themed zones
+local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931");if oldHalloween then oldHalloween:Destroy() end
+local oldBase=workspace:FindFirstChild("Baseplate");if oldBase then oldBase:Destroy() end
+local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor");if oldFloor then oldFloor:Destroy() end
+local lobby=Instance.new("Part");lobby.Name="HalloweenLobbyFloor";lobby.Anchored=true;lobby.Size=Vector3.new(240,1,240);lobby.Position=Vector3.new(0,0,0);lobby.Material=Enum.Material.Slate;lobby.Color=Color3.fromRGB(30,24,38);lobby.Parent=workspace
 
 local halloweenOk,halloween=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if halloweenOk and halloween then
  halloween.Name="Halloween_113280926555931";halloween.Parent=workspace
- local props={}
- for _,category in ipairs(halloween:GetChildren()) do
-  if category:IsA("Model") then
-   for _,prop in ipairs(category:GetChildren()) do
-    if prop:IsA("Model") then table.insert(props,prop) end
-   end
+ local usable={}
+ for _,o in ipairs(halloween:GetDescendants()) do
+  if o:IsA("Model") then
+   local n=string.lower(o.Name)
+   local parts=0
+   for _,d in ipairs(o:GetDescendants()) do if d:IsA("BasePart") then parts+=1 end end
+   if parts>0 and parts<80 and not string.find(n,"nature") and not string.find(n,"graveyard") and not string.find(n,"lighting") then table.insert(usable,o) end
   end
  end
- local ring={30,42,54,66,78,90}
- for i,prop in ipairs(props) do
-  local r=ring[((i-1)%#ring)+1]
-  local angle=math.rad((i*137.5)%360)
-  local x=math.cos(angle)*r
-  local z=math.sin(angle)*r
-  local y=0.5
-  local cf=CFrame.new(x,y,z)*CFrame.Angles(0,-angle+math.rad((i*31)%80-40),0)
-  prop.Parent=halloween
-  prop:PivotTo(cf)
+ table.sort(usable,function(x,y) return #x:GetDescendants()<#y:GetDescendants() end)
+ local originals={}
+ for i,o in ipairs(usable) do
+  local nested=false
+  for _,q in ipairs(originals) do if o:IsDescendantOf(q) then nested=true break end end
+  if not nested then table.insert(originals,o) end
+  if #originals>=60 then break end
  end
- for _,category in ipairs(halloween:GetChildren()) do
-  if category:IsA("Model") and #category:GetChildren()==0 then category:Destroy() end
+ for _,o in ipairs(originals) do o.Parent=halloween end
+ for _,o in ipairs(halloween:GetChildren()) do if o:IsA("Model") and not table.find(originals,o) then o:Destroy() end end
+ local function place(src,x,z,rot)
+  local c=src:Clone();c.Parent=halloween;c:PivotTo(CFrame.new(x,0.5,z)*CFrame.Angles(0,math.rad(rot),0))
+ end
+ for i,o in ipairs(originals) do
+  local angle=math.rad((i*137.5)%360);local r=38+((i*17)%65)
+  o:PivotTo(CFrame.new(math.cos(angle)*r,0.5,math.sin(angle)*r)*CFrame.Angles(0,-angle,0))
+ end
+ if #originals>0 then
+  for i=1,36 do local o=originals[((i*7-1)%#originals)+1];local a=math.rad((i*47)%360);place(o,math.cos(a)*(55+(i%4)*12),math.sin(a)*(55+(i%4)*12),(i*31)%360) end
  end
 end
 
@@ -187,7 +187,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V74")
+root:SetAttribute("ServerBuild", "V75")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -200,7 +200,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V74"
+txt.Text = "BUILD V75"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
