@@ -78,9 +78,10 @@ local settingsX,settingsY=-87,0
 local hudX,hudY,activePreset=0,-4,"hud1"
 local sizeScale=1
 local settingsScale=1
+local jumpX,jumpY,jumpScale=-28,-110,1
 local localPresets={hud1={x=0,y=-4,scale=1},hud2={x=0,y=-4,scale=1}}
-local ok,got,slot,x,y,savedScale,savedSX,savedSY,savedSS=pcall(function() return hudRemote:InvokeServer("get") end)
-if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4;sizeScale=math.clamp(tonumber(savedScale) or 1,.7,1.4);settingsX=savedSX or -87;settingsY=savedSY or 0;settingsScale=math.clamp(tonumber(savedSS) or 1,.7,1.4);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale} end
+local ok,got,slot,x,y,savedScale,savedSX,savedSY,savedSS,savedJX,savedJY,savedJS=pcall(function() return hudRemote:InvokeServer("get") end)
+if ok and got then activePreset=slot or "hud1";hudX=math.min(x or 0,0);hudY=y or -4;sizeScale=math.clamp(tonumber(savedScale) or 1,.7,1.4);settingsX=savedSX or -87;settingsY=savedSY or 0;settingsScale=math.clamp(tonumber(savedSS) or 1,.7,1.4);jumpX=savedJX or -28;jumpY=savedJY or -110;jumpScale=math.clamp(tonumber(savedJS) or 1,.7,1.4);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale} end
 
 local function applyPosition()
  frame.Position=UDim2.new(1,hudX,0,hudY)
@@ -161,12 +162,20 @@ end
 
 local selectionStroke=Instance.new("UIStroke");selectionStroke.Name="EditSelection";selectionStroke.Color=Color3.fromRGB(70,255,120);selectionStroke.Thickness=2.5;selectionStroke.Transparency=1;selectionStroke.Parent=frame
 local settingsSelection=Instance.new("UIStroke");settingsSelection.Name="EditSelection";settingsSelection.Color=Color3.fromRGB(70,255,120);settingsSelection.Thickness=3;settingsSelection.Transparency=1;settingsSelection.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;settingsSelection.Parent=settingsButton
-local function clearSelection() selectionStroke.Transparency=1;settingsSelection.Transparency=1 end
+local function jumpButton()
+ local jg=player.PlayerGui:FindFirstChild("CustomJumpHUD");return jg and jg:FindFirstChild("CustomJumpButton")
+end
+local function applyJump()
+ local jb=jumpButton();if jb then jb.Position=UDim2.new(1,jumpX,1,jumpY);jb.Size=UDim2.fromOffset(76*jumpScale,76*jumpScale) end
+ local jg=player.PlayerGui:FindFirstChild("CustomJumpHUD");local ev=jg and jg:FindFirstChild("JumpHUDEdit");if ev then ev:Fire(jumpX,jumpY,jumpScale) end
+end
+local jumpSelection
+local function clearSelection() selectionStroke.Transparency=1;settingsSelection.Transparency=1;if jumpSelection then jumpSelection.Transparency=1 end end
 local controls=Instance.new("Frame");controls.Position=UDim2.fromOffset(12,54);controls.Size=UDim2.new(1,-24,0,38);controls.BackgroundTransparency=1;controls.ZIndex=101;controls.Parent=editor
 local defs={{"←",-5,0},{"→",5,0},{"↑",0,-5},{"↓",0,5}}
 for i,d in ipairs(defs) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new((i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=17;bt.BorderSizePixel=0;bt.ZIndex=102;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function()if selectedElement=="diagnostic" then diagX=math.clamp(diagX+d[2],0,1000);diagY=math.clamp(diagY+d[3],0,700);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Position=UDim2.fromOffset(diagX,diagY);diagProxy.Position=db.Position end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildX=buildX+d[2];buildY=buildY+d[3];syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="settings" then settingsX=math.clamp(settingsX+d[2],-500,0);settingsY=math.clamp(settingsY+d[3],0,500);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton:SetAttribute("HUDX",settingsX);settingsButton:SetAttribute("HUDY",settingsY);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
+ bt.Activated:Connect(function()if selectedElement=="diagnostic" then diagX=math.clamp(diagX+d[2],0,1000);diagY=math.clamp(diagY+d[3],0,700);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Position=UDim2.fromOffset(diagX,diagY);diagProxy.Position=db.Position end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildX=buildX+d[2];buildY=buildY+d[3];syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="jump" then jumpX=math.clamp(jumpX+d[2],-1000,0);jumpY=math.clamp(jumpY+d[3],-1000,0);applyJump();editInfo.Text="X "..jumpX.."  Y "..jumpY.."  •  tamanho "..math.floor(jumpScale*100).."%";return elseif selectedElement=="settings" then settingsX=math.clamp(settingsX+d[2],-500,0);settingsY=math.clamp(settingsY+d[3],0,500);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton:SetAttribute("HUDX",settingsX);settingsButton:SetAttribute("HUDY",settingsY);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;hudX=math.clamp(hudX+d[2],-500,0);hudY=math.clamp(hudY+d[3],-100,500);applyPosition();editInfo.Text="X "..hudX.."  Y "..hudY.."  •  tamanho "..math.floor((frame:GetAttribute("HUDScale") or 1)*100).."%" end)
 end
 local function applyScale()
  local baseW=math.max(86,frame:GetAttribute("BaseWidth") or 112)
@@ -175,7 +184,7 @@ local function applyScale()
 end
 for i,d in ipairs({{"−",-.1},{"+",.1}}) do
  local bt=Instance.new("TextButton");bt.Position=UDim2.new(.56+(i-1)*.14,0,0,0);bt.Size=UDim2.new(.13,-3,1,0);bt.BackgroundColor3=Color3.fromRGB(28,31,38);bt.Text=d[1];bt.TextColor3=Color3.new(1,1,1);bt.Font=Enum.Font.GothamBold;bt.TextSize=18;bt.BorderSizePixel=0;bt.ZIndex=102;bt.Parent=controls;local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,8);c.Parent=bt
- bt.Activated:Connect(function() if selectedElement=="diagnostic" then diagScale=math.clamp(diagScale+d[2],.7,1.4);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Size=UDim2.fromOffset(118*diagScale,34*diagScale);diagProxy.Size=db.Size end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildScale=math.clamp(buildScale+d[2],.7,1.4);syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="settings" then settingsScale=math.clamp(settingsScale+d[2],.7,1.4);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
+ bt.Activated:Connect(function() if selectedElement=="diagnostic" then diagScale=math.clamp(diagScale+d[2],.7,1.4);local dg=player.PlayerGui:FindFirstChild("BuildDiagnostic");local db=dg and dg:FindFirstChild("OpenDiagnostic");if db then db.Size=UDim2.fromOffset(118*diagScale,34*diagScale);diagProxy.Size=db.Size end;editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%";return elseif selectedElement=="build" then buildScale=math.clamp(buildScale+d[2],.7,1.4);syncEditProxies();editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%";return elseif selectedElement=="jump" then jumpScale=math.clamp(jumpScale+d[2],.7,1.4);applyJump();editInfo.Text="X "..jumpX.."  Y "..jumpY.."  •  tamanho "..math.floor(jumpScale*100).."%";return elseif selectedElement=="settings" then settingsScale=math.clamp(settingsScale+d[2],.7,1.4);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);editInfo.Text="X "..settingsX.."  Y "..settingsY.."  •  tamanho "..math.floor(settingsScale*100).."%";return elseif selectedElement~="gold" then return end;sizeScale=math.clamp(sizeScale+d[2],.7,1.4);applyScale()end)
 end
 local done=Instance.new("TextButton");done.AnchorPoint=Vector2.new(1,0);done.Position=UDim2.new(1,0,0,0);done.Size=UDim2.new(.16,-2,1,0);done.BackgroundColor3=Color3.fromRGB(255,199,47);done.Text="OK";done.TextColor3=Color3.fromRGB(18,18,18);done.Font=Enum.Font.GothamBold;done.TextSize=11;done.BorderSizePixel=0;done.ZIndex=102;done.Parent=controls;local dc=Instance.new("UICorner");dc.CornerRadius=UDim.new(0,8);dc.Parent=done
 
@@ -183,12 +192,19 @@ local function refreshSettings()
  for i,bt in ipairs(profileButtons) do local on=(activePreset==("hud"..i));bt.BackgroundColor3=on and Color3.fromRGB(255,195,43) or Color3.fromRGB(28,31,38);bt.TextColor3=on and Color3.fromRGB(18,18,18) or Color3.new(1,1,1) end
 end
 for i,bt in ipairs(profileButtons) do bt.Activated:Connect(function()
- localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};local wanted="hud"..i;local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
- if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);settingsX=nsx or -87;settingsY=nsy or 0;settingsScale=math.clamp(tonumber(nss) or 1,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};applyPosition();applyScale();refreshSettings()end
+ localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};local wanted="hud"..i;local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss,njx,njy,njs=pcall(function()return hudRemote:InvokeServer("load",wanted)end)
+ if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or 1,.7,1.4);settingsX=nsx or -87;settingsY=nsy or 0;settingsScale=math.clamp(tonumber(nss) or 1,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);jumpX=njx or -28;jumpY=njy or -110;jumpScale=math.clamp(tonumber(njs) or 1,.7,1.4);applyJump();localPresets[activePreset]={x=hudX,y=hudY,scale=sizeScale};applyPosition();applyScale();refreshSettings()end
 end) end
 modify.Activated:Connect(function()
  panel.Visible=false;editor.Visible=true;selectedElement=nil;clearSelection()
  syncEditProxies();diagProxy.Visible=true;buildProxy.Visible=true;editTitle.Text="TOQUE EM UM ELEMENTO";editInfo.Text="Selecione um HUD na tela para editar"
+end)
+task.spawn(function()
+ local jg=player.PlayerGui:WaitForChild("CustomJumpHUD",10);local jb=jg and jg:FindFirstChild("CustomJumpButton")
+ if jb then
+  jumpSelection=Instance.new("UIStroke");jumpSelection.Name="EditSelection";jumpSelection.Color=Color3.fromRGB(70,255,120);jumpSelection.Thickness=3;jumpSelection.Transparency=1;jumpSelection.Parent=jb
+  jb.Activated:Connect(function()if editor.Visible then selectedElement="jump";clearSelection();jumpSelection.Transparency=0;editTitle.Text="EDITANDO: PULO";editInfo.Text="X "..jumpX.."  Y "..jumpY.."  •  tamanho "..math.floor(jumpScale*100).."%" end end)
+ end
 end)
 -- The edited HUD itself can also be tapped while edit mode is active.
 frame.Active=true
@@ -198,8 +214,8 @@ end)
 diagProxy.Activated:Connect(function() if editor.Visible then selectedElement="diagnostic";editTitle.Text="EDITANDO: DIAGNÓSTICO";editInfo.Text="X "..diagX.."  Y "..diagY.."  •  tamanho "..math.floor(diagScale*100).."%" end end)
 buildProxy.Activated:Connect(function() if editor.Visible then selectedElement="build";editTitle.Text="EDITANDO: BUILD";editInfo.Text="X "..buildX.."  Y "..buildY.."  •  tamanho "..math.floor(buildScale*100).."%" end end)
 done.Activated:Connect(function()
- if selectedElement=="settings" then local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale,settingsX,settingsY,settingsScale)end);if pok and yes then activePreset=newslot or activePreset;settingsX=nsx or settingsX;settingsY=nsy or settingsY;settingsScale=math.clamp(tonumber(nss) or settingsScale,.7,1.4) end;editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings();return elseif selectedElement=="diagnostic" or selectedElement=="build" then editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings();return elseif selectedElement~="gold" then editor.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;clearSelection();refreshSettings();return end
- local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale,settingsX,settingsY,settingsScale)end)
+ if selectedElement=="jump" or selectedElement=="settings" then local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale,settingsX,settingsY,settingsScale,jumpX,jumpY,jumpScale)end);if pok and yes then activePreset=newslot or activePreset;settingsX=nsx or settingsX;settingsY=nsy or settingsY;settingsScale=math.clamp(tonumber(nss) or settingsScale,.7,1.4) end;editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings();return elseif selectedElement=="diagnostic" or selectedElement=="build" then editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings();return elseif selectedElement~="gold" then editor.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;clearSelection();refreshSettings();return end
+ local pok,yes,newslot,nx,ny,ns=pcall(function()return hudRemote:InvokeServer("save",activePreset,hudX,hudY,sizeScale,settingsX,settingsY,settingsScale,jumpX,jumpY,jumpScale)end)
  if pok and yes then activePreset=newslot;hudX=nx;hudY=ny;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);applyPosition();applyScale()end
  editor.Visible=false;diagProxy.Visible=false;buildProxy.Visible=false;frame.ZIndex=1;settingsButton.ZIndex=1;panel.Visible=true;selectedElement=nil;clearSelection();refreshSettings()
 end)
@@ -208,14 +224,16 @@ local save={Activated={Connect=function()end}}
 reset.Activated:Connect(function()
  hudX,hudY,sizeScale=0,-4,1
  settingsX,settingsY,settingsScale=-87,0,1
+ jumpX,jumpY,jumpScale=-28,-110,1
+ applyJump()
  settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38,38)
  localPresets[activePreset]={x=0,y=-4,scale=1}
  applyPosition();applyScale()
  reset.Text="REDEFINIDO"
  task.delay(.7,function() if reset and reset.Parent then reset.Text="REDEFINIR HUD" end end)
  task.spawn(function()
-  local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
-  if pok and yes then activePreset=newslot or activePreset;hudX=nx or hudX;hudY=ny or hudY;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);settingsX=nsx or settingsX;settingsY=nsy or settingsY;settingsScale=math.clamp(tonumber(nss) or settingsScale,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);applyPosition();applyScale();refreshSettings() end
+  local pok,yes,newslot,nx,ny,ns,nsx,nsy,nss,njx,njy,njs=pcall(function()return hudRemote:InvokeServer("reset",activePreset)end)
+  if pok and yes then activePreset=newslot or activePreset;hudX=nx or hudX;hudY=ny or hudY;sizeScale=math.clamp(tonumber(ns) or sizeScale,.7,1.4);settingsX=nsx or settingsX;settingsY=nsy or settingsY;settingsScale=math.clamp(tonumber(nss) or settingsScale,.7,1.4);settingsButton.Position=UDim2.new(1,settingsX,0,settingsY);settingsButton.Size=UDim2.fromOffset(38*settingsScale,38*settingsScale);jumpX=njx or jumpX;jumpY=njy or jumpY;jumpScale=math.clamp(tonumber(njs) or jumpScale,.7,1.4);applyJump();applyPosition();applyScale();refreshSettings() end
  end)
 end)
 settingsButton.Activated:Connect(function()
