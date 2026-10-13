@@ -56,10 +56,12 @@ local function jump()
  local char=player.Character
  local hum=char and char:FindFirstChildOfClass("Humanoid")
  if hum and hum.Health>0 and hum:GetState()~=Enum.HumanoidStateType.Dead then
-  local state=hum:GetState()
-  local grounded=hum.FloorMaterial~=Enum.Material.Air
-  if grounded and state~=Enum.HumanoidStateType.Freefall and state~=Enum.HumanoidStateType.Jumping then
+  local root=char:FindFirstChild("HumanoidRootPart")
+  if hum.FloorMaterial~=Enum.Material.Air and root and math.abs(root.AssemblyLinearVelocity.Y)<8 then
    hum.Jump=true
+   task.delay(0.08,function()
+    if hum and hum.Parent then hum.Jump=false end
+   end)
   end
  end
 end
