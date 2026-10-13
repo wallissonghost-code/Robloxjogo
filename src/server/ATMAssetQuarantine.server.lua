@@ -4,7 +4,7 @@ local InsertService = game:GetService("InsertService")
 local oldHalloween=workspace:FindFirstChild("Halloween_113280926555931");if oldHalloween then oldHalloween:Destroy() end
 local oldBase=workspace:FindFirstChild("Baseplate");if oldBase then oldBase:Destroy() end
 local oldFloor=workspace:FindFirstChild("HalloweenLobbyFloor");if oldFloor then oldFloor:Destroy() end
-local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(4000,2,120);floor.Position=Vector3.new(1900,-1,0);floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
+local floor=Instance.new("Part");floor.Name="HalloweenLobbyFloor";floor.Anchored=true;floor.Size=Vector3.new(8000,4,160);floor.Position=Vector3.new(3900,-2,0);floor.CanCollide=true;floor.CanTouch=true;floor.Transparency=0;floor.Material=Enum.Material.Slate;floor.Color=Color3.fromRGB(32,27,38);floor.Parent=workspace
 
 local okHalloween,pack=pcall(function() return InsertService:LoadAsset(113280926555931) end)
 if okHalloween and pack then
@@ -27,13 +27,13 @@ if okHalloween and pack then
  end
  local gap=24
  for i,m in ipairs(items) do
-  local x=(i-1)*gap;local z=0
+  local x=40+(i-1)*gap;local z=0
   local boxCf,boxSize=m:GetBoundingBox();local bottom=boxCf.Position.Y-boxSize.Y/2;m:PivotTo(m:GetPivot()+Vector3.new(x-m:GetPivot().Position.X,0.05-bottom,z-m:GetPivot().Position.Z))
   m.Name=string.format("ITEM_%03d",i)
   local adornee=m:FindFirstChildWhichIsA("BasePart",true)
   if adornee then
-   local tag=Instance.new("BillboardGui");tag.Name="ItemNumber";tag.Size=UDim2.fromOffset(64,20);tag.StudsOffset=Vector3.new(0,2.5,0);tag.AlwaysOnTop=false;tag.MaxDistance=14;tag.Adornee=adornee;tag.Parent=m
-   local t=Instance.new("TextLabel");t.Size=UDim2.fromScale(1,1);t.BackgroundColor3=Color3.fromRGB(10,10,12);t.BackgroundTransparency=.15;t.TextColor3=Color3.new(1,1,1);t.Font=Enum.Font.GothamBold;t.TextSize=10;t.Text=string.format("ITEM %03d",i);t.Parent=tag
+   local tag=Instance.new("BillboardGui");tag.Name="ItemNumber";tag.Size=UDim2.fromOffset(78,24);tag.StudsOffset=Vector3.new(0,6,0);tag.AlwaysOnTop=true;tag.MaxDistance=9;tag.Adornee=adornee;tag.Parent=m
+   local t=Instance.new("TextLabel");t.Size=UDim2.fromScale(1,1);t.BackgroundColor3=Color3.fromRGB(10,10,12);t.BackgroundTransparency=0;t.TextColor3=Color3.new(1,1,1);t.Font=Enum.Font.GothamBold;t.TextSize=11;t.Text=string.format("ITEM %03d",i);t.Parent=tag
   end
  end
  pack:SetAttribute("ItemCount",#items)
@@ -187,7 +187,7 @@ root:SetAttribute("SafePromptReady", true)
 root:SetAttribute("PromptTriggerCount", 0)
 root:SetAttribute("ATMOpenFireCount", 0)
 root:SetAttribute("LastPromptUserId", 0)
-root:SetAttribute("ServerBuild", "V81")
+root:SetAttribute("ServerBuild", "V82")
 
 local tag = Instance.new("BillboardGui")
 tag.Name = "ServerBuildTag"
@@ -200,7 +200,7 @@ txt.Size = UDim2.fromScale(1,1)
 txt.BackgroundColor3 = Color3.fromRGB(15,15,18)
 txt.BackgroundTransparency = 0.15
 txt.TextColor3 = Color3.new(1,1,1)
-txt.Text = "BUILD V81"
+txt.Text = "BUILD V82"
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 16
 txt.Parent = tag
