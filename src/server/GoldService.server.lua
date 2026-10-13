@@ -17,12 +17,12 @@ local function savePlayer(p)
  if not ok then warn("[Gold] Falha ao salvar "..p.Name..": "..tostring(err))end
 end
 local function setupPlayer(p)
- local presets={hud1={x=0,y=-4,scale=1},hud2={x=0,y=-4,scale=1}}
+ local presets={hud1={x=0,y=-4,scale=1,sx=-87,sy=0,ss=1},hud2={x=0,y=-4,scale=1,sx=-87,sy=0,ss=1}}
  local active="hud1"
  local hok,hdata=pcall(function()return HudStore:GetAsync(keyFor(p))end)
  if hok and type(hdata)=="table" then
-  if hdata.hud1 then presets.hud1={x=math.clamp(math.floor(tonumber(hdata.hud1.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud1.y) or -4),-100,500),scale=math.clamp(tonumber(hdata.hud1.scale) or 1,.7,1.4)} end
-  if hdata.hud2 then presets.hud2={x=math.clamp(math.floor(tonumber(hdata.hud2.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud2.y) or -4),-100,500),scale=math.clamp(tonumber(hdata.hud2.scale) or 1,.7,1.4)} end
+  if hdata.hud1 then presets.hud1={x=math.clamp(math.floor(tonumber(hdata.hud1.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud1.y) or -4),-100,500),scale=math.clamp(tonumber(hdata.hud1.scale) or 1,.7,1.4),sx=math.clamp(math.floor(tonumber(hdata.hud1.sx) or -87),-500,0),sy=math.clamp(math.floor(tonumber(hdata.hud1.sy) or 0),0,500),ss=math.clamp(tonumber(hdata.hud1.ss) or 1,.7,1.4)} end
+  if hdata.hud2 then presets.hud2={x=math.clamp(math.floor(tonumber(hdata.hud2.x) or 0),-500,0),y=math.clamp(math.floor(tonumber(hdata.hud2.y) or -4),-100,500),scale=math.clamp(tonumber(hdata.hud2.scale) or 1,.7,1.4),sx=math.clamp(math.floor(tonumber(hdata.hud2.sx) or -87),-500,0),sy=math.clamp(math.floor(tonumber(hdata.hud2.sy) or 0),0,500),ss=math.clamp(tonumber(hdata.hud2.ss) or 1,.7,1.4)} end
   if hdata.active=="hud2" then active="hud2" end
  end
  hudSessions[p]={presets=presets,active=active}
@@ -39,27 +39,28 @@ local function setupPlayer(p)
  task.spawn(function()while p.Parent==Players and sessions[p]do task.wait(1);local s=sessions[p];if s then s.wallet+=GOLD_PER_SECOND;s.goldValue.Value=s.wallet end end end)
  task.spawn(function()while p.Parent==Players and sessions[p]do task.wait(SAVE_INTERVAL);if sessions[p]then savePlayer(p)end end end)
 end
-hudRemote.OnServerInvoke=function(p,action,a,b,c,d)
+hudRemote.OnServerInvoke=function(p,action,a,b,c,d,e,f,g)
  local h=hudSessions[p]
  if not h then return false,"hud1",0,-4 end
- if action=="get" then local q=h.presets[h.active];return true,h.active,q.x,q.y,q.scale end
+ if action=="get" then local q=h.presets[h.active];return true,h.active,q.x,q.y,q.scale,q.sx,q.sy,q.ss end
  if action=="save" then
   local slot=(a=="hud2") and "hud2" or "hud1"
   local x=math.clamp(math.floor(tonumber(b) or 0),-500,0)
   local y=math.clamp(math.floor(tonumber(c) or -4),-100,500)
   local scale=math.clamp(tonumber(d) or 1,.7,1.4)
-  h.presets[slot]={x=x,y=y,scale=scale};h.active=slot
+  local sx=math.clamp(math.floor(tonumber(e) or -87),-500,0);local sy=math.clamp(math.floor(tonumber(f) or 0),0,500);local ss=math.clamp(tonumber(g) or 1,.7,1.4)
+  h.presets[slot]={x=x,y=y,scale=scale,sx=sx,sy=sy,ss=ss};h.active=slot
   local ok=pcall(function()HudStore:SetAsync(keyFor(p),{active=h.active,hud1=h.presets.hud1,hud2=h.presets.hud2})end)
-  return ok,slot,x,y,scale
+  return ok,slot,x,y,scale,sx,sy,ss
  end
  if action=="load" then
   local slot=(a=="hud2") and "hud2" or "hud1";h.active=slot;local q=h.presets[slot]
-  return true,slot,q.x,q.y,q.scale
+  return true,slot,q.x,q.y,q.scale,q.sx,q.sy,q.ss
  end
  if action=="reset" then
-  local slot=(a=="hud2") and "hud2" or "hud1";h.presets[slot]={x=0,y=-4,scale=1};h.active=slot
+  local slot=(a=="hud2") and "hud2" or "hud1";h.presets[slot]={x=0,y=-4,scale=1,sx=-87,sy=0,ss=1};h.active=slot
   local ok=pcall(function()HudStore:SetAsync(keyFor(p),{active=h.active,hud1=h.presets.hud1,hud2=h.presets.hud2})end)
-  return ok,slot,0,-4,1
+  return ok,slot,0,-4,1,-87,0,1
  end
  return false,h.active,0,-4
 end
