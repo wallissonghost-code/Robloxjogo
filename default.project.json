@@ -8,7 +8,7 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [256, 1, 256],
+          "Size": [128, 1, 128],
           "Position": [0, 0, 0],
           "Material": "Grass"
         }
