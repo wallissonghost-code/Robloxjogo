@@ -8,45 +8,19 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [
-            256,
-            1,
-            256
-          ],
-          "Position": [
-            0,
-            0,
-            0
-          ],
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
           "Material": "Grass"
         }
       }
     },
     "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "GoldService": {
-        "$path": "src/server/GoldService.server.lua"
-      },
-      "ATMAssetQuarantine": {
-        "$path": "src/server/ATMAssetQuarantine.server.lua"
-      }
+      "$className": "ServerScriptService"
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "GoldHUD": {
-          "$path": "src/client/GoldHUD.client.lua"
-        },
-        "BuildDiagnostic": {
-          "$path": "src/client/BuildDiagnostic.client.lua"
-        },
-        "SafeATM": {
-          "$path": "src/client/SafeATM.client.lua"
-        },
-        "CustomJump": {
-          "$path": "src/client/CustomJump.client.lua"
-        }
+        "$className": "StarterPlayerScripts"
       }
     }
   }
