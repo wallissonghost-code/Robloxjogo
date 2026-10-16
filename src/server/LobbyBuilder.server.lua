@@ -232,6 +232,8 @@ local NPC_PLAYER_SPEED_MULTIPLIER=1.15
 local NPC_ACCELERATION=28
 local NPC_DECELERATION=38
 local NPC_UPDATE_INTERVAL=1/60
+local NPC_FULL_SPEED_ANGLE=8
+local NPC_STOP_TURN_ANGLE=75
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
 local SKELETON_FRONT_YAW_OFFSET=115
@@ -316,6 +318,13 @@ local function targetSkeletonYaw(fromPos,targetPos)
 	return math.deg(math.atan2(-flat.X,-flat.Z))+SKELETON_FRONT_YAW_OFFSET
 end
 
+local function skeletonForwardFromHeading(heading)
+	-- targetSkeletonYaw includes the mesh-front calibration, so remove that
+	-- calibration to recover the world travel heading.
+	local travelYaw=math.rad(heading-SKELETON_FRONT_YAW_OFFSET)
+	return Vector3.new(-math.sin(travelYaw),0,-math.cos(travelYaw))
+end
+
 local function transformFollowerGroup(group,target,move,stepDt)
 	local skeleton=group.skeleton
 	local center=visualCenter(skeleton)
@@ -358,41 +367,56 @@ RunService.Heartbeat:Connect(function(dt)
 			local toPlayer=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
 			local dist=toPlayer.Magnitude
 			if dist<=FOLLOW_RADIUS then
-				-- Turn first. No translation is allowed until the visual front is aligned.
+				-- Character-like steering: rotate toward the target, then travel along
+				-- the mob's own forward axis instead of sliding directly at the player.
 				local aligned=transformFollowerGroup(group,root.Position,Vector3.zero,stepDt)
-				if not aligned then
-					group.moveSpeed=math.max(0,(group.moveSpeed or 0)-NPC_DECELERATION*stepDt)
+				local desired=targetSkeletonYaw(center,root.Position) or group.heading
+				local angleError=math.abs((desired-group.heading+180)%360-180)
+				local wantsMove=dist>FOLLOW_STOP and angleError<NPC_STOP_TURN_ANGLE
+				local steeringScale=1
+				if angleError>NPC_FULL_SPEED_ANGLE then
+					steeringScale=1-(angleError-NPC_FULL_SPEED_ANGLE)/(NPC_STOP_TURN_ANGLE-NPC_FULL_SPEED_ANGLE)
+					steeringScale=math.clamp(steeringScale,0,1)
 				end
-				if aligned then
-					local wantsMove=dist>FOLLOW_STOP and dist>0.001
-					local targetSpeed=wantsMove and npcMoveSpeed or 0
-					local rate=targetSpeed>group.moveSpeed and NPC_ACCELERATION or NPC_DECELERATION
-					local delta=math.clamp(targetSpeed-group.moveSpeed,-rate*stepDt,rate*stepDt)
-					group.moveSpeed=math.max(0,group.moveSpeed+delta)
-					local velocity=Vector3.zero
-					if wantsMove and group.moveSpeed>0 then velocity+=toPlayer.Unit*group.moveSpeed end
-					for other,otherCenter in pairs(centers) do
-						if other~=group then
-							local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
-							local d=away.Magnitude
-							if d<NPC_SEPARATION then
-								if d<0.05 then
-									local side=Vector3.new(-toPlayer.Z,0,toPlayer.X)
-									if side.Magnitude<0.05 then side=Vector3.new(1,0,0) end
-									away=side.Unit; d=0
-								else away=away.Unit end
-								velocity+=away*(NPC_SEPARATION_FORCE*(1-d/NPC_SEPARATION))
+				local targetSpeed=wantsMove and npcMoveSpeed*steeringScale or 0
+				local rate=targetSpeed>(group.moveSpeed or 0) and NPC_ACCELERATION or NPC_DECELERATION
+				local delta=math.clamp(targetSpeed-(group.moveSpeed or 0),-rate*stepDt,rate*stepDt)
+				group.moveSpeed=math.max(0,(group.moveSpeed or 0)+delta)
+
+				local velocity=Vector3.zero
+				if group.moveSpeed>0.001 then
+					velocity+=skeletonForwardFromHeading(group.heading)*group.moveSpeed
+				end
+
+				-- Separation behaves like local avoidance, but it cannot override the
+				-- forward locomotion strongly enough to make the body slide sideways.
+				local avoidance=Vector3.zero
+				for other,otherCenter in pairs(centers) do
+					if other~=group then
+						local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
+						local d=away.Magnitude
+						if d<NPC_SEPARATION then
+							if d<0.05 then
+								local forward=skeletonForwardFromHeading(group.heading)
+								away=Vector3.new(-forward.Z,0,forward.X); d=0
+							else
+								away=away.Unit
 							end
+							avoidance+=away*(NPC_SEPARATION_FORCE*(1-d/NPC_SEPARATION))
 						end
 					end
-					local move=velocity*stepDt
-					local maxFrameSpeed=math.max(group.moveSpeed,math.min(npcMoveSpeed,NPC_SEPARATION_FORCE))
-					if move.Magnitude>maxFrameSpeed*stepDt then move=move.Unit*(maxFrameSpeed*stepDt) end
-					-- Translation only: facing was already updated above this frame.
-					if move.Magnitude>0.001 then
-						for _,obj in ipairs({group.skeleton,group.hat}) do
-							if obj and obj.Parent==placed then translate(obj,move) end
-						end
+				end
+				if avoidance.Magnitude>0 then
+					avoidance=avoidance*0.35
+					velocity+=avoidance
+				end
+
+				local move=velocity*stepDt
+				local maxFrameSpeed=math.max(group.moveSpeed,math.min(npcMoveSpeed,NPC_SEPARATION_FORCE))
+				if move.Magnitude>maxFrameSpeed*stepDt then move=move.Unit*(maxFrameSpeed*stepDt) end
+				if move.Magnitude>0.001 then
+					for _,obj in ipairs({group.skeleton,group.hat}) do
+						if obj and obj.Parent==placed then translate(obj,move) end
 					end
 				end
 			end
