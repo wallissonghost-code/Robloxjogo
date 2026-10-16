@@ -230,7 +230,7 @@ local FOLLOW_STOP=3.5
 local FOLLOW_SPEED=5
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
-local SKELETON_FRONT_YAW_OFFSET=90
+local SKELETON_FRONT_YAW_OFFSET=0
 local NPC_TURN_SPEED=220
 local NPC_MOVE_ALIGN_ANGLE=22
 
@@ -295,20 +295,27 @@ local function rebuildFollowerGroups()
 					local old=hatPart:FindFirstChild("FollowerHatWeld"); if old then old:Destroy() end
 				end
 			end
-			table.insert(followerGroups,{skeleton=skeleton,hat=best,yaw=skeleton:GetAttribute("RotationY") or 0})
+			table.insert(followerGroups,{
+			skeleton=skeleton,
+			hat=best,
+			-- Runtime facing state is independent from persistent builder RotationY.
+			heading=skeleton:GetAttribute("RotationY") or 0
+		})
 		end
 	end
+end
+
+local function targetSkeletonYaw(fromPos,targetPos)
+	local flat=Vector3.new(targetPos.X-fromPos.X,0,targetPos.Z-fromPos.Z)
+	if flat.Magnitude<0.01 then return nil end
+	return math.deg(math.atan2(-flat.X,-flat.Z))+SKELETON_FRONT_YAW_OFFSET
 end
 
 local function transformFollowerGroup(group,target,move,stepDt)
 	local skeleton=group.skeleton
 	local center=visualCenter(skeleton)
-	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
-	local desired=group.yaw
-	if flat.Magnitude>=0.01 then
-		desired=math.deg(math.atan2(-flat.X,-flat.Z))+SKELETON_FRONT_YAW_OFFSET
-	end
-	local error=(desired-group.yaw+180)%360-180
+	local desired=targetSkeletonYaw(center,target) or group.heading
+	local error=(desired-group.heading+180)%360-180
 	local maxTurn=NPC_TURN_SPEED*(stepDt or 0.05)
 	local yawDelta=math.clamp(error,-maxTurn,maxTurn)
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
@@ -320,7 +327,7 @@ local function transformFollowerGroup(group,target,move,stepDt)
 			part.CFrame=CFrame.new(center)*rot*relative+move
 		end
 	end
-	group.yaw=(group.yaw+yawDelta)%360
+	group.heading=(group.heading+yawDelta)%360
 	return math.abs(error)<=NPC_MOVE_ALIGN_ANGLE
 end
 
