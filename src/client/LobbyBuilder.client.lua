@@ -72,7 +72,7 @@ exportTitle.Size=UDim2.new(1,-48,0,32); exportTitle.Position=UDim2.fromOffset(8,
 local exportClose=Instance.new("TextButton")
 exportClose.Size=UDim2.fromOffset(36,30); exportClose.Position=UDim2.new(1,-40,0,4); exportClose.Text="X"; exportClose.TextScaled=true; exportClose.ZIndex=21; exportClose.Parent=exportPanel
 local exportBox=Instance.new("TextBox")
-exportBox.Size=UDim2.new(1,-16,1,-82); exportBox.Position=UDim2.fromOffset(8,40); exportBox.ClearTextOnFocus=false; exportBox.MultiLine=true; exportBox.TextEditable=true; exportBox.TextWrapped=false; exportBox.TextXAlignment=Enum.TextXAlignment.Left; exportBox.TextYAlignment=Enum.TextYAlignment.Top; exportBox.TextSize=14; exportBox.Text=""; exportBox.ZIndex=21; exportBox.Parent=exportPanel
+exportBox.Size=UDim2.new(1,-16,1,-82); exportBox.Position=UDim2.fromOffset(8,40); exportBox.ClearTextOnFocus=false; exportBox.MultiLine=true; exportBox.TextEditable=true; exportBox.TextWrapped=true; exportBox.TextXAlignment=Enum.TextXAlignment.Left; exportBox.TextYAlignment=Enum.TextYAlignment.Top; exportBox.TextSize=14; exportBox.Text=""; exportBox.ZIndex=21; exportBox.Parent=exportPanel
 local exportNav=Instance.new("Frame")
 exportNav.Size=UDim2.new(1,-16,0,30); exportNav.Position=UDim2.new(0,8,1,-36); exportNav.ZIndex=21; exportNav.Parent=exportPanel
 local exportPrev=Instance.new("TextButton"); exportPrev.Size=UDim2.new(.25,-2,1,0); exportPrev.Text="<"; exportPrev.TextScaled=true; exportPrev.ZIndex=22; exportPrev.Parent=exportNav
@@ -87,15 +87,38 @@ local function showExportPage()
 end
 local function paginateExport(text)
 	exportPages={}
-	local page={}
-	local chars=0
+	local header={}
+	local blocks={}
+	local current=nil
 	for line in (text.."\n"):gmatch("(.-)\n") do
-		if #page>0 and chars+#line+1>700 then
-			table.insert(exportPages,table.concat(page,"\n")); page={}; chars=0
+		if line:match("^%d%d%d|") then
+			local id,name,ax,ay,az,rot,rx,ry,rz=line:match("^(%d+)|([^|]+)|ABS|([^|]+)|([^|]+)|([^|]+)|ROT|([^|]+)|REL|([^|]+)|([^|]+)|([^|]+)$")
+			if id then
+				table.insert(blocks,table.concat({
+					id.." | "..name,
+					"ABS  X="..ax.."  Y="..ay.."  Z="..az,
+					"ROT  Y="..rot,
+					"REL  X="..rx.."  Y="..ry.."  Z="..rz
+				},"\n"))
+			else
+				table.insert(blocks,line)
+			end
+		else
+			table.insert(header,line)
 		end
-		table.insert(page,line); chars+=#line+1
 	end
-	if #page>0 then table.insert(exportPages,table.concat(page,"\n")) end
+	local prefix=table.concat(header,"\n")
+	local page=prefix
+	for _,block in ipairs(blocks) do
+		local candidate=(page=="" and block) or (page.."\n\n"..block)
+		if #page>0 and #candidate>650 then
+			table.insert(exportPages,page)
+			page=prefix.."\n\n"..block
+		else
+			page=candidate
+		end
+	end
+	if page~="" then table.insert(exportPages,page) end
 	if #exportPages==0 then exportPages={text} end
 	exportIndex=1; showExportPage()
 end
