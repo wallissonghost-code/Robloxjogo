@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")\nlocal RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 if player.UserId ~= 9538436641 then return end
@@ -199,11 +200,14 @@ local function updatePreview()
 	if not camera then return end
 
 	local viewport = camera.ViewportSize
-	local ray = camera:ViewportPointToRay(viewport.X * 0.5, viewport.Y * 0.5)
+	local ray = camera:ViewportPointToRay(viewport.X / 2, viewport.Y / 2)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
+
 	local ignored = {preview}
-	if player.Character then table.insert(ignored, player.Character) end
+	if player.Character then
+		table.insert(ignored, player.Character)
+	end
 	params.FilterDescendantsInstances = ignored
 
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
