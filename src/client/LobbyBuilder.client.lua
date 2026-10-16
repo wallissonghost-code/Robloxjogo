@@ -89,20 +89,16 @@ local function paginateExport(text)
 	exportPages={}
 	local header={}
 	local blocks={}
-	local current=nil
 	for line in (text.."\n"):gmatch("(.-)\n") do
-		if line:match("^%d%d%d|") then
-			local id,name,ax,ay,az,rot,rx,ry,rz=line:match("^(%d+)|([^|]+)|ABS|([^|]+)|([^|]+)|([^|]+)|ROT|([^|]+)|REL|([^|]+)|([^|]+)|([^|]+)$")
-			if id then
-				table.insert(blocks,table.concat({
-					id.." | "..name,
-					"ABS  X="..ax.."  Y="..ay.."  Z="..az,
-					"ROT  Y="..rot,
-					"REL  X="..rx.."  Y="..ry.."  Z="..rz
-				},"\n"))
-			else
-				table.insert(blocks,line)
-			end
+		local fields={}
+		for field in (line.."|"):gmatch("(.-)|") do table.insert(fields,field) end
+		if #fields>=13 and fields[3]=="ABS" and fields[7]=="ROT" and fields[9]=="REL" then
+			table.insert(blocks,table.concat({
+				fields[1].." | "..fields[2],
+				"ABS  X="..fields[4].."  Y="..fields[5].."  Z="..fields[6],
+				"ROT  Y="..fields[8],
+				"REL  X="..fields[10].."  Y="..fields[11].."  Z="..fields[12]
+			},"\n"))
 		else
 			table.insert(header,line)
 		end
