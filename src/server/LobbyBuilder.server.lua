@@ -231,6 +231,8 @@ local FOLLOW_SPEED=5
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
 local SKELETON_FRONT_YAW_OFFSET=90
+local NPC_TURN_SPEED=220
+local NPC_MOVE_ALIGN_ANGLE=22
 
 local function visualCenter(obj)
 	local minV,maxV=worldBounds(obj)
@@ -298,20 +300,18 @@ local function rebuildFollowerGroups()
 	end
 end
 
-local function transformFollowerGroup(group,target,move)
+local function transformFollowerGroup(group,target,move,stepDt)
 	local skeleton=group.skeleton
 	local center=visualCenter(skeleton)
 	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
 	local desired=group.yaw
 	if flat.Magnitude>=0.01 then
-		-- atan2 gives the world-facing yaw; the imported skeleton mesh has its
-		-- visual front rotated relative to Roblox's -Z forward axis.
 		desired=math.deg(math.atan2(-flat.X,-flat.Z))+SKELETON_FRONT_YAW_OFFSET
 	end
-	local yawDelta=(desired-group.yaw+180)%360-180
+	local error=(desired-group.yaw+180)%360-180
+	local maxTurn=NPC_TURN_SPEED*(stepDt or 0.05)
+	local yawDelta=math.clamp(error,-maxTurn,maxTurn)
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
-	-- Decorations stay anchored. Apply one identical rigid transform to the
-	-- skeleton and its paired hat, preserving the authored relative offset exactly.
 	local members={skeleton}
 	if group.hat and group.hat.Parent==placed then table.insert(members,group.hat) end
 	for _,obj in ipairs(members) do
@@ -320,7 +320,8 @@ local function transformFollowerGroup(group,target,move)
 			part.CFrame=CFrame.new(center)*rot*relative+move
 		end
 	end
-	group.yaw=desired
+	group.yaw=(group.yaw+yawDelta)%360
+	return math.abs(error)<=NPC_MOVE_ALIGN_ANGLE
 end
 
 local followClock=0
@@ -343,28 +344,34 @@ RunService.Heartbeat:Connect(function(dt)
 			local toPlayer=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
 			local dist=toPlayer.Magnitude
 			if dist<=FOLLOW_RADIUS then
-				local velocity=Vector3.zero
-				if dist>FOLLOW_STOP and dist>0.001 then
-					velocity+=toPlayer.Unit*FOLLOW_SPEED
-				end
-				for other,otherCenter in pairs(centers) do
-					if other~=group then
-						local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
-						local d=away.Magnitude
-						if d<NPC_SEPARATION then
-							if d<0.05 then
-								local side=Vector3.new(-toPlayer.Z,0,toPlayer.X)
-								if side.Magnitude<0.05 then side=Vector3.new(1,0,0) end
-								away=side.Unit; d=0
-							else away=away.Unit end
-							velocity+=away*(NPC_SEPARATION_FORCE*(1-d/NPC_SEPARATION))
+				-- Turn first. No translation is allowed until the visual front is aligned.
+				local aligned=transformFollowerGroup(group,root.Position,Vector3.zero,stepDt)
+				if aligned then
+					local velocity=Vector3.zero
+					if dist>FOLLOW_STOP and dist>0.001 then velocity+=toPlayer.Unit*FOLLOW_SPEED end
+					for other,otherCenter in pairs(centers) do
+						if other~=group then
+							local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
+							local d=away.Magnitude
+							if d<NPC_SEPARATION then
+								if d<0.05 then
+									local side=Vector3.new(-toPlayer.Z,0,toPlayer.X)
+									if side.Magnitude<0.05 then side=Vector3.new(1,0,0) end
+									away=side.Unit; d=0
+								else away=away.Unit end
+								velocity+=away*(NPC_SEPARATION_FORCE*(1-d/NPC_SEPARATION))
+							end
+						end
+					end
+					local move=velocity*stepDt
+					if move.Magnitude>FOLLOW_SPEED*stepDt then move=move.Unit*(FOLLOW_SPEED*stepDt) end
+					-- Translation only: facing was already updated above this frame.
+					if move.Magnitude>0.001 then
+						for _,obj in ipairs({group.skeleton,group.hat}) do
+							if obj and obj.Parent==placed then translate(obj,move) end
 						end
 					end
 				end
-				local move=velocity*stepDt
-				if move.Magnitude>FOLLOW_SPEED*stepDt then move=move.Unit*(FOLLOW_SPEED*stepDt) end
-				-- Always update facing, even when standing still near the player.
-				transformFollowerGroup(group,root.Position,move)
 			end
 		end
 	end
