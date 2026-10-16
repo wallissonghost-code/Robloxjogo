@@ -85,39 +85,6 @@ local function showExportPage()
 	exportPage.Text=tostring(exportIndex).."/"..tostring(math.max(1,#exportPages))
 	exportBox.CursorPosition=1
 end
-local function paginateExport(text)
-	exportPages={}
-	local header={}
-	local blocks={}
-	for line in (text.."\n"):gmatch("(.-)\n") do
-		local fields={}
-		for field in (line.."|"):gmatch("(.-)|") do table.insert(fields,field) end
-		if #fields>=13 and fields[3]=="ABS" and fields[7]=="ROT" and fields[9]=="REL" then
-			table.insert(blocks,table.concat({
-				fields[1].." | "..fields[2],
-				"ABS  X="..fields[4].."  Y="..fields[5].."  Z="..fields[6],
-				"ROT  Y="..fields[8],
-				"REL  X="..fields[10].."  Y="..fields[11].."  Z="..fields[12]
-			},"\n"))
-		else
-			table.insert(header,line)
-		end
-	end
-	local prefix=table.concat(header,"\n")
-	local page=prefix
-	for _,block in ipairs(blocks) do
-		local candidate=(page=="" and block) or (page.."\n\n"..block)
-		if #page>0 and #candidate>650 then
-			table.insert(exportPages,page)
-			page=prefix.."\n\n"..block
-		else
-			page=candidate
-		end
-	end
-	if page~="" then table.insert(exportPages,page) end
-	if #exportPages==0 then exportPages={text} end
-	exportIndex=1; showExportPage()
-end
 exportPrev.Activated:Connect(function() if exportIndex>1 then exportIndex-=1; showExportPage() end end)
 exportNext.Activated:Connect(function() if exportIndex<#exportPages then exportIndex+=1; showExportPage() end end)
 exportClose.Activated:Connect(function() exportPanel.Visible=false end)
@@ -159,7 +126,9 @@ btn(bar,"RST",.67,.13,function() distance=4; height=0; joinLast=false; status.Te
 btn(bar,"EXP",.80,.20,function()
 	local r=request:InvokeServer("export")
 	if not r or not r.ok then status.Text=(r and r.error) or "Erro export"; return end
-	paginateExport(r.text)
+	exportPages=r.pages or {}
+	exportIndex=1
+	showExportPage()
 	exportTitle.Text="EXPORT - "..tostring(r.count).." PECAS"
 	exportPanel.Visible=true
 	status.Text="Exportado"
