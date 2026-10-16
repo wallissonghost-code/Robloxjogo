@@ -1,5 +1,6 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local InsertService=game:GetService("InsertService")
+local Players=game:GetService("Players")
 local OWNER_USER_ID=9538436641
 local HALLOWEEN_ASSET_ID=113280926555931
 local remotes=ReplicatedStorage:FindFirstChild("LobbyBuilderRemotes") or Instance.new("Folder"); remotes.Name="LobbyBuilderRemotes"; remotes.Parent=ReplicatedStorage
@@ -9,6 +10,17 @@ local placed=workspace:FindFirstChild("LobbyDecor") or Instance.new("Folder"); p
 local catalogLoaded=false
 local catalogLoading=false
 local catalogStatus="Ainda nao carregado"
+
+local function enforceSolo(joiningPlayer)
+	for _,other in ipairs(Players:GetPlayers()) do
+		if other ~= joiningPlayer then
+			joiningPlayer:Kick("Servidor de construcao em modo solo.")
+			return
+		end
+	end
+end
+Players.PlayerAdded:Connect(enforceSolo)
+for _,p in ipairs(Players:GetPlayers()) do enforceSolo(p) end
 
 local function authorized(p) return p.UserId==OWNER_USER_ID end
 local function sanitize(inst)
@@ -93,7 +105,9 @@ request.OnServerInvoke=function(player,action,data)
 		if math.abs(base.X)>62 or math.abs(base.Z)>62 or base.Y < -20 or base.Y > 60 then return {ok=false,error="Fora do lobby"} end
 		local obj=template:Clone(); obj.Name="Decor_"..data.name; obj:SetAttribute("PlacedBy",player.UserId); obj.Parent=placed
 		placeBaseAt(obj,base,data.rotation or 0)
-		return {ok=true}
+		local placedCF,placedSize=bounds(obj)
+		local top=Vector3.new(placedCF.Position.X,placedCF.Position.Y+placedSize.Y*.5,placedCF.Position.Z)
+		return {ok=true,center=placedCF.Position,top=top}
 	elseif action=="deleteNearest" then
 		local p=data.position; if typeof(p)~="Vector3" then return {ok=false,error="Posicao invalida"} end
 		local best,dist
