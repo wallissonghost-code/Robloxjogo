@@ -128,10 +128,15 @@ local function snapshotBuild()
 	for _,obj in ipairs(placed:GetChildren()) do
 		local minV,maxV=worldBounds(obj)
 		local center=(minV+maxV)*.5
+		local bx=obj:GetAttribute("BaseX")
+		local by=obj:GetAttribute("BaseY")
+		local bz=obj:GetAttribute("BaseZ")
 		table.insert(rows,{
 			order=obj:GetAttribute("PlacedOrder") or 999999,
 			name=obj:GetAttribute("AssetName") or obj.Name:gsub("^Decor_",""),
-			x=center.X, y=minV.Y, z=center.Z,
+			x=type(bx)=="number" and bx or center.X,
+			y=type(by)=="number" and by or minV.Y,
+			z=type(bz)=="number" and bz or center.Z,
 			rotation=obj:GetAttribute("RotationY") or 0
 		})
 	end
@@ -225,72 +230,108 @@ local function visualCenter(obj)
 	return (minV+maxV)*.5
 end
 
-local function moveDecorXZ(obj,delta)
-	if delta.Magnitude<=0 then return end
-	translate(obj,Vector3.new(delta.X,0,delta.Z))
+local followerGroups={}
+local followerSignature=""
+
+local function authoredPosition(obj)
+	local x,y,z=obj:GetAttribute("BaseX"),obj:GetAttribute("BaseY"),obj:GetAttribute("BaseZ")
+	if type(x)=="number" and type(y)=="number" and type(z)=="number" then return Vector3.new(x,y,z) end
+	local minV,maxV=worldBounds(obj); local c=(minV+maxV)*.5
+	return Vector3.new(c.X,minV.Y,c.Z)
 end
 
-local function faceDecorToward(obj,target)
-	local center=visualCenter(obj)
-	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
-	if flat.Magnitude<0.01 then return end
-	local desired=math.deg(math.atan2(-flat.X,-flat.Z))
-	local current=obj:GetAttribute("RuntimeYaw") or obj:GetAttribute("RotationY") or 0
-	local delta=(desired-current+180)%360-180
-	rotateAroundCenter(obj,delta)
-	obj:SetAttribute("RuntimeYaw",desired)
-end
-
-local function baseXZ(obj)
-	local x=obj:GetAttribute("BaseX")
-	local z=obj:GetAttribute("BaseZ")
-	if type(x)=="number" and type(z)=="number" then return Vector2.new(x,z) end
-	local c=visualCenter(obj); return Vector2.new(c.X,c.Z)
-end
-
-local function getFollowerGroups()
-	local groups={}
+local function rebuildFollowerGroups()
+	local children=placed:GetChildren()
+	table.sort(children,function(a,b) return (a:GetAttribute("PlacedOrder") or 999999)<(b:GetAttribute("PlacedOrder") or 999999) end)
+	local sigParts={}
+	for _,o in ipairs(children) do table.insert(sigParts,tostring(o:GetAttribute("PlacedOrder"))..":"..tostring(o:GetAttribute("AssetName"))) end
+	local sig=table.concat(sigParts,"|")
+	if sig==followerSignature then return end
+	followerSignature=sig; followerGroups={}
 	local hats={}
-	for _,obj in ipairs(placed:GetChildren()) do
-		if obj:GetAttribute("AssetName")=="048_Hat" then table.insert(hats,obj) end
-	end
-	for _,skeleton in ipairs(placed:GetChildren()) do
+	for _,o in ipairs(children) do if o:GetAttribute("AssetName")=="048_Hat" then table.insert(hats,o) end end
+	local claimed={}
+	for _,skeleton in ipairs(children) do
 		if skeleton:GetAttribute("AssetName")=="035_Skeleton" then
-			local sb=baseXZ(skeleton)
-			local bestHat,bestDist
+			local sp=authoredPosition(skeleton)
+			local syaw=skeleton:GetAttribute("RotationY") or 0
+			local best,bestDist
 			for _,hat in ipairs(hats) do
-				if not hat:GetAttribute("RuntimeFollowerClaimed") then
-					local d=(sb-baseXZ(hat)).Magnitude
-					if d<2 and (not bestDist or d<bestDist) then bestHat,bestDist=hat,d end
+				if not claimed[hat] then
+					local hp=authoredPosition(hat)
+					local d=(Vector2.new(sp.X,sp.Z)-Vector2.new(hp.X,hp.Z)).Magnitude
+					if d<2 and (not bestDist or d<bestDist) then best,bestDist=hat,d end
 				end
 			end
-			if bestHat then bestHat:SetAttribute("RuntimeFollowerClaimed",true) end
-			table.insert(groups,{skeleton=skeleton,hat=bestHat})
+			if best then claimed[best]=true end
+			table.insert(followerGroups,{skeleton=skeleton,hat=best,yaw=syaw})
 		end
 	end
-	for _,hat in ipairs(hats) do hat:SetAttribute("RuntimeFollowerClaimed",nil) end
-	return groups
 end
 
 local function transformFollowerGroup(group,target,move)
 	local skeleton=group.skeleton
 	local center=visualCenter(skeleton)
 	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
-	local current=skeleton:GetAttribute("RuntimeYaw") or skeleton:GetAttribute("RotationY") or 0
-	local desired=current
+	local desired=group.yaw
 	if flat.Magnitude>=0.01 then desired=math.deg(math.atan2(-flat.X,-flat.Z)) end
-	local yawDelta=(desired-current+180)%360-180
-	local pivot=center
+	local yawDelta=(desired-group.yaw+180)%360-180
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
-	local members={skeleton}
-	if group.hat then table.insert(members,group.hat) end
+	local members={skeleton}; if group.hat and group.hat.Parent==placed then table.insert(members,group.hat) end
 	for _,obj in ipairs(members) do
 		for _,part in ipairs(getParts(obj)) do
-			local relative=CFrame.new(pivot):ToObjectSpace(part.CFrame)
-			part.CFrame=CFrame.new(pivot)*rot*relative+move
+			local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
+			part.CFrame=CFrame.new(center)*rot*relative+move
 		end
 	end
-	skeleton:SetAttribute("RuntimeYaw",desired)
+	group.yaw=desired
+end
+
+local function hideAvatarInstance(inst)
+	if inst:IsA("BasePart") then inst.Transparency=1
+	elseif inst:IsA("Decal") or inst:IsA("Texture") then inst.Transparency=1 end
+end
+
+local function applySkeletonCharacter(player,character)
+	if not authorized(player) or character~=player.Character then return end
+	if not loadCatalog() then return end
+	local root=character:FindFirstChild("HumanoidRootPart")
+	local humanoid=character:FindFirstChildOfClass("Humanoid")
+	local template=catalog:FindFirstChild("035_Skeleton")
+	if not root or not humanoid or not template then return end
+	for _,d in ipairs(character:GetDescendants()) do hideAvatarInstance(d) end
+	root.Transparency=1
+	local old=character:FindFirstChild("SkeletonAvatarVisual"); if old then old:Destroy() end
+	local visual=template:Clone(); visual.Name="SkeletonAvatarVisual"; visual.Parent=character
+	local parts=getParts(visual); if #parts==0 then visual:Destroy(); return end
+	for _,p in ipairs(parts) do p.Transparency=0 end
+	local minV,maxV=worldBounds(visual); local center=(minV+maxV)*.5
+	local floorY=root.Position.Y-humanoid.HipHeight-(root.Size.Y*.5)
+	local target=Vector3.new(root.Position.X,floorY+(maxV.Y-minV.Y)*.5,root.Position.Z)
+	translate(visual,target-center)
+	for _,part in ipairs(parts) do
+		part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false; part.Massless=true
+		local weld=Instance.new("WeldConstraint"); weld.Name="SkeletonAvatarWeld"; weld.Part0=root; weld.Part1=part; weld.Parent=part
+	end
+	character.DescendantAdded:Connect(function(d)
+		if not d:IsDescendantOf(visual) then task.defer(function() if d.Parent then hideAvatarInstance(d) end end) end
+	end)
+	humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
+end
+
+local function hookCharacter(player,character)
+	task.spawn(function()
+		local humanoid=character:WaitForChild("Humanoid",10)
+		local root=character:WaitForChild("HumanoidRootPart",10)
+		if not humanoid or not root then return end
+		task.wait(1.5)
+		applySkeletonCharacter(player,character)
+	end)
+end
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(c) hookCharacter(p,c) end) end)
+for _,p in ipairs(Players:GetPlayers()) do
+	p.CharacterAdded:Connect(function(c) hookCharacter(p,c) end)
+	if p.Character then hookCharacter(p,p.Character) end
 end
 
 local followClock=0
@@ -298,18 +339,20 @@ RunService.Heartbeat:Connect(function(dt)
 	followClock+=dt
 	if followClock<0.05 then return end
 	local stepDt=followClock; followClock=0
+	rebuildFollowerGroups()
 	local targetPlayer=Players:GetPlayers()[1]
 	local root=targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
-	for _,group in ipairs(getFollowerGroups()) do
+	for _,group in ipairs(followerGroups) do
 		local skeleton=group.skeleton
-		if skeleton.Parent~=placed then continue end
-		local center=visualCenter(skeleton)
-		local flat=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
-		local dist=flat.Magnitude
-		if dist<=FOLLOW_RADIUS and dist>FOLLOW_STOP then
-			local move=flat.Unit*math.min(FOLLOW_SPEED*stepDt,dist-FOLLOW_STOP)
-			transformFollowerGroup(group,root.Position,move)
+		if skeleton.Parent==placed then
+			local center=visualCenter(skeleton)
+			local flat=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
+			local dist=flat.Magnitude
+			if dist<=FOLLOW_RADIUS and dist>FOLLOW_STOP then
+				local move=flat.Unit*math.min(FOLLOW_SPEED*stepDt,dist-FOLLOW_STOP)
+				transformFollowerGroup(group,root.Position,move)
+			end
 		end
 	end
 end)
@@ -380,9 +423,9 @@ request.OnServerInvoke=function(player,action,data)
 			table.insert(rows,{
 				order=obj:GetAttribute("PlacedOrder") or 999999,
 				name=obj:GetAttribute("AssetName") or obj.Name:gsub("^Decor_",""),
-				x=obj:GetAttribute("BaseX") or center.X,
-				y=obj:GetAttribute("BaseY") or minV.Y,
-				z=obj:GetAttribute("BaseZ") or center.Z,
+				x=type(obj:GetAttribute("BaseX"))=="number" and obj:GetAttribute("BaseX") or center.X,
+				y=type(obj:GetAttribute("BaseY"))=="number" and obj:GetAttribute("BaseY") or minV.Y,
+				z=type(obj:GetAttribute("BaseZ"))=="number" and obj:GetAttribute("BaseZ") or center.Z,
 				rotation=obj:GetAttribute("RotationY") or 0
 			})
 		end
