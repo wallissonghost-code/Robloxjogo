@@ -126,7 +126,19 @@ btn(bar,"RST",.67,.13,function() distance=4; height=0; joinLast=false; status.Te
 btn(bar,"EXP",.80,.20,function()
 	local r=request:InvokeServer("export")
 	if not r or not r.ok then status.Text=(r and r.error) or "Erro export"; return end
-	exportPages=r.pages or {}
+	exportPages={}
+	local headerText=r.header or "LOBBY_BUILD_V1"
+	local pageText=headerText
+	for _,block in ipairs(r.blocks or {}) do
+		local candidate=pageText.."\n\n"..block
+		if #candidate>650 and pageText~=headerText then
+			table.insert(exportPages,pageText)
+			pageText=headerText.."\n\n"..block
+		else
+			pageText=candidate
+		end
+	end
+	table.insert(exportPages,pageText)
 	exportIndex=1
 	showExportPage()
 	exportTitle.Text="EXPORT - "..tostring(r.count).." PECAS"
