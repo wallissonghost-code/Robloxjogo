@@ -228,6 +228,8 @@ local RunService=game:GetService("RunService")
 local FOLLOW_RADIUS=18
 local FOLLOW_STOP=3.5
 local FOLLOW_SPEED=5
+local NPC_SEPARATION=2.4
+local NPC_SEPARATION_FORCE=7
 
 local function visualCenter(obj)
 	local minV,maxV=worldBounds(obj)
@@ -325,15 +327,38 @@ RunService.Heartbeat:Connect(function(dt)
 	local targetPlayer=Players:GetPlayers()[1]
 	local root=targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
+	local centers={}
+	for _,group in ipairs(followerGroups) do
+		if group.skeleton.Parent==placed then centers[group]=visualCenter(group.skeleton) end
+	end
 	for _,group in ipairs(followerGroups) do
 		local skeleton=group.skeleton
-		if skeleton.Parent==placed then
-			local center=visualCenter(skeleton)
-			local flat=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
-			local dist=flat.Magnitude
-			if dist<=FOLLOW_RADIUS and dist>FOLLOW_STOP then
-				local move=flat.Unit*math.min(FOLLOW_SPEED*stepDt,dist-FOLLOW_STOP)
-				transformFollowerGroup(group,root.Position,move)
+		local center=centers[group]
+		if skeleton.Parent==placed and center then
+			local toPlayer=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
+			local dist=toPlayer.Magnitude
+			if dist<=FOLLOW_RADIUS then
+				local velocity=Vector3.zero
+				if dist>FOLLOW_STOP and dist>0.001 then
+					velocity+=toPlayer.Unit*FOLLOW_SPEED
+				end
+				for other,otherCenter in pairs(centers) do
+					if other~=group then
+						local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
+						local d=away.Magnitude
+						if d<NPC_SEPARATION then
+							if d<0.05 then
+								local side=Vector3.new(-toPlayer.Z,0,toPlayer.X)
+								if side.Magnitude<0.05 then side=Vector3.new(1,0,0) end
+								away=side.Unit; d=0
+							else away=away.Unit end
+							velocity+=away*(NPC_SEPARATION_FORCE*(1-d/NPC_SEPARATION))
+						end
+					end
+				end
+				local move=velocity*stepDt
+				if move.Magnitude>FOLLOW_SPEED*stepDt then move=move.Unit*(FOLLOW_SPEED*stepDt) end
+				if move.Magnitude>0.001 then transformFollowerGroup(group,root.Position,move) end
 			end
 		end
 	end
