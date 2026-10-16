@@ -192,8 +192,8 @@ local function rotateXZ(v,yaw)
 end
 
 local function createTestPrefabCopy()
-	if placed:GetAttribute("TestPrefabCopyCreated") then return end
-	if not loadCatalog() then return end
+	if placed:GetAttribute("TestPrefabCopyCreated") then return false,"Copia ja criada" end
+	if not loadCatalog() then return false,"Catalogo indisponivel" end
 	local nextOrder=#placed:GetChildren()+1
 	for i,item in ipairs(TEST_PREFAB) do
 		local template=catalog:FindFirstChild(item.name)
@@ -211,13 +211,16 @@ local function createTestPrefabCopy()
 	end
 	placed:SetAttribute("TestPrefabCopyCreated",true)
 	task.defer(saveNow)
+	return true
 end
 
 request.OnServerInvoke=function(player,action,data)
 	if not authorized(player) then return {ok=false,error="Sem permissao"} end
 	data=data or {}
-	if action=="catalog" then
-		createTestPrefabCopy()
+	if action=="duplicateTestPrefab" then
+		local ok,msg=createTestPrefabCopy()
+		return {ok=ok,error=msg,count=#placed:GetChildren()}
+	elseif action=="catalog" then
 		loadCatalog()
 		local items={}; for _,item in ipairs(catalog:GetChildren()) do table.insert(items,item.Name) end; table.sort(items)
 		return {ok=catalogLoaded,items=items,status=catalogStatus}
