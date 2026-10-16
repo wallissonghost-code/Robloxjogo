@@ -1,9 +1,12 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local InsertService=game:GetService("InsertService")
 local Players=game:GetService("Players")
+local DataStoreService=game:GetService("DataStoreService")
 
 local OWNER_USER_ID=9538436641
 local HALLOWEEN_ASSET_ID=113280926555931
+local BUILD_STORE=DataStoreService:GetDataStore("LobbyCreativeBuild_V1")
+local BUILD_KEY="HalloweenLobby"
 
 local remotes=ReplicatedStorage:FindFirstChild("LobbyBuilderRemotes") or Instance.new("Folder")
 remotes.Name="LobbyBuilderRemotes"; remotes.Parent=ReplicatedStorage
@@ -116,6 +119,65 @@ local function placeByVisualBounds(obj,base,yaw)
 	return finalCenter,Vector3.new(finalCenter.X,maxV.Y,finalCenter.Z)
 end
 
+
+local saveQueued=false
+local saving=false
+
+local function snapshotBuild()
+	local rows={}
+	for _,obj in ipairs(placed:GetChildren()) do
+		local minV,maxV=worldBounds(obj)
+		local center=(minV+maxV)*.5
+		table.insert(rows,{
+			order=obj:GetAttribute("PlacedOrder") or 999999,
+			name=obj:GetAttribute("AssetName") or obj.Name:gsub("^Decor_",""),
+			x=center.X, y=minV.Y, z=center.Z,
+			rotation=obj:GetAttribute("RotationY") or 0
+		})
+	end
+	table.sort(rows,function(a,b) return a.order<b.order end)
+	return {version=1,updated=os.time(),items=rows}
+end
+
+local function saveNow()
+	if saving then saveQueued=true; return end
+	saving=true
+	local payload=snapshotBuild()
+	local ok,err=pcall(function() BUILD_STORE:SetAsync(BUILD_KEY,payload) end)
+	saving=false
+	if not ok then warn("[LobbyBuilder] Falha ao salvar build: "..tostring(err)) end
+	if saveQueued then saveQueued=false; task.defer(saveNow) end
+end
+
+local function restoreBuild()
+	local ok,data=pcall(function() return BUILD_STORE:GetAsync(BUILD_KEY) end)
+	if not ok then warn("[LobbyBuilder] Falha ao carregar build: "..tostring(data)); return end
+	if type(data)~="table" or type(data.items)~="table" or #data.items==0 then return end
+	if not loadCatalog() then warn("[LobbyBuilder] Build salvo existe, mas catalogo nao carregou"); return end
+	placed:ClearAllChildren()
+	for i,row in ipairs(data.items) do
+		local template=catalog:FindFirstChild(row.name)
+		if template and type(row.x)=="number" and type(row.y)=="number" and type(row.z)=="number" then
+			local obj=template:Clone(); obj.Name="Decor_"..row.name
+			obj:SetAttribute("PlacedBy",OWNER_USER_ID); obj:SetAttribute("AssetName",row.name)
+			obj:SetAttribute("RotationY",row.rotation or 0); obj:SetAttribute("PlacedOrder",row.order or i)
+			obj.Parent=placed
+			local base=Vector3.new(row.x,row.y,row.z)
+			placeByVisualBounds(obj,base,row.rotation or 0)
+			obj:SetAttribute("BaseX",row.x); obj:SetAttribute("BaseY",row.y); obj:SetAttribute("BaseZ",row.z)
+		end
+	end
+	print("[LobbyBuilder] Build persistente restaurado: "..#placed:GetChildren().." pecas")
+end
+
+task.spawn(restoreBuild)
+game:BindToClose(function()
+	if #placed:GetChildren()>0 then
+		local payload=snapshotBuild()
+		pcall(function() BUILD_STORE:SetAsync(BUILD_KEY,payload) end)
+	end
+end)
+
 request.OnServerInvoke=function(player,action,data)
 	if not authorized(player) then return {ok=false,error="Sem permissao"} end
 	data=data or {}
@@ -137,6 +199,7 @@ request.OnServerInvoke=function(player,action,data)
 		obj.Parent=placed
 		local center,top=placeByVisualBounds(obj,base,data.rotation or 0)
 		obj:SetAttribute("BaseX",base.X); obj:SetAttribute("BaseY",base.Y); obj:SetAttribute("BaseZ",base.Z)
+		task.defer(saveNow)
 		return {ok=true,center=center,top=top}
 	elseif action=="export" then
 		local rows={}
@@ -169,7 +232,7 @@ request.OnServerInvoke=function(player,action,data)
 			local minV,maxV=worldBounds(obj); local center=(minV+maxV)*.5; local d=(center-pos).Magnitude
 			if not bestDist or d<bestDist then best,bestDist=obj,d end
 		end
-		if best and bestDist<=12 then best:Destroy(); return {ok=true} end
+		if best and bestDist<=12 then best:Destroy(); task.defer(saveNow); return {ok=true} end
 		return {ok=false,error="Nenhum item proximo"}
 	end
 	return {ok=false,error="Acao invalida"}
