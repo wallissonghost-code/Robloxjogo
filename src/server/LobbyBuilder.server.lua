@@ -129,9 +129,38 @@ request.OnServerInvoke=function(player,action,data)
 		local base=data.basePosition
 		if typeof(base)~="Vector3" then return {ok=false,error="Posicao invalida"} end
 		if math.abs(base.X)>62 or math.abs(base.Z)>62 or base.Y < -20 or base.Y > 60 then return {ok=false,error="Fora do lobby"} end
-		local obj=template:Clone(); obj.Name="Decor_"..data.name; obj:SetAttribute("PlacedBy",player.UserId); obj.Parent=placed
+		local obj=template:Clone(); obj.Name="Decor_"..data.name
+		obj:SetAttribute("PlacedBy",player.UserId)
+		obj:SetAttribute("AssetName",data.name)
+		obj:SetAttribute("RotationY",data.rotation or 0)
+		obj:SetAttribute("PlacedOrder",#placed:GetChildren()+1)
+		obj.Parent=placed
 		local center,top=placeByVisualBounds(obj,base,data.rotation or 0)
+		obj:SetAttribute("BaseX",base.X); obj:SetAttribute("BaseY",base.Y); obj:SetAttribute("BaseZ",base.Z)
 		return {ok=true,center=center,top=top}
+	elseif action=="export" then
+		local rows={}
+		for _,obj in ipairs(placed:GetChildren()) do
+			local minV,maxV=worldBounds(obj)
+			local center=(minV+maxV)*.5
+			table.insert(rows,{
+				order=obj:GetAttribute("PlacedOrder") or 999999,
+				name=obj:GetAttribute("AssetName") or obj.Name:gsub("^Decor_",""),
+				x=obj:GetAttribute("BaseX") or center.X,
+				y=obj:GetAttribute("BaseY") or minV.Y,
+				z=obj:GetAttribute("BaseZ") or center.Z,
+				rotation=obj:GetAttribute("RotationY") or 0
+			})
+		end
+		table.sort(rows,function(a,b) return a.order<b.order end)
+		if #rows==0 then return {ok=false,error="Nenhuma peca colocada"} end
+		local origin=Vector3.new(rows[1].x,rows[1].y,rows[1].z)
+		local lines={"LOBBY_BUILD_V1",string.format("ORIGIN|%.3f|%.3f|%.3f",origin.X,origin.Y,origin.Z)}
+		for i,row in ipairs(rows) do
+			table.insert(lines,string.format("%03d|%s|ABS|%.3f|%.3f|%.3f|ROT|%.1f|REL|%.3f|%.3f|%.3f",
+				i,row.name,row.x,row.y,row.z,row.rotation,row.x-origin.X,row.y-origin.Y,row.z-origin.Z))
+		end
+		return {ok=true,text=table.concat(lines,"\n"),count=#rows}
 	elseif action=="deleteNearest" then
 		local pos=data.position
 		if typeof(pos)~="Vector3" then return {ok=false,error="Posicao invalida"} end
