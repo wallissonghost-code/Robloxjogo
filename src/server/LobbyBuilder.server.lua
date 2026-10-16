@@ -230,6 +230,7 @@ local FOLLOW_STOP=3.5
 local FOLLOW_SPEED=5
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
+local SKELETON_FRONT_YAW_OFFSET=90
 
 local function visualCenter(obj)
 	local minV,maxV=worldBounds(obj)
@@ -302,7 +303,11 @@ local function transformFollowerGroup(group,target,move)
 	local center=visualCenter(skeleton)
 	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
 	local desired=group.yaw
-	if flat.Magnitude>=0.01 then desired=math.deg(math.atan2(-flat.X,-flat.Z)) end
+	if flat.Magnitude>=0.01 then
+		-- atan2 gives the world-facing yaw; the imported skeleton mesh has its
+		-- visual front rotated relative to Roblox's -Z forward axis.
+		desired=math.deg(math.atan2(-flat.X,-flat.Z))+SKELETON_FRONT_YAW_OFFSET
+	end
 	local yawDelta=(desired-group.yaw+180)%360-180
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
 	-- Decorations stay anchored. Apply one identical rigid transform to the
@@ -358,7 +363,8 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 				local move=velocity*stepDt
 				if move.Magnitude>FOLLOW_SPEED*stepDt then move=move.Unit*(FOLLOW_SPEED*stepDt) end
-				if move.Magnitude>0.001 then transformFollowerGroup(group,root.Position,move) end
+				-- Always update facing, even when standing still near the player.
+				transformFollowerGroup(group,root.Position,move)
 			end
 		end
 	end
