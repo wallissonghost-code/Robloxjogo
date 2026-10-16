@@ -240,6 +240,17 @@ local function authoredPosition(obj)
 	return Vector3.new(c.X,minV.Y,c.Z)
 end
 
+local function firstPart(obj)
+	local parts=getParts(obj)
+	return parts[1]
+end
+
+local function resetToAuthored(obj)
+	local base=authoredPosition(obj)
+	local yaw=obj:GetAttribute("RotationY") or 0
+	placeByVisualBounds(obj,base,yaw)
+end
+
 local function rebuildFollowerGroups()
 	local children=placed:GetChildren()
 	table.sort(children,function(a,b) return (a:GetAttribute("PlacedOrder") or 999999)<(b:GetAttribute("PlacedOrder") or 999999) end)
@@ -249,12 +260,17 @@ local function rebuildFollowerGroups()
 	if sig==followerSignature then return end
 	followerSignature=sig; followerGroups={}
 	local hats={}
-	for _,o in ipairs(children) do if o:GetAttribute("AssetName")=="048_Hat" then table.insert(hats,o) end end
+	for _,o in ipairs(children) do
+		if o:GetAttribute("AssetName")=="048_Hat" then
+			resetToAuthored(o)
+			table.insert(hats,o)
+		end
+	end
 	local claimed={}
 	for _,skeleton in ipairs(children) do
 		if skeleton:GetAttribute("AssetName")=="035_Skeleton" then
+			resetToAuthored(skeleton)
 			local sp=authoredPosition(skeleton)
-			local syaw=skeleton:GetAttribute("RotationY") or 0
 			local best,bestDist
 			for _,hat in ipairs(hats) do
 				if not claimed[hat] then
@@ -263,8 +279,16 @@ local function rebuildFollowerGroups()
 					if d<2 and (not bestDist or d<bestDist) then best,bestDist=hat,d end
 				end
 			end
-			if best then claimed[best]=true end
-			table.insert(followerGroups,{skeleton=skeleton,hat=best,yaw=syaw})
+			if best then
+				claimed[best]=true
+				local skPart,hatPart=firstPart(skeleton),firstPart(best)
+				if skPart and hatPart then
+					local old=hatPart:FindFirstChild("FollowerHatWeld"); if old then old:Destroy() end
+					local weld=Instance.new("WeldConstraint")
+					weld.Name="FollowerHatWeld"; weld.Part0=skPart; weld.Part1=hatPart; weld.Parent=hatPart
+				end
+			end
+			table.insert(followerGroups,{skeleton=skeleton,hat=best,yaw=skeleton:GetAttribute("RotationY") or 0})
 		end
 	end
 end
@@ -277,61 +301,12 @@ local function transformFollowerGroup(group,target,move)
 	if flat.Magnitude>=0.01 then desired=math.deg(math.atan2(-flat.X,-flat.Z)) end
 	local yawDelta=(desired-group.yaw+180)%360-180
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
-	local members={skeleton}; if group.hat and group.hat.Parent==placed then table.insert(members,group.hat) end
-	for _,obj in ipairs(members) do
-		for _,part in ipairs(getParts(obj)) do
-			local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
-			part.CFrame=CFrame.new(center)*rot*relative+move
-		end
+	-- Move only the skeleton. The hat is physically welded and follows exactly.
+	for _,part in ipairs(getParts(skeleton)) do
+		local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
+		part.CFrame=CFrame.new(center)*rot*relative+move
 	end
 	group.yaw=desired
-end
-
-local function hideAvatarInstance(inst)
-	if inst:IsA("BasePart") then inst.Transparency=1
-	elseif inst:IsA("Decal") or inst:IsA("Texture") then inst.Transparency=1 end
-end
-
-local function applySkeletonCharacter(player,character)
-	if not authorized(player) or character~=player.Character then return end
-	if not loadCatalog() then return end
-	local root=character:FindFirstChild("HumanoidRootPart")
-	local humanoid=character:FindFirstChildOfClass("Humanoid")
-	local template=catalog:FindFirstChild("035_Skeleton")
-	if not root or not humanoid or not template then return end
-	for _,d in ipairs(character:GetDescendants()) do hideAvatarInstance(d) end
-	root.Transparency=1
-	local old=character:FindFirstChild("SkeletonAvatarVisual"); if old then old:Destroy() end
-	local visual=template:Clone(); visual.Name="SkeletonAvatarVisual"; visual.Parent=character
-	local parts=getParts(visual); if #parts==0 then visual:Destroy(); return end
-	for _,p in ipairs(parts) do p.Transparency=0 end
-	local minV,maxV=worldBounds(visual); local center=(minV+maxV)*.5
-	local floorY=root.Position.Y-humanoid.HipHeight-(root.Size.Y*.5)
-	local target=Vector3.new(root.Position.X,floorY+(maxV.Y-minV.Y)*.5,root.Position.Z)
-	translate(visual,target-center)
-	for _,part in ipairs(parts) do
-		part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false; part.Massless=true
-		local weld=Instance.new("WeldConstraint"); weld.Name="SkeletonAvatarWeld"; weld.Part0=root; weld.Part1=part; weld.Parent=part
-	end
-	character.DescendantAdded:Connect(function(d)
-		if not d:IsDescendantOf(visual) then task.defer(function() if d.Parent then hideAvatarInstance(d) end end) end
-	end)
-	humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
-end
-
-local function hookCharacter(player,character)
-	task.spawn(function()
-		local humanoid=character:WaitForChild("Humanoid",10)
-		local root=character:WaitForChild("HumanoidRootPart",10)
-		if not humanoid or not root then return end
-		task.wait(1.5)
-		applySkeletonCharacter(player,character)
-	end)
-end
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(c) hookCharacter(p,c) end) end)
-for _,p in ipairs(Players:GetPlayers()) do
-	p.CharacterAdded:Connect(function(c) hookCharacter(p,c) end)
-	if p.Character then hookCharacter(p,p.Character) end
 end
 
 local followClock=0
@@ -413,6 +388,7 @@ request.OnServerInvoke=function(player,action,data)
 		obj.Parent=placed
 		local center,top=placeByVisualBounds(obj,base,data.rotation or 0)
 		obj:SetAttribute("BaseX",base.X); obj:SetAttribute("BaseY",base.Y); obj:SetAttribute("BaseZ",base.Z)
+		followerSignature=""
 		task.defer(saveNow)
 		return {ok=true,center=center,top=top}
 	elseif action=="export" then
@@ -454,7 +430,7 @@ request.OnServerInvoke=function(player,action,data)
 			local minV,maxV=worldBounds(obj); local center=(minV+maxV)*.5; local d=(center-pos).Magnitude
 			if not bestDist or d<bestDist then best,bestDist=obj,d end
 		end
-		if best and bestDist<=12 then best:Destroy(); task.defer(saveNow); return {ok=true} end
+		if best and bestDist<=12 then best:Destroy(); followerSignature=""; task.defer(saveNow); return {ok=true} end
 		return {ok=false,error="Nenhum item proximo"}
 	end
 	return {ok=false,error="Acao invalida"}
