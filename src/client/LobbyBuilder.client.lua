@@ -65,6 +65,16 @@ end
 local gui=Instance.new("ScreenGui")
 gui.Name="LobbyCreativeHUD"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=false; gui.Parent=player:WaitForChild("PlayerGui")
 
+local exportPanel=Instance.new("Frame")
+exportPanel.Size=UDim2.new(1,-24,0.48,0); exportPanel.Position=UDim2.new(0,12,0.26,0); exportPanel.Visible=false; exportPanel.ZIndex=20; exportPanel.Parent=gui
+local exportTitle=Instance.new("TextLabel")
+exportTitle.Size=UDim2.new(1,-48,0,32); exportTitle.Position=UDim2.fromOffset(8,4); exportTitle.BackgroundTransparency=1; exportTitle.Text="DIAGNOSTICO / EXPORT"; exportTitle.TextXAlignment=Enum.TextXAlignment.Left; exportTitle.TextScaled=true; exportTitle.ZIndex=21; exportTitle.Parent=exportPanel
+local exportClose=Instance.new("TextButton")
+exportClose.Size=UDim2.fromOffset(36,30); exportClose.Position=UDim2.new(1,-40,0,4); exportClose.Text="X"; exportClose.TextScaled=true; exportClose.ZIndex=21; exportClose.Parent=exportPanel
+local exportBox=Instance.new("TextBox")
+exportBox.Size=UDim2.new(1,-16,1,-46); exportBox.Position=UDim2.fromOffset(8,40); exportBox.ClearTextOnFocus=false; exportBox.MultiLine=true; exportBox.TextEditable=false; exportBox.TextWrapped=false; exportBox.TextXAlignment=Enum.TextXAlignment.Left; exportBox.TextYAlignment=Enum.TextYAlignment.Top; exportBox.TextSize=14; exportBox.Text=""; exportBox.ZIndex=21; exportBox.Parent=exportPanel
+exportClose.Activated:Connect(function() exportPanel.Visible=false end)
+
 local toggle=Instance.new("TextButton")
 toggle.Size=UDim2.fromOffset(48,48); toggle.Position=UDim2.new(1,-60,0,8); toggle.Text="BUILD"; toggle.TextScaled=true; toggle.Parent=gui
 
@@ -82,23 +92,31 @@ catalog.ScrollingDirection=Enum.ScrollingDirection.X; catalog.ScrollBarThickness
 local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,3); list.Parent=catalog
 
 local bar=Instance.new("Frame"); bar.Size=UDim2.new(1,-8,0,30); bar.Position=UDim2.fromOffset(4,86); bar.Parent=dock
-local status=Instance.new("TextLabel"); status.Size=UDim2.new(.34,-2,1,0); status.BackgroundTransparency=1; status.Text="Selecione"; status.TextScaled=true; status.Parent=bar
+local status=Instance.new("TextLabel"); status.Size=UDim2.new(.25,-2,1,0); status.BackgroundTransparency=1; status.Text="Selecione"; status.TextScaled=true; status.Parent=bar
 
 local function btn(parent,text,x,w,fn)
 	local b=Instance.new("TextButton"); b.Size=UDim2.new(w,-2,1,0); b.Position=UDim2.new(x,0,0,0); b.Text=text; b.TextScaled=true; b.Parent=parent; b.Activated:Connect(fn); return b
 end
 
-local placeBtn=btn(bar,"OK",.34,.18,function()
+local placeBtn=btn(bar,"OK",.25,.15,function()
 	if not selected or not previewBase then return end
 	local r=request:InvokeServer("place",{name=selected,basePosition=previewBase,rotation=rotation})
 	if r and r.ok then lastTop=r.top; status.Text="OK" else status.Text=(r and r.error) or "Erro" end
 end)
-btn(bar,"↻",.52,.14,function() rotation=(rotation+45)%360; status.Text=rotation.."°" end)
-btn(bar,"DEL",.66,.17,function()
+btn(bar,"↻",.40,.12,function() rotation=(rotation+45)%360; status.Text=rotation.."°" end)
+btn(bar,"DEL",.52,.15,function()
 	local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not root then return end
 	local r=request:InvokeServer("deleteNearest",{position=root.Position}); status.Text=r.ok and "Apagado" or "Nada perto"
 end)
-btn(bar,"RST",.83,.17,function() distance=4; height=0; joinLast=false; status.Text="Reset" end)
+btn(bar,"RST",.67,.13,function() distance=4; height=0; joinLast=false; status.Text="Reset" end)
+btn(bar,"EXP",.80,.20,function()
+	local r=request:InvokeServer("export")
+	if not r or not r.ok then status.Text=(r and r.error) or "Erro export"; return end
+	exportBox.Text=r.text
+	exportTitle.Text="EXPORT - "..tostring(r.count).." PECAS"
+	exportPanel.Visible=true
+	status.Text="Exportado"
+end)
 
 local adjust=Instance.new("Frame"); adjust.Size=UDim2.new(1,-8,0,30); adjust.Position=UDim2.fromOffset(4,120); adjust.Parent=dock
 btn(adjust,"D-",0,.14,function() distance=math.max(.5,distance-.5) end)
