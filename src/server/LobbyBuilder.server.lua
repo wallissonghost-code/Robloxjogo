@@ -214,6 +214,78 @@ local function createTestPrefabCopy()
 	return true
 end
 
+
+local RunService=game:GetService("RunService")
+local FOLLOW_RADIUS=18
+local FOLLOW_STOP=3.5
+local FOLLOW_SPEED=5
+
+local function visualCenter(obj)
+	local minV,maxV=worldBounds(obj)
+	return (minV+maxV)*.5
+end
+
+local function moveDecorXZ(obj,delta)
+	if delta.Magnitude<=0 then return end
+	translate(obj,Vector3.new(delta.X,0,delta.Z))
+end
+
+local function faceDecorToward(obj,target)
+	local center=visualCenter(obj)
+	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
+	if flat.Magnitude<0.01 then return end
+	local desired=math.deg(math.atan2(-flat.X,-flat.Z))
+	local current=obj:GetAttribute("RuntimeYaw") or obj:GetAttribute("RotationY") or 0
+	local delta=(desired-current+180)%360-180
+	rotateAroundCenter(obj,delta)
+	obj:SetAttribute("RuntimeYaw",desired)
+end
+
+local function getFollowerGroups()
+	local groups={}
+	local skeletons={}
+	for _,obj in ipairs(placed:GetChildren()) do
+		if obj:GetAttribute("AssetName")=="035_Skeleton" then table.insert(skeletons,obj) end
+	end
+	for _,skeleton in ipairs(skeletons) do
+		local sc=visualCenter(skeleton)
+		local bestHat,bestDist
+		for _,obj in ipairs(placed:GetChildren()) do
+			if obj:GetAttribute("AssetName")=="048_Hat" then
+				local hc=visualCenter(obj)
+				local d=(Vector2.new(sc.X,sc.Z)-Vector2.new(hc.X,hc.Z)).Magnitude
+				if d<1.5 and (not bestDist or d<bestDist) then bestHat,bestDist=obj,d end
+			end
+		end
+		table.insert(groups,{skeleton=skeleton,hat=bestHat})
+	end
+	return groups
+end
+
+local followClock=0
+RunService.Heartbeat:Connect(function(dt)
+	followClock+=dt
+	if followClock<0.05 then return end
+	local stepDt=followClock; followClock=0
+	local targetPlayer=Players:GetPlayers()[1]
+	local root=targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	for _,group in ipairs(getFollowerGroups()) do
+		local skeleton=group.skeleton
+		if skeleton.Parent~=placed then continue end
+		local center=visualCenter(skeleton)
+		local flat=Vector3.new(root.Position.X-center.X,0,root.Position.Z-center.Z)
+		local dist=flat.Magnitude
+		if dist<=FOLLOW_RADIUS and dist>FOLLOW_STOP then
+			local move=flat.Unit*math.min(FOLLOW_SPEED*stepDt,dist-FOLLOW_STOP)
+			moveDecorXZ(skeleton,move)
+			if group.hat then moveDecorXZ(group.hat,move) end
+			faceDecorToward(skeleton,root.Position)
+			if group.hat then faceDecorToward(group.hat,root.Position) end
+		end
+	end
+end)
+
 request.OnServerInvoke=function(player,action,data)
 	if not authorized(player) then return {ok=false,error="Sem permissao"} end
 	data=data or {}
