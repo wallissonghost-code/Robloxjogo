@@ -178,10 +178,46 @@ game:BindToClose(function()
 	end
 end)
 
+
+local TEST_PREFAB={
+	{name="035_Skeleton",rel=Vector3.new(0,0,0),rotation=90},
+	{name="048_Hat",rel=Vector3.new(-0.004,3.250,-0.068),rotation=0}
+}
+local TEST_PREFAB_TARGET=Vector3.new(0.161,0.591,6.243)
+local TEST_PREFAB_YAW=135
+
+local function rotateXZ(v,yaw)
+	local r=math.rad(yaw)
+	return Vector3.new(v.X*math.cos(r)-v.Z*math.sin(r),v.Y,v.X*math.sin(r)+v.Z*math.cos(r))
+end
+
+local function createTestPrefabCopy()
+	if placed:GetAttribute("TestPrefabCopyCreated") then return end
+	if not loadCatalog() then return end
+	local nextOrder=#placed:GetChildren()+1
+	for i,item in ipairs(TEST_PREFAB) do
+		local template=catalog:FindFirstChild(item.name)
+		if template then
+			local rel=rotateXZ(item.rel,TEST_PREFAB_YAW)
+			local base=TEST_PREFAB_TARGET+rel
+			local yaw=(item.rotation+TEST_PREFAB_YAW)%360
+			local obj=template:Clone(); obj.Name="Decor_"..item.name
+			obj:SetAttribute("PlacedBy",OWNER_USER_ID); obj:SetAttribute("AssetName",item.name)
+			obj:SetAttribute("RotationY",yaw); obj:SetAttribute("PlacedOrder",nextOrder+i-1)
+			obj:SetAttribute("PrefabTestCopy",true); obj.Parent=placed
+			placeByVisualBounds(obj,base,yaw)
+			obj:SetAttribute("BaseX",base.X); obj:SetAttribute("BaseY",base.Y); obj:SetAttribute("BaseZ",base.Z)
+		end
+	end
+	placed:SetAttribute("TestPrefabCopyCreated",true)
+	task.defer(saveNow)
+end
+
 request.OnServerInvoke=function(player,action,data)
 	if not authorized(player) then return {ok=false,error="Sem permissao"} end
 	data=data or {}
 	if action=="catalog" then
+		createTestPrefabCopy()
 		loadCatalog()
 		local items={}; for _,item in ipairs(catalog:GetChildren()) do table.insert(items,item.Name) end; table.sort(items)
 		return {ok=catalogLoaded,items=items,status=catalogStatus}
