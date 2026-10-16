@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")\nlocal RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 if player.UserId ~= 9538436641 then return end
@@ -193,12 +193,13 @@ open.Activated:Connect(function()
 	end
 end)
 
-local function pointPreview(screenPosition)
+local function updatePreview()
 	if not panel.Visible or not selected or not preview then return end
 	local camera = workspace.CurrentCamera
 	if not camera then return end
 
-	local ray = camera:ViewportPointToRay(screenPosition.X, screenPosition.Y)
+	local viewport = camera.ViewportSize
+	local ray = camera:ViewportPointToRay(viewport.X * 0.5, viewport.Y * 0.5)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local ignored = {preview}
@@ -209,18 +210,7 @@ local function pointPreview(screenPosition)
 	if hit then
 		previewPosition = hit.Position
 		moveObject(preview, CFrame.new(previewPosition) * CFrame.Angles(0, math.rad(rotation), 0))
-		status.Text = "Preview pronto"
 	end
 end
 
-UserInputService.TouchTap:Connect(function(points, processed)
-	if not processed and points[1] then
-		pointPreview(points[1])
-	end
-end)
-
-UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.UserInputType == Enum.UserInputType.MouseButton1 then
-		pointPreview(input.Position)
-	end
-end)
+RunService.RenderStepped:Connect(updatePreview)
