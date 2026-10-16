@@ -289,7 +289,39 @@ end)
 request.OnServerInvoke=function(player,action,data)
 	if not authorized(player) then return {ok=false,error="Sem permissao"} end
 	data=data or {}
-	if action=="duplicateTestPrefab" then
+	if action=="inspectSkeleton" then
+		if not loadCatalog() then return {ok=false,error="Catalogo indisponivel"} end
+		local template=catalog:FindFirstChild("035_Skeleton")
+		if not template then return {ok=false,error="035_Skeleton nao encontrado"} end
+		local lines={"SKELETON_INSPECT_V1","ROOT | "..template.Name.." | "..template.ClassName}
+		local partCount,jointCount=0,0
+		local function depthOf(inst)
+			local depth=0; local p=inst.Parent
+			while p and p~=template do depth+=1; p=p.Parent end
+			return depth
+		end
+		local all={template}
+		for _,d in ipairs(template:GetDescendants()) do table.insert(all,d) end
+		for _,inst in ipairs(all) do
+			if inst~=template then
+				local prefix=string.rep("  ",depthOf(inst))
+				local extra=""
+				if inst:IsA("BasePart") then
+					partCount+=1
+					extra=string.format(" | SIZE %.3f %.3f %.3f",inst.Size.X,inst.Size.Y,inst.Size.Z)
+					if inst:IsA("MeshPart") then extra=extra.." | MESH "..tostring(inst.MeshId) end
+				elseif inst:IsA("Motor6D") or inst:IsA("Weld") or inst:IsA("WeldConstraint") then
+					jointCount+=1
+					local p0=inst:IsA("WeldConstraint") and inst.Part0 or inst.Part0
+					local p1=inst:IsA("WeldConstraint") and inst.Part1 or inst.Part1
+					extra=" | P0 "..(p0 and p0.Name or "nil").." | P1 "..(p1 and p1.Name or "nil")
+				end
+				table.insert(lines,prefix..inst.Name.." | "..inst.ClassName..extra)
+			end
+		end
+		table.insert(lines,2,string.format("SUMMARY | PARTS %d | JOINTS %d | DESC %d",partCount,jointCount,#all-1))
+		return {ok=true,text=table.concat(lines,"\n"),parts=partCount,joints=jointCount}
+	elseif action=="duplicateTestPrefab" then
 		local ok,msg=createTestPrefabCopy()
 		return {ok=ok,error=msg,count=#placed:GetChildren()}
 	elseif action=="catalog" then
