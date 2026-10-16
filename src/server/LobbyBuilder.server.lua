@@ -262,6 +262,53 @@ local function getFollowerGroups()
 	return groups
 end
 
+
+local function applySkeletonCharacter(player)
+	if not authorized(player) then return end
+	if not loadCatalog() then return end
+	local character=player.Character
+	local root=character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid=character and character:FindFirstChildOfClass("Humanoid")
+	local template=catalog:FindFirstChild("035_Skeleton")
+	if not character or not root or not humanoid or not template then return end
+	local old=character:FindFirstChild("SkeletonAvatarVisual")
+	if old then old:Destroy() end
+	for _,d in ipairs(character:GetDescendants()) do
+		if d:IsA("BasePart") and d~=root then d.Transparency=1
+		elseif d:IsA("Decal") then d.Transparency=1
+		elseif d:IsA("Accessory") then
+			local handle=d:FindFirstChild("Handle")
+			if handle then handle.Transparency=1 end
+		end
+	end
+	root.Transparency=1
+	local visual=template:Clone(); visual.Name="SkeletonAvatarVisual"; visual.Parent=character
+	local parts=getParts(visual)
+	if #parts==0 then visual:Destroy(); return end
+	local minV,maxV=worldBounds(visual)
+	local visualCenter=(minV+maxV)*.5
+	local targetCenter=root.Position+Vector3.new(0,(maxV.Y-minV.Y)*0.05,0)
+	translate(visual,targetCenter-visualCenter)
+	for _,part in ipairs(parts) do
+		part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false
+		part.Massless=true
+		local weld=Instance.new("WeldConstraint")
+		weld.Name="SkeletonAvatarWeld"; weld.Part0=root; weld.Part1=part; weld.Parent=part
+	end
+	humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
+end
+
+local function hookSkeletonCharacter(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		applySkeletonCharacter(player)
+	end)
+	if player.Character then task.defer(function() task.wait(1); applySkeletonCharacter(player) end) end
+end
+
+Players.PlayerAdded:Connect(hookSkeletonCharacter)
+for _,p in ipairs(Players:GetPlayers()) do hookSkeletonCharacter(p) end
+
 local followClock=0
 RunService.Heartbeat:Connect(function(dt)
 	followClock+=dt
