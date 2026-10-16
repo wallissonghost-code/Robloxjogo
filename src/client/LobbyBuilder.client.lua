@@ -147,17 +147,21 @@ btn(bar,"EXP",.80,.20,function()
 end)
 
 local adjust=Instance.new("Frame"); adjust.Size=UDim2.new(1,-8,0,30); adjust.Position=UDim2.fromOffset(4,120); adjust.Parent=dock
-btn(adjust,"D-",0,.14,function() distance=math.max(.5,distance-.5) end)
-btn(adjust,"D+",.14,.14,function() distance=math.min(20,distance+.5) end)
-btn(adjust,"Y-",.28,.14,function() height=math.max(-20,height-.25) end)
-btn(adjust,"Y+",.42,.14,function() height=math.min(30,height+.25) end)
+btn(adjust,"D-",0,.12,function() distance=math.max(.5,distance-.5) end)
+btn(adjust,"D+",.12,.12,function() distance=math.min(20,distance+.5) end)
+btn(adjust,"Y-",.24,.12,function() height=math.max(-20,height-.25) end)
+btn(adjust,"Y+",.36,.12,function() height=math.min(30,height+.25) end)
 local joinBtn
-joinBtn=btn(adjust,"JOIN",.56,.22,function()
+joinBtn=btn(adjust,"JOIN",.48,.18,function()
 	joinLast=not joinLast
 	if joinLast and lastTop then distance=0; height=0 end
 	joinBtn.Text=joinLast and "JOIN ✓" or "JOIN"
 end)
-btn(adjust,"MIN",.78,.22,function() dock.Visible=false; toggle.Visible=true end)
+btn(adjust,"DUP",.66,.17,function()
+	local r=request:InvokeServer("duplicateTestPrefab")
+	status.Text=(r and r.ok) and ("DUP "..tostring(r.count)) or ((r and r.error) or "Erro DUP")
+end)
+btn(adjust,"MIN",.83,.17,function() dock.Visible=false; toggle.Visible=true end)
 
 local collapsed=false
 collapse.Activated:Connect(function()
