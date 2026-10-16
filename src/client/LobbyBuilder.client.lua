@@ -157,11 +157,27 @@ joinBtn=btn(adjust,"JOIN",.48,.18,function()
 	if joinLast and lastTop then distance=0; height=0 end
 	joinBtn.Text=joinLast and "JOIN ✓" or "JOIN"
 end)
-btn(adjust,"DUP",.66,.17,function()
+btn(adjust,"DUP",.66,.11,function()
 	local r=request:InvokeServer("duplicateTestPrefab")
 	status.Text=(r and r.ok) and ("DUP "..tostring(r.count)) or ((r and r.error) or "Erro DUP")
 end)
-btn(adjust,"MIN",.83,.17,function() dock.Visible=false; toggle.Visible=true end)
+btn(adjust,"RIG?",.77,.11,function()
+	local r=request:InvokeServer("inspectSkeleton")
+	if not r or not r.ok then status.Text=(r and r.error) or "Erro RIG"; return end
+	exportPages={}
+	local text=r.text or ""
+	local page=""
+	for line in (text.."\n"):gmatch("(.-)\n") do
+		local candidate=(page=="" and line or page.."\n"..line)
+		if #candidate>1200 and page~="" then table.insert(exportPages,page); page=line else page=candidate end
+	end
+	if page~="" then table.insert(exportPages,page) end
+	if #exportPages==0 then table.insert(exportPages,text) end
+	exportIndex=1; showExportPage()
+	exportTitle.Text="SKELETON - "..tostring(r.parts).." PARTS / "..tostring(r.joints).." JOINTS"
+	exportPanel.Visible=true; status.Text="Rig export"
+end)
+btn(adjust,"MIN",.88,.12,function() dock.Visible=false; toggle.Visible=true end)
 
 local collapsed=false
 collapse.Activated:Connect(function()
