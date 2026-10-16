@@ -7,6 +7,14 @@ local OWNER_USER_ID=9538436641
 local HALLOWEEN_ASSET_ID=113280926555931
 local BUILD_STORE=DataStoreService:GetDataStore("LobbyCreativeBuild_V1")
 local BUILD_KEY="HalloweenLobby"
+local BUILD_REPAIR_VERSION=2
+local KNOWN_GOOD_BUILD={
+	{order=1,name="035_Skeleton",x=-0.161,y=0.591,z=-6.243,rotation=90},
+	{order=2,name="048_Hat",x=-0.165,y=3.841,z=-6.312,rotation=0},
+	-- Rebuild the DUP copy from the same prefab geometry, opposite-side target + 135 Y.
+	{order=3,name="035_Skeleton",x=0.161,y=0.591,z=6.243,rotation=225},
+	{order=4,name="048_Hat",x=0.260,y=3.841,z=6.193,rotation=135}
+}
 
 local remotes=ReplicatedStorage:FindFirstChild("LobbyBuilderRemotes") or Instance.new("Folder")
 remotes.Name="LobbyBuilderRemotes"; remotes.Parent=ReplicatedStorage
@@ -141,7 +149,7 @@ local function snapshotBuild()
 		})
 	end
 	table.sort(rows,function(a,b) return a.order<b.order end)
-	return {version=1,updated=os.time(),items=rows}
+	return {version=2,repairVersion=BUILD_REPAIR_VERSION,updated=os.time(),items=rows}
 end
 
 local function saveNow()
@@ -157,7 +165,23 @@ end
 local function restoreBuild()
 	local ok,data=pcall(function() return BUILD_STORE:GetAsync(BUILD_KEY) end)
 	if not ok then warn("[LobbyBuilder] Falha ao carregar build: "..tostring(data)); return end
-	if type(data)~="table" or type(data.items)~="table" or #data.items==0 then return end
+	if type(data)~="table" then data={version=0,items={}} end
+	if (data.repairVersion or 0)<BUILD_REPAIR_VERSION then
+		local rel=Vector3.new(-0.004,3.250,-0.068)
+		local r=math.rad(135)
+		local rotated=Vector3.new(rel.X*math.cos(r)-rel.Z*math.sin(r),rel.Y,rel.X*math.sin(r)+rel.Z*math.cos(r))
+		local repaired={}
+		for _,row in ipairs(KNOWN_GOOD_BUILD) do
+			local copy={}; for k,v in pairs(row) do copy[k]=v end
+			table.insert(repaired,copy)
+		end
+		repaired[4].x=0.161+rotated.X; repaired[4].y=0.591+rotated.Y; repaired[4].z=6.243+rotated.Z
+		data={version=2,repairVersion=BUILD_REPAIR_VERSION,updated=os.time(),items=repaired}
+		local saved,err=pcall(function() BUILD_STORE:SetAsync(BUILD_KEY,data) end)
+		if not saved then warn("[LobbyBuilder] Falha ao persistir reparo: "..tostring(err)) end
+		print("[LobbyBuilder] Build corrompido reparado para versao "..BUILD_REPAIR_VERSION)
+	end
+	if type(data.items)~="table" or #data.items==0 then return end
 	if not loadCatalog() then warn("[LobbyBuilder] Build salvo existe, mas catalogo nao carregou"); return end
 	placed:ClearAllChildren()
 	for i,row in ipairs(data.items) do
@@ -197,28 +221,8 @@ local function rotateXZ(v,yaw)
 end
 
 local function createTestPrefabCopy()
-	if placed:GetAttribute("TestPrefabCopyCreated") then return false,"Copia ja criada" end
-	if not loadCatalog() then return false,"Catalogo indisponivel" end
-	local nextOrder=#placed:GetChildren()+1
-	for i,item in ipairs(TEST_PREFAB) do
-		local template=catalog:FindFirstChild(item.name)
-		if template then
-			local rel=rotateXZ(item.rel,TEST_PREFAB_YAW)
-			local base=TEST_PREFAB_TARGET+rel
-			local yaw=(item.rotation+TEST_PREFAB_YAW)%360
-			local obj=template:Clone(); obj.Name="Decor_"..item.name
-			obj:SetAttribute("PlacedBy",OWNER_USER_ID); obj:SetAttribute("AssetName",item.name)
-			obj:SetAttribute("RotationY",yaw); obj:SetAttribute("PlacedOrder",nextOrder+i-1)
-			obj:SetAttribute("PrefabTestCopy",true); obj.Parent=placed
-			placeByVisualBounds(obj,base,yaw)
-			obj:SetAttribute("BaseX",base.X); obj:SetAttribute("BaseY",base.Y); obj:SetAttribute("BaseZ",base.Z)
-		end
-	end
-	placed:SetAttribute("TestPrefabCopyCreated",true)
-	task.defer(saveNow)
-	return true
+	return false,"Teste DUP ja incorporado ao build reparado"
 end
-
 
 local RunService=game:GetService("RunService")
 local FOLLOW_RADIUS=18
