@@ -241,73 +241,57 @@ local function faceDecorToward(obj,target)
 	obj:SetAttribute("RuntimeYaw",desired)
 end
 
+local function baseXZ(obj)
+	local x=obj:GetAttribute("BaseX")
+	local z=obj:GetAttribute("BaseZ")
+	if type(x)=="number" and type(z)=="number" then return Vector2.new(x,z) end
+	local c=visualCenter(obj); return Vector2.new(c.X,c.Z)
+end
+
 local function getFollowerGroups()
 	local groups={}
-	local skeletons={}
+	local hats={}
 	for _,obj in ipairs(placed:GetChildren()) do
-		if obj:GetAttribute("AssetName")=="035_Skeleton" then table.insert(skeletons,obj) end
+		if obj:GetAttribute("AssetName")=="048_Hat" then table.insert(hats,obj) end
 	end
-	for _,skeleton in ipairs(skeletons) do
-		local sc=visualCenter(skeleton)
-		local bestHat,bestDist
-		for _,obj in ipairs(placed:GetChildren()) do
-			if obj:GetAttribute("AssetName")=="048_Hat" then
-				local hc=visualCenter(obj)
-				local d=(Vector2.new(sc.X,sc.Z)-Vector2.new(hc.X,hc.Z)).Magnitude
-				if d<1.5 and (not bestDist or d<bestDist) then bestHat,bestDist=obj,d end
+	for _,skeleton in ipairs(placed:GetChildren()) do
+		if skeleton:GetAttribute("AssetName")=="035_Skeleton" then
+			local sb=baseXZ(skeleton)
+			local bestHat,bestDist
+			for _,hat in ipairs(hats) do
+				if not hat:GetAttribute("RuntimeFollowerClaimed") then
+					local d=(sb-baseXZ(hat)).Magnitude
+					if d<2 and (not bestDist or d<bestDist) then bestHat,bestDist=hat,d end
+				end
 			end
+			if bestHat then bestHat:SetAttribute("RuntimeFollowerClaimed",true) end
+			table.insert(groups,{skeleton=skeleton,hat=bestHat})
 		end
-		table.insert(groups,{skeleton=skeleton,hat=bestHat})
 	end
+	for _,hat in ipairs(hats) do hat:SetAttribute("RuntimeFollowerClaimed",nil) end
 	return groups
 end
 
-
-local function applySkeletonCharacter(player)
-	if not authorized(player) then return end
-	if not loadCatalog() then return end
-	local character=player.Character
-	local root=character and character:FindFirstChild("HumanoidRootPart")
-	local humanoid=character and character:FindFirstChildOfClass("Humanoid")
-	local template=catalog:FindFirstChild("035_Skeleton")
-	if not character or not root or not humanoid or not template then return end
-	local old=character:FindFirstChild("SkeletonAvatarVisual")
-	if old then old:Destroy() end
-	for _,d in ipairs(character:GetDescendants()) do
-		if d:IsA("BasePart") and d~=root then d.Transparency=1
-		elseif d:IsA("Decal") then d.Transparency=1
-		elseif d:IsA("Accessory") then
-			local handle=d:FindFirstChild("Handle")
-			if handle then handle.Transparency=1 end
+local function transformFollowerGroup(group,target,move)
+	local skeleton=group.skeleton
+	local center=visualCenter(skeleton)
+	local flat=Vector3.new(target.X-center.X,0,target.Z-center.Z)
+	local current=skeleton:GetAttribute("RuntimeYaw") or skeleton:GetAttribute("RotationY") or 0
+	local desired=current
+	if flat.Magnitude>=0.01 then desired=math.deg(math.atan2(-flat.X,-flat.Z)) end
+	local yawDelta=(desired-current+180)%360-180
+	local pivot=center
+	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
+	local members={skeleton}
+	if group.hat then table.insert(members,group.hat) end
+	for _,obj in ipairs(members) do
+		for _,part in ipairs(getParts(obj)) do
+			local relative=CFrame.new(pivot):ToObjectSpace(part.CFrame)
+			part.CFrame=CFrame.new(pivot)*rot*relative+move
 		end
 	end
-	root.Transparency=1
-	local visual=template:Clone(); visual.Name="SkeletonAvatarVisual"; visual.Parent=character
-	local parts=getParts(visual)
-	if #parts==0 then visual:Destroy(); return end
-	local minV,maxV=worldBounds(visual)
-	local visualCenter=(minV+maxV)*.5
-	local targetCenter=root.Position+Vector3.new(0,(maxV.Y-minV.Y)*0.05,0)
-	translate(visual,targetCenter-visualCenter)
-	for _,part in ipairs(parts) do
-		part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false
-		part.Massless=true
-		local weld=Instance.new("WeldConstraint")
-		weld.Name="SkeletonAvatarWeld"; weld.Part0=root; weld.Part1=part; weld.Parent=part
-	end
-	humanoid.DisplayDistanceType=Enum.HumanoidDisplayDistanceType.None
+	skeleton:SetAttribute("RuntimeYaw",desired)
 end
-
-local function hookSkeletonCharacter(player)
-	player.CharacterAdded:Connect(function()
-		task.wait(1)
-		applySkeletonCharacter(player)
-	end)
-	if player.Character then task.defer(function() task.wait(1); applySkeletonCharacter(player) end) end
-end
-
-Players.PlayerAdded:Connect(hookSkeletonCharacter)
-for _,p in ipairs(Players:GetPlayers()) do hookSkeletonCharacter(p) end
 
 local followClock=0
 RunService.Heartbeat:Connect(function(dt)
@@ -325,10 +309,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local dist=flat.Magnitude
 		if dist<=FOLLOW_RADIUS and dist>FOLLOW_STOP then
 			local move=flat.Unit*math.min(FOLLOW_SPEED*stepDt,dist-FOLLOW_STOP)
-			moveDecorXZ(skeleton,move)
-			if group.hat then moveDecorXZ(group.hat,move) end
-			faceDecorToward(skeleton,root.Position)
-			if group.hat then faceDecorToward(group.hat,root.Position) end
+			transformFollowerGroup(group,root.Position,move)
 		end
 	end
 end)
