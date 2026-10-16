@@ -266,6 +266,71 @@ local function resetToAuthored(obj)
 	placeByVisualBounds(obj,base,yaw)
 end
 
+local function makeBonePart(model,name,size,cf,shape)
+	local p=Instance.new("Part")
+	p.Name=name; p.Size=size; p.CFrame=cf; p.Anchored=true; p.CanCollide=false
+	p.Material=Enum.Material.SmoothPlastic; p.Color=Color3.fromRGB(226,220,194)
+	if shape then p.Shape=shape end
+	p.Parent=model
+	return p
+end
+
+local function motor(name,p0,p1,c0,c1)
+	local m=Instance.new("Motor6D"); m.Name=name; m.Part0=p0; m.Part1=p1
+	m.C0=c0; m.C1=c1 or CFrame.new(); m.Parent=p0; return m
+end
+
+local function createAnimatedSkeletonRig(source)
+	local minV,maxV=worldBounds(source)
+	local base=Vector3.new((minV.X+maxV.X)*.5,minV.Y,(minV.Z+maxV.Z)*.5)
+	local model=Instance.new("Model"); model.Name="AnimatedSkeletonRig"; model.Parent=workspace
+	local root=makeBonePart(model,"Root",Vector3.new(.35,.35,.35),CFrame.new(base+Vector3.new(0,1.75,0)))
+	root.Transparency=1
+	local pelvis=makeBonePart(model,"Pelvis",Vector3.new(.85,.28,.38),root.CFrame*CFrame.new(0,-.25,0))
+	local chest=makeBonePart(model,"RibCage",Vector3.new(1.05,.85,.42),root.CFrame*CFrame.new(0,.55,0))
+	local head=makeBonePart(model,"Skull",Vector3.new(.72,.72,.66),root.CFrame*CFrame.new(0,1.35,0),Enum.PartType.Ball)
+	local lua=makeBonePart(model,"LeftUpperArm",Vector3.new(.22,.82,.22),root.CFrame*CFrame.new(-.72,.55,0))
+	local lla=makeBonePart(model,"LeftLowerArm",Vector3.new(.19,.78,.19),root.CFrame*CFrame.new(-.72,-.18,0))
+	local rua=makeBonePart(model,"RightUpperArm",Vector3.new(.22,.82,.22),root.CFrame*CFrame.new(.72,.55,0))
+	local rla=makeBonePart(model,"RightLowerArm",Vector3.new(.19,.78,.19),root.CFrame*CFrame.new(.72,-.18,0))
+	local lul=makeBonePart(model,"LeftUpperLeg",Vector3.new(.25,.88,.25),root.CFrame*CFrame.new(-.28,-.78,0))
+	local lll=makeBonePart(model,"LeftLowerLeg",Vector3.new(.22,.86,.22),root.CFrame*CFrame.new(-.28,-1.62,0))
+	local rul=makeBonePart(model,"RightUpperLeg",Vector3.new(.25,.88,.25),root.CFrame*CFrame.new(.28,-.78,0))
+	local rll=makeBonePart(model,"RightLowerLeg",Vector3.new(.22,.86,.22),root.CFrame*CFrame.new(.28,-1.62,0))
+	local joints={}
+	joints.RootPelvis=motor("RootPelvis",root,pelvis,CFrame.new(0,-.25,0))
+	joints.Spine=motor("Spine",root,chest,CFrame.new(0,.55,0))
+	joints.Neck=motor("Neck",root,head,CFrame.new(0,1.35,0))
+	joints.LShoulder=motor("LShoulder",root,lua,CFrame.new(-.72,.55,0))
+	joints.LElbow=motor("LElbow",lua,lla,CFrame.new(0,-.73,0))
+	joints.RShoulder=motor("RShoulder",root,rua,CFrame.new(.72,.55,0))
+	joints.RElbow=motor("RElbow",rua,rla,CFrame.new(0,-.73,0))
+	joints.LHip=motor("LHip",root,lul,CFrame.new(-.28,-.78,0))
+	joints.LKnee=motor("LKnee",lul,lll,CFrame.new(0,-.84,0))
+	joints.RHip=motor("RHip",root,rul,CFrame.new(.28,-.78,0))
+	joints.RKnee=motor("RKnee",rul,rll,CFrame.new(0,-.84,0))
+	model.PrimaryPart=root
+	return model,root,joints
+end
+
+local function animateRig(group,dt)
+	if not group.rig or not group.rig.Parent then return end
+	group.animClock=(group.animClock or 0)+dt*math.max(2.5,(group.moveSpeed or 0)*.65)
+	local moving=(group.moveSpeed or 0)>.4
+	local wave=moving and math.sin(group.animClock) or math.sin(group.animClock*.35)*.08
+	local leg=wave*.72
+	local arm=-wave*.55
+	group.joints.LHip.Transform=CFrame.Angles(leg,0,0)
+	group.joints.RHip.Transform=CFrame.Angles(-leg,0,0)
+	group.joints.LKnee.Transform=CFrame.Angles(math.max(0,-leg)*.55,0,0)
+	group.joints.RKnee.Transform=CFrame.Angles(math.max(0,leg)*.55,0,0)
+	group.joints.LShoulder.Transform=CFrame.Angles(arm,0,0)
+	group.joints.RShoulder.Transform=CFrame.Angles(-arm,0,0)
+	group.joints.LElbow.Transform=CFrame.Angles(-.18,0,0)
+	group.joints.RElbow.Transform=CFrame.Angles(-.18,0,0)
+	group.joints.Spine.Transform=CFrame.Angles(0,0,moving and math.sin(group.animClock*2)*.035 or 0)
+end
+
 local function rebuildFollowerGroups()
 	local children=placed:GetChildren()
 	table.sort(children,function(a,b) return (a:GetAttribute("PlacedOrder") or 999999)<(b:GetAttribute("PlacedOrder") or 999999) end)
@@ -273,6 +338,9 @@ local function rebuildFollowerGroups()
 	for _,o in ipairs(children) do table.insert(sigParts,tostring(o:GetAttribute("PlacedOrder"))..":"..tostring(o:GetAttribute("AssetName"))) end
 	local sig=table.concat(sigParts,"|")
 	if sig==followerSignature then return end
+	for _,oldGroup in ipairs(followerGroups) do
+		if oldGroup.rig then oldGroup.rig:Destroy() end
+	end
 	followerSignature=sig; followerGroups={}
 	local hats={}
 	for _,o in ipairs(children) do
@@ -301,13 +369,12 @@ local function rebuildFollowerGroups()
 					local old=hatPart:FindFirstChild("FollowerHatWeld"); if old then old:Destroy() end
 				end
 			end
+			local rig,rigRoot,joints=createAnimatedSkeletonRig(skeleton)
+			for _,part in ipairs(getParts(skeleton)) do part.Transparency=1; part.CanCollide=false end
 			table.insert(followerGroups,{
-			skeleton=skeleton,
-			hat=best,
-			-- Runtime facing state is independent from persistent builder RotationY.
-			heading=skeleton:GetAttribute("RotationY") or 0,
-			moveSpeed=0
-		})
+				skeleton=skeleton,hat=best,rig=rig,rigRoot=rigRoot,joints=joints,
+				heading=skeleton:GetAttribute("RotationY") or 0,moveSpeed=0,animClock=0
+			})
 		end
 	end
 end
@@ -335,6 +402,7 @@ local function transformFollowerGroup(group,target,move,stepDt)
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
 	local members={skeleton}
 	if group.hat and group.hat.Parent==placed then table.insert(members,group.hat) end
+	if group.rig and group.rig.Parent then table.insert(members,group.rig) end
 	for _,obj in ipairs(members) do
 		for _,part in ipairs(getParts(obj)) do
 			local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
@@ -415,10 +483,11 @@ RunService.Heartbeat:Connect(function(dt)
 				local maxFrameSpeed=math.max(group.moveSpeed,math.min(npcMoveSpeed,NPC_SEPARATION_FORCE))
 				if move.Magnitude>maxFrameSpeed*stepDt then move=move.Unit*(maxFrameSpeed*stepDt) end
 				if move.Magnitude>0.001 then
-					for _,obj in ipairs({group.skeleton,group.hat}) do
-						if obj and obj.Parent==placed then translate(obj,move) end
+					for _,obj in ipairs({group.skeleton,group.hat,group.rig}) do
+						if obj and (obj.Parent==placed or obj.Parent==workspace) then translate(obj,move) end
 					end
 				end
+				animateRig(group,stepDt)
 			end
 		end
 	end
