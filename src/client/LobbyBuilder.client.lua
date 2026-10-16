@@ -1,191 +1,167 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local Players=game:GetService("Players")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
 
-local player = Players.LocalPlayer
-if player.UserId ~= 9538436641 then return end
+local player=Players.LocalPlayer
+if player.UserId~=9538436641 then return end
+local request=ReplicatedStorage:WaitForChild("LobbyBuilderRemotes"):WaitForChild("Request")
+local catalogFolder=ReplicatedStorage:WaitForChild("HalloweenCatalog")
 
-local request = ReplicatedStorage:WaitForChild("LobbyBuilderRemotes"):WaitForChild("Request")
-local catalogFolder = ReplicatedStorage:WaitForChild("HalloweenCatalog")
+local selected,preview,previewBase
+local rotation=0
+local catalogLoaded=false
+local distance=4
+local height=0
+local joinLast=false
+local lastTop
 
-local selected, preview, previewBasePosition
-local rotation = 0
-local catalogLoaded = false
-local placementDistance = 6
-local heightOffset = 0
-local joinLast = false
-local lastPlacedTop
-local lastPlacedCenter
+local function getParts(obj)
+	local parts={}
+	if obj:IsA("BasePart") then table.insert(parts,obj) end
+	for _,d in ipairs(obj:GetDescendants()) do if d:IsA("BasePart") then table.insert(parts,d) end end
+	return parts
+end
+
+local function worldBounds(obj)
+	local parts=getParts(obj)
+	if #parts==0 then return Vector3.zero,Vector3.zero end
+	local minV=Vector3.new(math.huge,math.huge,math.huge)
+	local maxV=Vector3.new(-math.huge,-math.huge,-math.huge)
+	for _,p in ipairs(parts) do
+		local cf=p.CFrame; local h=p.Size*.5
+		local ax=cf.RightVector; local ay=cf.UpVector; local az=cf.LookVector
+		local e=Vector3.new(
+			math.abs(ax.X)*h.X+math.abs(ay.X)*h.Y+math.abs(az.X)*h.Z,
+			math.abs(ax.Y)*h.X+math.abs(ay.Y)*h.Y+math.abs(az.Y)*h.Z,
+			math.abs(ax.Z)*h.X+math.abs(ay.Z)*h.Y+math.abs(az.Z)*h.Z
+		)
+		minV=Vector3.new(math.min(minV.X,p.Position.X-e.X),math.min(minV.Y,p.Position.Y-e.Y),math.min(minV.Z,p.Position.Z-e.Z))
+		maxV=Vector3.new(math.max(maxV.X,p.Position.X+e.X),math.max(maxV.Y,p.Position.Y+e.Y),math.max(maxV.Z,p.Position.Z+e.Z))
+	end
+	return minV,maxV
+end
+
+local function translate(obj,delta)
+	for _,p in ipairs(getParts(obj)) do p.CFrame=p.CFrame+delta end
+end
+
+local function placeVisual(obj,base)
+	local minV,maxV=worldBounds(obj)
+	local center=(minV+maxV)*.5
+	translate(obj,Vector3.new(base.X-center.X,base.Y-minV.Y,base.Z-center.Z))
+end
 
 local function clearPreview()
-	if preview then preview:Destroy(); preview = nil end
-	previewBasePosition = nil
+	if preview then preview:Destroy(); preview=nil end
+	previewBase=nil
 end
 
-local function makeGhost(obj)
-	for _, d in ipairs(obj:GetDescendants()) do
-		if d:IsA("BasePart") then
-			d.Anchored = true; d.CanCollide = false; d.CanTouch = false; d.CanQuery = false
-			d.Transparency = math.max(d.Transparency, 0.55)
-		end
+local function ghost(obj)
+	for _,p in ipairs(getParts(obj)) do
+		p.Anchored=true; p.CanCollide=false; p.CanTouch=false; p.CanQuery=false; p.Transparency=math.max(p.Transparency,.45)
 	end
-	if obj:IsA("BasePart") then
-		obj.Anchored = true; obj.CanCollide = false; obj.CanTouch = false; obj.CanQuery = false
-		obj.Transparency = math.max(obj.Transparency, 0.55)
-	end
-end
-
-local function pivotTo(obj, cf)
-	if obj:IsA("Model") then
-		obj:PivotTo(cf)
-	elseif obj:IsA("BasePart") then
-		obj.CFrame = cf
-	else
-		local part = obj:FindFirstChildWhichIsA("BasePart", true)
-		if part then
-			local delta = cf * part.CFrame:Inverse()
-			for _, d in ipairs(obj:GetDescendants()) do
-				if d:IsA("BasePart") then d.CFrame = delta * d.CFrame end
-			end
-		end
-	end
-end
-
-local function bounds(obj)
-	if obj:IsA("Model") then
-		local cf, size = obj:GetBoundingBox()
-		return cf, size
-	end
-	if obj:IsA("BasePart") then return obj.CFrame, obj.Size end
-	local parts = {}
-	for _, d in ipairs(obj:GetDescendants()) do if d:IsA("BasePart") then table.insert(parts, d) end end
-	if #parts == 0 then return CFrame.new(), Vector3.zero end
-	local minV = Vector3.new(math.huge, math.huge, math.huge)
-	local maxV = Vector3.new(-math.huge, -math.huge, -math.huge)
-	for _, p in ipairs(parts) do
-		local half = p.Size * 0.5
-		minV = Vector3.new(math.min(minV.X,p.Position.X-half.X),math.min(minV.Y,p.Position.Y-half.Y),math.min(minV.Z,p.Position.Z-half.Z))
-		maxV = Vector3.new(math.max(maxV.X,p.Position.X+half.X),math.max(maxV.Y,p.Position.Y+half.Y),math.max(maxV.Z,p.Position.Z+half.Z))
-	end
-	local center=(minV+maxV)*0.5
-	return CFrame.new(center), maxV-minV
-end
-
-local function placeBaseAt(obj, basePos, yaw)
-	pivotTo(obj, CFrame.new(basePos) * CFrame.Angles(0, math.rad(yaw), 0))
-	local boxCF, boxSize = bounds(obj)
-	local bottomY = boxCF.Position.Y - boxSize.Y * 0.5
-	local dy = basePos.Y - bottomY
-	if math.abs(dy) > 0.001 then
-		local current
-		if obj:IsA("Model") then current=obj:GetPivot()
-		elseif obj:IsA("BasePart") then current=obj.CFrame
-		else
-			local p=obj:FindFirstChildWhichIsA("BasePart",true); current=p and p.CFrame
-		end
-		if current then pivotTo(obj, current + Vector3.new(0,dy,0)) end
-	end
-	return bounds(obj)
 end
 
 local gui=Instance.new("ScreenGui")
-gui.Name="LobbyCreativeHUD"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=true; gui.Parent=player:WaitForChild("PlayerGui")
-local open=Instance.new("TextButton")
-open.Size=UDim2.fromOffset(88,30); open.Position=UDim2.new(1,-98,0,72); open.Text="CONSTRUIR"; open.TextScaled=true; open.Parent=gui
-local panel=Instance.new("Frame")
-panel.Size=UDim2.new(1,-20,0,136); panel.Position=UDim2.new(0,10,0,108); panel.Visible=false; panel.Parent=gui
-local scroll=Instance.new("ScrollingFrame")
-scroll.Size=UDim2.new(1,-12,0,42); scroll.Position=UDim2.fromOffset(6,5); scroll.AutomaticCanvasSize=Enum.AutomaticSize.X
-scroll.CanvasSize=UDim2.new(); scroll.ScrollingDirection=Enum.ScrollingDirection.X; scroll.ScrollBarThickness=3; scroll.Parent=panel
-local layout=Instance.new("UIListLayout"); layout.FillDirection=Enum.FillDirection.Horizontal; layout.Padding=UDim.new(0,4); layout.Parent=scroll
-local controls=Instance.new("Frame"); controls.BackgroundTransparency=1; controls.Size=UDim2.new(1,-12,0,28); controls.Position=UDim2.fromOffset(6,50); controls.Parent=panel
-local status=Instance.new("TextLabel"); status.Size=UDim2.new(.30,0,1,0); status.BackgroundTransparency=1; status.Text="Selecione um item"; status.TextScaled=true; status.Parent=controls
+gui.Name="LobbyCreativeHUD"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=false; gui.Parent=player:WaitForChild("PlayerGui")
 
-local function button(parent,text,x,w,fn)
-	local b=Instance.new("TextButton"); b.Text=text; b.TextScaled=true; b.Size=UDim2.new(w,-3,1,0); b.Position=UDim2.new(x,0,0,0); b.Parent=parent
-	b.Activated:Connect(fn); return b
+local toggle=Instance.new("TextButton")
+toggle.Size=UDim2.fromOffset(48,48); toggle.Position=UDim2.new(1,-60,0,8); toggle.Text="BUILD"; toggle.TextScaled=true; toggle.Parent=gui
+
+local dock=Instance.new("Frame")
+dock.Size=UDim2.fromOffset(300,154); dock.Position=UDim2.new(1,-312,0,62); dock.Visible=false; dock.Parent=gui
+
+local header=Instance.new("Frame"); header.Size=UDim2.new(1,-8,0,30); header.Position=UDim2.fromOffset(4,4); header.Parent=dock
+local title=Instance.new("TextLabel"); title.Size=UDim2.new(1,-68,1,0); title.BackgroundTransparency=1; title.Text="BUILDER"; title.TextXAlignment=Enum.TextXAlignment.Left; title.TextScaled=true; title.Parent=header
+local collapse=Instance.new("TextButton"); collapse.Size=UDim2.fromOffset(30,26); collapse.Position=UDim2.new(1,-62,0,2); collapse.Text="_"; collapse.TextScaled=true; collapse.Parent=header
+local close=Instance.new("TextButton"); close.Size=UDim2.fromOffset(28,26); close.Position=UDim2.new(1,-30,0,2); close.Text="X"; close.TextScaled=true; close.Parent=header
+
+local catalog=Instance.new("ScrollingFrame")
+catalog.Size=UDim2.new(1,-8,0,44); catalog.Position=UDim2.fromOffset(4,38); catalog.AutomaticCanvasSize=Enum.AutomaticSize.X; catalog.CanvasSize=UDim2.new()
+catalog.ScrollingDirection=Enum.ScrollingDirection.X; catalog.ScrollBarThickness=2; catalog.Parent=dock
+local list=Instance.new("UIListLayout"); list.FillDirection=Enum.FillDirection.Horizontal; list.Padding=UDim.new(0,3); list.Parent=catalog
+
+local bar=Instance.new("Frame"); bar.Size=UDim2.new(1,-8,0,30); bar.Position=UDim2.fromOffset(4,86); bar.Parent=dock
+local status=Instance.new("TextLabel"); status.Size=UDim2.new(.34,-2,1,0); status.BackgroundTransparency=1; status.Text="Selecione"; status.TextScaled=true; status.Parent=bar
+
+local function btn(parent,text,x,w,fn)
+	local b=Instance.new("TextButton"); b.Size=UDim2.new(w,-2,1,0); b.Position=UDim2.new(x,0,0,0); b.Text=text; b.TextScaled=true; b.Parent=parent; b.Activated:Connect(fn); return b
 end
 
-local adjust=Instance.new("Frame"); adjust.BackgroundTransparency=1; adjust.Size=UDim2.new(1,-12,0,24); adjust.Position=UDim2.fromOffset(6,80); adjust.Parent=panel
-local joinRow=Instance.new("Frame"); joinRow.BackgroundTransparency=1; joinRow.Size=UDim2.new(1,-12,0,24); joinRow.Position=UDim2.fromOffset(6,106); joinRow.Parent=panel
-
-button(adjust,"PERTO -",0,.25,function() placementDistance=math.max(0.5,placementDistance-1) end)
-button(adjust,"LONGE +",.25,.25,function() placementDistance=math.min(30,placementDistance+1) end)
-button(adjust,"ALTURA -",.50,.25,function() heightOffset=math.max(-20,heightOffset-.5) end)
-button(adjust,"ALTURA +",.75,.25,function() heightOffset=math.min(30,heightOffset+.5) end)
-
-local joinButton
-joinButton=button(joinRow,"JUNTAR ULTIMA: OFF",0,.55,function()
-	joinLast=not joinLast
-	joinButton.Text=joinLast and "JUNTAR ULTIMA: ON" or "JUNTAR ULTIMA: OFF"
-	if joinLast and lastPlacedTop then
-		placementDistance=0
-		heightOffset=0
-	elseif not joinLast then
-		placementDistance=math.max(placementDistance,0.5)
-	end
+local placeBtn=btn(bar,"OK",.34,.18,function()
+	if not selected or not previewBase then return end
+	local r=request:InvokeServer("place",{name=selected,basePosition=previewBase,rotation=rotation})
+	if r and r.ok then lastTop=r.top; status.Text="OK" else status.Text=(r and r.error) or "Erro" end
 end)
-button(joinRow,"RESET POSICAO",.55,.45,function() placementDistance=6; heightOffset=0; joinLast=false; joinButton.Text="JUNTAR ULTIMA: OFF" end)
+btn(bar,"↻",.52,.14,function() rotation=(rotation+45)%360; status.Text=rotation.."°" end)
+btn(bar,"DEL",.66,.17,function()
+	local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not root then return end
+	local r=request:InvokeServer("deleteNearest",{position=root.Position}); status.Text=r.ok and "Apagado" or "Nada perto"
+end)
+btn(bar,"RST",.83,.17,function() distance=4; height=0; joinLast=false; status.Text="Reset" end)
+
+local adjust=Instance.new("Frame"); adjust.Size=UDim2.new(1,-8,0,30); adjust.Position=UDim2.fromOffset(4,120); adjust.Parent=dock
+btn(adjust,"D-",0,.14,function() distance=math.max(.5,distance-.5) end)
+btn(adjust,"D+",.14,.14,function() distance=math.min(20,distance+.5) end)
+btn(adjust,"Y-",.28,.14,function() height=math.max(-20,height-.25) end)
+btn(adjust,"Y+",.42,.14,function() height=math.min(30,height+.25) end)
+local joinBtn
+joinBtn=btn(adjust,"JOIN",.56,.22,function()
+	joinLast=not joinLast
+	if joinLast and lastTop then distance=0; height=0 end
+	joinBtn.Text=joinLast and "JOIN ✓" or "JOIN"
+end)
+btn(adjust,"MIN",.78,.22,function() dock.Visible=false; toggle.Visible=true end)
+
+local collapsed=false
+collapse.Activated:Connect(function()
+	collapsed=not collapsed
+	catalog.Visible=not collapsed; bar.Visible=not collapsed; adjust.Visible=not collapsed
+	dock.Size=collapsed and UDim2.fromOffset(300,38) or UDim2.fromOffset(300,154)
+	collapse.Text=collapsed and "+" or "_"
+end)
+close.Activated:Connect(function() clearPreview(); dock.Visible=false; toggle.Visible=true end)
 
 local function selectItem(name)
-	selected=name; clearPreview(); heightOffset=0
-	placementDistance=(joinLast and lastPlacedTop) and 0 or 6
+	selected=name; clearPreview(); height=0
+	if not (joinLast and lastTop) then distance=4 end
 	local template=catalogFolder:FindFirstChild(name)
-	if not template then status.Text="Item nao replicou"; return end
-	preview=template:Clone(); preview.Name="CreativePreview"; makeGhost(preview); preview.Parent=workspace
+	if not template then status.Text="Erro item"; return end
+	preview=template:Clone(); preview.Name="CreativePreview"; ghost(preview); preview.Parent=workspace
 	status.Text=name:gsub("^%d+_","")
 end
 
 local function loadCatalog()
 	if catalogLoaded then return end
-	status.Text="Carregando..."
-	local result=request:InvokeServer("catalog")
-	if not result or not result.ok then status.Text=result and (result.status or result.error) or "Falha no catalogo"; return end
-	for _,name in ipairs(result.items) do
-		local b=Instance.new("TextButton"); b.Size=UDim2.fromOffset(82,38); b.Text=name:gsub("^%d+_",""); b.TextWrapped=true; b.TextScaled=true; b.Parent=scroll
+	status.Text="..."
+	local r=request:InvokeServer("catalog")
+	if not r or not r.ok then status.Text=(r and (r.status or r.error)) or "Erro"; return end
+	for _,name in ipairs(r.items) do
+		local b=Instance.new("TextButton"); b.Size=UDim2.fromOffset(68,40); b.Text=name:gsub("^%d+_",""); b.TextWrapped=true; b.TextScaled=true; b.Parent=catalog
 		b.Activated:Connect(function() selectItem(name) end)
 	end
-	catalogLoaded=true; status.Text=tostring(#result.items).." itens"
+	catalogLoaded=true; status.Text=#r.items.." itens"
 end
 
-button(controls,"COLOCAR",.30,.20,function()
-	if not selected or not previewBasePosition or not preview then status.Text="Selecione um item"; return end
-	local boxCF,boxSize=bounds(preview)
-	local result=request:InvokeServer("place",{name=selected,basePosition=previewBasePosition,rotation=rotation})
-	if result.ok then
-		lastPlacedCenter=result.center or boxCF.Position
-		lastPlacedTop=result.top or Vector3.new(boxCF.Position.X,boxCF.Position.Y+boxSize.Y*.5,boxCF.Position.Z)
-		status.Text="Colocado"
-	else status.Text=result.error or "Erro" end
+toggle.Activated:Connect(function()
+	toggle.Visible=false; dock.Visible=true; loadCatalog()
 end)
-button(controls,"GIRAR",.50,.12,function() rotation=(rotation+45)%360; status.Text=tostring(rotation).." graus" end)
-button(controls,"APAGAR",.62,.18,function()
-	local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not root then return end
-	local r=request:InvokeServer("deleteNearest",{position=root.Position}); status.Text=r.ok and "Removido" or (r.error or "Erro")
-end)
-button(controls,"X",.80,.20,function() clearPreview(); panel.Visible=false end)
 
-open.Activated:Connect(function() panel.Visible=not panel.Visible; if panel.Visible then loadCatalog() else clearPreview() end end)
-
-local function updatePreview()
-	if not panel.Visible or not selected or not preview then return end
+local function update()
+	if not dock.Visible or not preview then return end
 	local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	local camera=workspace.CurrentCamera
-	if not root or not camera then return end
-	local look=camera.CFrame.LookVector
+	if not root then return end
+	local look=root.CFrame.LookVector
 	local flat=Vector3.new(look.X,0,look.Z)
-	if flat.Magnitude<.05 then flat=Vector3.new(root.CFrame.LookVector.X,0,root.CFrame.LookVector.Z) end
-	flat=flat.Unit
-
+	if flat.Magnitude<.01 then flat=Vector3.new(0,0,-1) else flat=flat.Unit end
 	local base
-	if joinLast and lastPlacedTop then
-		base=lastPlacedTop + flat*placementDistance + Vector3.new(0,heightOffset,0)
+	if joinLast and lastTop then
+		base=lastTop+flat*distance+Vector3.new(0,height,0)
 	else
-		-- Root is about 3 studs above the floor; use the player's floor as Y=0 reference.
-		local floorY=root.Position.Y-3
-		base=Vector3.new(root.Position.X, floorY+heightOffset, root.Position.Z) + flat*placementDistance
+		local origin=Vector3.new(root.Position.X,root.Position.Y-3,root.Position.Z)
+		base=origin+flat*distance+Vector3.new(0,height,0)
 	end
-	previewBasePosition=base
-	placeBaseAt(preview,base,rotation)
+	previewBase=base
+	placeVisual(preview,base)
 end
-RunService.RenderStepped:Connect(updatePreview)
+RunService.RenderStepped:Connect(update)
