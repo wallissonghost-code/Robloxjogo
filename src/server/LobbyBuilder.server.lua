@@ -281,11 +281,9 @@ local function rebuildFollowerGroups()
 			end
 			if best then
 				claimed[best]=true
-				local skPart,hatPart=firstPart(skeleton),firstPart(best)
-				if skPart and hatPart then
+				local hatPart=firstPart(best)
+				if hatPart then
 					local old=hatPart:FindFirstChild("FollowerHatWeld"); if old then old:Destroy() end
-					local weld=Instance.new("WeldConstraint")
-					weld.Name="FollowerHatWeld"; weld.Part0=skPart; weld.Part1=hatPart; weld.Parent=hatPart
 				end
 			end
 			table.insert(followerGroups,{skeleton=skeleton,hat=best,yaw=skeleton:GetAttribute("RotationY") or 0})
@@ -301,10 +299,15 @@ local function transformFollowerGroup(group,target,move)
 	if flat.Magnitude>=0.01 then desired=math.deg(math.atan2(-flat.X,-flat.Z)) end
 	local yawDelta=(desired-group.yaw+180)%360-180
 	local rot=CFrame.Angles(0,math.rad(yawDelta),0)
-	-- Move only the skeleton. The hat is physically welded and follows exactly.
-	for _,part in ipairs(getParts(skeleton)) do
-		local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
-		part.CFrame=CFrame.new(center)*rot*relative+move
+	-- Decorations stay anchored. Apply one identical rigid transform to the
+	-- skeleton and its paired hat, preserving the authored relative offset exactly.
+	local members={skeleton}
+	if group.hat and group.hat.Parent==placed then table.insert(members,group.hat) end
+	for _,obj in ipairs(members) do
+		for _,part in ipairs(getParts(obj)) do
+			local relative=CFrame.new(center):ToObjectSpace(part.CFrame)
+			part.CFrame=CFrame.new(center)*rot*relative+move
+		end
 	end
 	group.yaw=desired
 end
