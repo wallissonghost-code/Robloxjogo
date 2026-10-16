@@ -222,24 +222,16 @@ request.OnServerInvoke=function(player,action,data)
 			"LOBBY_BUILD_V1",
 			string.format("ORIGIN X=%.3f Y=%.3f Z=%.3f",origin.X,origin.Y,origin.Z)
 		},"\n")
-		local pages={}
-		local page=header
+		local blocks={}
 		for i,row in ipairs(rows) do
-			local block=table.concat({
+			table.insert(blocks,table.concat({
 				string.format("%03d | %s",i,row.name),
 				string.format("ABS X=%.3f Y=%.3f Z=%.3f",row.x,row.y,row.z),
 				string.format("ROT Y=%.1f",row.rotation),
 				string.format("REL X=%.3f Y=%.3f Z=%.3f",row.x-origin.X,row.y-origin.Y,row.z-origin.Z)
-			},"\n")
-			if #page+#block+2>650 then
-				table.insert(pages,page)
-				page=header.."\n\n"..block
-			else
-				page=page.."\n\n"..block
-			end
+			},"\n"))
 		end
-		table.insert(pages,page)
-		return {ok=true,pages=pages,count=#rows}
+		return {ok=true,header=header,blocks=blocks,count=#rows}
 	elseif action=="deleteNearest" then
 		local pos=data.position
 		if typeof(pos)~="Vector3" then return {ok=false,error="Posicao invalida"} end
