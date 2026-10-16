@@ -91,14 +91,14 @@ end
 local gui=Instance.new("ScreenGui")
 gui.Name="LobbyCreativeHUD"; gui.ResetOnSpawn=false; gui.IgnoreGuiInset=true; gui.Parent=player:WaitForChild("PlayerGui")
 local open=Instance.new("TextButton")
-open.Size=UDim2.fromOffset(92,34); open.Position=UDim2.new(0,10,1,-44); open.Text="CONSTRUIR"; open.TextScaled=true; open.Parent=gui
+open.Size=UDim2.fromOffset(88,30); open.Position=UDim2.new(1,-98,0,72); open.Text="CONSTRUIR"; open.TextScaled=true; open.Parent=gui
 local panel=Instance.new("Frame")
-panel.Size=UDim2.new(1,-20,0,184); panel.Position=UDim2.new(0,10,1,-194); panel.Visible=false; panel.Parent=gui
+panel.Size=UDim2.new(1,-20,0,136); panel.Position=UDim2.new(0,10,0,108); panel.Visible=false; panel.Parent=gui
 local scroll=Instance.new("ScrollingFrame")
-scroll.Size=UDim2.new(1,-12,0,58); scroll.Position=UDim2.fromOffset(6,5); scroll.AutomaticCanvasSize=Enum.AutomaticSize.X
+scroll.Size=UDim2.new(1,-12,0,42); scroll.Position=UDim2.fromOffset(6,5); scroll.AutomaticCanvasSize=Enum.AutomaticSize.X
 scroll.CanvasSize=UDim2.new(); scroll.ScrollingDirection=Enum.ScrollingDirection.X; scroll.ScrollBarThickness=3; scroll.Parent=panel
 local layout=Instance.new("UIListLayout"); layout.FillDirection=Enum.FillDirection.Horizontal; layout.Padding=UDim.new(0,4); layout.Parent=scroll
-local controls=Instance.new("Frame"); controls.BackgroundTransparency=1; controls.Size=UDim2.new(1,-12,0,40); controls.Position=UDim2.fromOffset(6,67); controls.Parent=panel
+local controls=Instance.new("Frame"); controls.BackgroundTransparency=1; controls.Size=UDim2.new(1,-12,0,28); controls.Position=UDim2.fromOffset(6,50); controls.Parent=panel
 local status=Instance.new("TextLabel"); status.Size=UDim2.new(.30,0,1,0); status.BackgroundTransparency=1; status.Text="Selecione um item"; status.TextScaled=true; status.Parent=controls
 
 local function button(parent,text,x,w,fn)
@@ -106,8 +106,8 @@ local function button(parent,text,x,w,fn)
 	b.Activated:Connect(fn); return b
 end
 
-local adjust=Instance.new("Frame"); adjust.BackgroundTransparency=1; adjust.Size=UDim2.new(1,-12,0,30); adjust.Position=UDim2.fromOffset(6,108); adjust.Parent=panel
-local joinRow=Instance.new("Frame"); joinRow.BackgroundTransparency=1; joinRow.Size=UDim2.new(1,-12,0,30); joinRow.Position=UDim2.fromOffset(6,142); joinRow.Parent=panel
+local adjust=Instance.new("Frame"); adjust.BackgroundTransparency=1; adjust.Size=UDim2.new(1,-12,0,24); adjust.Position=UDim2.fromOffset(6,80); adjust.Parent=panel
+local joinRow=Instance.new("Frame"); joinRow.BackgroundTransparency=1; joinRow.Size=UDim2.new(1,-12,0,24); joinRow.Position=UDim2.fromOffset(6,106); joinRow.Parent=panel
 
 button(adjust,"PERTO -",0,.25,function() placementDistance=math.max(0.5,placementDistance-1) end)
 button(adjust,"LONGE +",.25,.25,function() placementDistance=math.min(30,placementDistance+1) end)
@@ -118,7 +118,12 @@ local joinButton
 joinButton=button(joinRow,"JUNTAR ULTIMA: OFF",0,.55,function()
 	joinLast=not joinLast
 	joinButton.Text=joinLast and "JUNTAR ULTIMA: ON" or "JUNTAR ULTIMA: OFF"
-	if joinLast and lastPlacedTop then placementDistance=0; heightOffset=0 end
+	if joinLast and lastPlacedTop then
+		placementDistance=0
+		heightOffset=0
+	elseif not joinLast then
+		placementDistance=math.max(placementDistance,0.5)
+	end
 end)
 button(joinRow,"RESET POSICAO",.55,.45,function() placementDistance=6; heightOffset=0; joinLast=false; joinButton.Text="JUNTAR ULTIMA: OFF" end)
 
@@ -137,7 +142,7 @@ local function loadCatalog()
 	local result=request:InvokeServer("catalog")
 	if not result or not result.ok then status.Text=result and (result.status or result.error) or "Falha no catalogo"; return end
 	for _,name in ipairs(result.items) do
-		local b=Instance.new("TextButton"); b.Size=UDim2.fromOffset(96,54); b.Text=name:gsub("^%d+_",""); b.TextWrapped=true; b.TextScaled=true; b.Parent=scroll
+		local b=Instance.new("TextButton"); b.Size=UDim2.fromOffset(82,38); b.Text=name:gsub("^%d+_",""); b.TextWrapped=true; b.TextScaled=true; b.Parent=scroll
 		b.Activated:Connect(function() selectItem(name) end)
 	end
 	catalogLoaded=true; status.Text=tostring(#result.items).." itens"
@@ -148,8 +153,8 @@ button(controls,"COLOCAR",.30,.20,function()
 	local boxCF,boxSize=bounds(preview)
 	local result=request:InvokeServer("place",{name=selected,basePosition=previewBasePosition,rotation=rotation})
 	if result.ok then
-		lastPlacedCenter=boxCF.Position
-		lastPlacedTop=Vector3.new(boxCF.Position.X,boxCF.Position.Y+boxSize.Y*.5,boxCF.Position.Z)
+		lastPlacedCenter=result.center or boxCF.Position
+		lastPlacedTop=result.top or Vector3.new(boxCF.Position.X,boxCF.Position.Y+boxSize.Y*.5,boxCF.Position.Z)
 		status.Text="Colocado"
 	else status.Text=result.error or "Erro" end
 end)
