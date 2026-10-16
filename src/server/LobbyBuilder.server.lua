@@ -16,7 +16,7 @@ catalog.Name = "HalloweenCatalog"; catalog.Parent = ReplicatedStorage
 local placed = workspace:FindFirstChild("LobbyDecor") or Instance.new("Folder")
 placed.Name = "LobbyDecor"; placed.Parent = workspace
 
-local catalogStatus = "Carregando..."
+local catalogStatus = "Ainda não carregado"\nlocal catalogLoaded = false\nlocal catalogLoading = false
 local function authorized(player) return player.UserId == OWNER_USER_ID end
 
 local function sanitizeTemplate(inst)
