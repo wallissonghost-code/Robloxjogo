@@ -229,6 +229,9 @@ local FOLLOW_RADIUS=18
 local FOLLOW_STOP=3.5
 local FOLLOW_SPEED=5 -- fallback
 local NPC_PLAYER_SPEED_MULTIPLIER=1.15
+local NPC_ACCELERATION=28
+local NPC_DECELERATION=38
+local NPC_UPDATE_INTERVAL=1/60
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
 local SKELETON_FRONT_YAW_OFFSET=115
@@ -300,7 +303,8 @@ local function rebuildFollowerGroups()
 			skeleton=skeleton,
 			hat=best,
 			-- Runtime facing state is independent from persistent builder RotationY.
-			heading=skeleton:GetAttribute("RotationY") or 0
+			heading=skeleton:GetAttribute("RotationY") or 0,
+			moveSpeed=0
 		})
 		end
 	end
@@ -335,7 +339,7 @@ end
 local followClock=0
 RunService.Heartbeat:Connect(function(dt)
 	followClock+=dt
-	if followClock<0.05 then return end
+	if followClock<NPC_UPDATE_INTERVAL then return end
 	local stepDt=followClock; followClock=0
 	rebuildFollowerGroups()
 	local targetPlayer=Players:GetPlayers()[1]
@@ -356,9 +360,17 @@ RunService.Heartbeat:Connect(function(dt)
 			if dist<=FOLLOW_RADIUS then
 				-- Turn first. No translation is allowed until the visual front is aligned.
 				local aligned=transformFollowerGroup(group,root.Position,Vector3.zero,stepDt)
+				if not aligned then
+					group.moveSpeed=math.max(0,(group.moveSpeed or 0)-NPC_DECELERATION*stepDt)
+				end
 				if aligned then
+					local wantsMove=dist>FOLLOW_STOP and dist>0.001
+					local targetSpeed=wantsMove and npcMoveSpeed or 0
+					local rate=targetSpeed>group.moveSpeed and NPC_ACCELERATION or NPC_DECELERATION
+					local delta=math.clamp(targetSpeed-group.moveSpeed,-rate*stepDt,rate*stepDt)
+					group.moveSpeed=math.max(0,group.moveSpeed+delta)
 					local velocity=Vector3.zero
-					if dist>FOLLOW_STOP and dist>0.001 then velocity+=toPlayer.Unit*npcMoveSpeed end
+					if wantsMove and group.moveSpeed>0 then velocity+=toPlayer.Unit*group.moveSpeed end
 					for other,otherCenter in pairs(centers) do
 						if other~=group then
 							local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
@@ -374,7 +386,8 @@ RunService.Heartbeat:Connect(function(dt)
 						end
 					end
 					local move=velocity*stepDt
-					if move.Magnitude>npcMoveSpeed*stepDt then move=move.Unit*(npcMoveSpeed*stepDt) end
+					local maxFrameSpeed=math.max(group.moveSpeed,math.min(npcMoveSpeed,NPC_SEPARATION_FORCE))
+					if move.Magnitude>maxFrameSpeed*stepDt then move=move.Unit*(maxFrameSpeed*stepDt) end
 					-- Translation only: facing was already updated above this frame.
 					if move.Magnitude>0.001 then
 						for _,obj in ipairs({group.skeleton,group.hat}) do
