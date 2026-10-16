@@ -227,7 +227,8 @@ end
 local RunService=game:GetService("RunService")
 local FOLLOW_RADIUS=18
 local FOLLOW_STOP=3.5
-local FOLLOW_SPEED=5
+local FOLLOW_SPEED=5 -- fallback
+local NPC_PLAYER_SPEED_MULTIPLIER=1.15
 local NPC_SEPARATION=2.4
 local NPC_SEPARATION_FORCE=7
 local SKELETON_FRONT_YAW_OFFSET=115
@@ -340,6 +341,8 @@ RunService.Heartbeat:Connect(function(dt)
 	local targetPlayer=Players:GetPlayers()[1]
 	local root=targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
+	local humanoid=targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+	local npcMoveSpeed=humanoid and math.max(FOLLOW_SPEED,humanoid.WalkSpeed*NPC_PLAYER_SPEED_MULTIPLIER) or FOLLOW_SPEED
 	local centers={}
 	for _,group in ipairs(followerGroups) do
 		if group.skeleton.Parent==placed then centers[group]=visualCenter(group.skeleton) end
@@ -355,7 +358,7 @@ RunService.Heartbeat:Connect(function(dt)
 				local aligned=transformFollowerGroup(group,root.Position,Vector3.zero,stepDt)
 				if aligned then
 					local velocity=Vector3.zero
-					if dist>FOLLOW_STOP and dist>0.001 then velocity+=toPlayer.Unit*FOLLOW_SPEED end
+					if dist>FOLLOW_STOP and dist>0.001 then velocity+=toPlayer.Unit*npcMoveSpeed end
 					for other,otherCenter in pairs(centers) do
 						if other~=group then
 							local away=Vector3.new(center.X-otherCenter.X,0,center.Z-otherCenter.Z)
@@ -371,7 +374,7 @@ RunService.Heartbeat:Connect(function(dt)
 						end
 					end
 					local move=velocity*stepDt
-					if move.Magnitude>FOLLOW_SPEED*stepDt then move=move.Unit*(FOLLOW_SPEED*stepDt) end
+					if move.Magnitude>npcMoveSpeed*stepDt then move=move.Unit*(npcMoveSpeed*stepDt) end
 					-- Translation only: facing was already updated above this frame.
 					if move.Magnitude>0.001 then
 						for _,obj in ipairs({group.skeleton,group.hat}) do
