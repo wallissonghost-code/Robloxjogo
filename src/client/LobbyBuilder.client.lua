@@ -14,6 +14,8 @@ local rotation = 0
 local preview
 local previewPosition
 local catalogLoaded = false
+local placementDistance = 8
+local heightOffset = 0
 
 local function clearPreview()
 	if preview then
@@ -67,8 +69,8 @@ open.TextScaled = true
 open.Parent = gui
 
 local panel = Instance.new("Frame")
-panel.Size = UDim2.new(1, -20, 0, 112)
-panel.Position = UDim2.new(0, 10, 1, -122)
+panel.Size = UDim2.new(1, -20, 0, 150)
+panel.Position = UDim2.new(0, 10, 1, -160)
 panel.Visible = false
 panel.Parent = gui
 
@@ -93,7 +95,7 @@ controls.Position = UDim2.fromOffset(6, 67)
 controls.Parent = panel
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(0.34, 0, 1, 0)
+status.Size = UDim2.new(0.30, 0, 1, 0)
 status.BackgroundTransparency = 1
 status.Text = "Selecione um item"
 status.TextScaled = true
@@ -111,8 +113,39 @@ local function addButton(text, x, width, callback)
 	return b
 end
 
+local adjust = Instance.new("Frame")
+adjust.BackgroundTransparency = 1
+adjust.Size = UDim2.new(1, -12, 0, 30)
+adjust.Position = UDim2.fromOffset(6, 108)
+adjust.Parent = panel
+
+local function adjustButton(text, x, callback)
+	local b = Instance.new("TextButton")
+	b.Text = text
+	b.TextScaled = true
+	b.Size = UDim2.new(0.25, -3, 1, 0)
+	b.Position = UDim2.new(x, 0, 0, 0)
+	b.Parent = adjust
+	b.Activated:Connect(callback)
+end
+
+adjustButton("PERTO -", 0.00, function()
+	placementDistance = math.max(3, placementDistance - 2)
+end)
+adjustButton("LONGE +", 0.25, function()
+	placementDistance = math.min(30, placementDistance + 2)
+end)
+adjustButton("ALTURA -", 0.50, function()
+	heightOffset = math.max(-10, heightOffset - 1)
+end)
+adjustButton("ALTURA +", 0.75, function()
+	heightOffset = math.min(20, heightOffset + 1)
+end)
+
 local function selectItem(name)
 	selected = name
+	placementDistance = 8
+	heightOffset = 0
 	clearPreview()
 	local template = catalogFolder:FindFirstChild(name)
 	if not template then
@@ -151,9 +184,9 @@ local function loadCatalog()
 	status.Text = tostring(#result.items) .. " itens"
 end
 
-addButton("COLOCAR", 0.35, 0.20, function()
+addButton("COLOCAR", 0.30, 0.20, function()
 	if not selected or not previewPosition then
-		status.Text = "Toque no mapa primeiro"
+		status.Text = "Selecione um item"
 		return
 	end
 	local result = request:InvokeServer("place", {
@@ -164,7 +197,7 @@ addButton("COLOCAR", 0.35, 0.20, function()
 	status.Text = result.ok and "Colocado" or (result.error or "Erro")
 end)
 
-addButton("GIRAR", 0.55, 0.10, function()
+addButton("GIRAR", 0.50, 0.12, function()
 	rotation = (rotation + 45) % 360
 	if preview and previewPosition then
 		moveObject(preview, CFrame.new(previewPosition) * CFrame.Angles(0, math.rad(rotation), 0))
@@ -172,7 +205,7 @@ addButton("GIRAR", 0.55, 0.10, function()
 	status.Text = tostring(rotation) .. " graus"
 end)
 
-addButton("APAGAR", 0.65, 0.18, function()
+addButton("APAGAR", 0.62, 0.18, function()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
@@ -180,7 +213,7 @@ addButton("APAGAR", 0.65, 0.18, function()
 	status.Text = result.ok and "Removido" or (result.error or "Erro")
 end)
 
-addButton("X", 0.83, 0.17, function()
+addButton("X", 0.80, 0.20, function()
 	clearPreview()
 	panel.Visible = false
 end)
@@ -196,25 +229,24 @@ end)
 
 local function updatePreview()
 	if not panel.Visible or not selected or not preview then return end
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local camera = workspace.CurrentCamera
-	if not camera then return end
+	if not root or not camera then return end
 
-	local viewport = camera.ViewportSize
-	local ray = camera:ViewportPointToRay(viewport.X / 2, viewport.Y / 2)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-
-	local ignored = {preview}
-	if player.Character then
-		table.insert(ignored, player.Character)
+	-- Horizontal camera direction keeps placement predictable on mobile:
+	-- looking up/down no longer throws the object across the map.
+	local look = camera.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 0.05 then
+		local rootLook = root.CFrame.LookVector
+		flat = Vector3.new(rootLook.X, 0, rootLook.Z)
 	end
-	params.FilterDescendantsInstances = ignored
+	flat = flat.Unit
 
-	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
-	if hit then
-		previewPosition = hit.Position
-		moveObject(preview, CFrame.new(previewPosition) * CFrame.Angles(0, math.rad(rotation), 0))
-	end
+	previewPosition = root.Position + flat * placementDistance + Vector3.new(0, heightOffset, 0)
+	moveObject(preview, CFrame.new(previewPosition) * CFrame.Angles(0, math.rad(rotation), 0))
 end
 
 RunService.RenderStepped:Connect(updatePreview)
