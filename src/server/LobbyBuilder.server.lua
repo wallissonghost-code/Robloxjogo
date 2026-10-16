@@ -218,12 +218,28 @@ request.OnServerInvoke=function(player,action,data)
 		table.sort(rows,function(a,b) return a.order<b.order end)
 		if #rows==0 then return {ok=false,error="Nenhuma peca colocada"} end
 		local origin=Vector3.new(rows[1].x,rows[1].y,rows[1].z)
-		local lines={"LOBBY_BUILD_V1",string.format("ORIGIN|%.3f|%.3f|%.3f",origin.X,origin.Y,origin.Z)}
+		local header=table.concat({
+			"LOBBY_BUILD_V1",
+			string.format("ORIGIN X=%.3f Y=%.3f Z=%.3f",origin.X,origin.Y,origin.Z)
+		},"\n")
+		local pages={}
+		local page=header
 		for i,row in ipairs(rows) do
-			table.insert(lines,string.format("%03d|%s|ABS|%.3f|%.3f|%.3f|ROT|%.1f|REL|%.3f|%.3f|%.3f",
-				i,row.name,row.x,row.y,row.z,row.rotation,row.x-origin.X,row.y-origin.Y,row.z-origin.Z))
+			local block=table.concat({
+				string.format("%03d | %s",i,row.name),
+				string.format("ABS X=%.3f Y=%.3f Z=%.3f",row.x,row.y,row.z),
+				string.format("ROT Y=%.1f",row.rotation),
+				string.format("REL X=%.3f Y=%.3f Z=%.3f",row.x-origin.X,row.y-origin.Y,row.z-origin.Z)
+			},"\n")
+			if #page+#block+2>650 then
+				table.insert(pages,page)
+				page=header.."\n\n"..block
+			else
+				page=page.."\n\n"..block
+			end
 		end
-		return {ok=true,text=table.concat(lines,"\n"),count=#rows}
+		table.insert(pages,page)
+		return {ok=true,pages=pages,count=#rows}
 	elseif action=="deleteNearest" then
 		local pos=data.position
 		if typeof(pos)~="Vector3" then return {ok=false,error="Posicao invalida"} end
