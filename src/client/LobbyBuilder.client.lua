@@ -72,7 +72,35 @@ exportTitle.Size=UDim2.new(1,-48,0,32); exportTitle.Position=UDim2.fromOffset(8,
 local exportClose=Instance.new("TextButton")
 exportClose.Size=UDim2.fromOffset(36,30); exportClose.Position=UDim2.new(1,-40,0,4); exportClose.Text="X"; exportClose.TextScaled=true; exportClose.ZIndex=21; exportClose.Parent=exportPanel
 local exportBox=Instance.new("TextBox")
-exportBox.Size=UDim2.new(1,-16,1,-46); exportBox.Position=UDim2.fromOffset(8,40); exportBox.ClearTextOnFocus=false; exportBox.MultiLine=true; exportBox.TextEditable=false; exportBox.TextWrapped=false; exportBox.TextXAlignment=Enum.TextXAlignment.Left; exportBox.TextYAlignment=Enum.TextYAlignment.Top; exportBox.TextSize=14; exportBox.Text=""; exportBox.ZIndex=21; exportBox.Parent=exportPanel
+exportBox.Size=UDim2.new(1,-16,1,-82); exportBox.Position=UDim2.fromOffset(8,40); exportBox.ClearTextOnFocus=false; exportBox.MultiLine=true; exportBox.TextEditable=true; exportBox.TextWrapped=false; exportBox.TextXAlignment=Enum.TextXAlignment.Left; exportBox.TextYAlignment=Enum.TextYAlignment.Top; exportBox.TextSize=14; exportBox.Text=""; exportBox.ZIndex=21; exportBox.Parent=exportPanel
+local exportNav=Instance.new("Frame")
+exportNav.Size=UDim2.new(1,-16,0,30); exportNav.Position=UDim2.new(0,8,1,-36); exportNav.ZIndex=21; exportNav.Parent=exportPanel
+local exportPrev=Instance.new("TextButton"); exportPrev.Size=UDim2.new(.25,-2,1,0); exportPrev.Text="<"; exportPrev.TextScaled=true; exportPrev.ZIndex=22; exportPrev.Parent=exportNav
+local exportPage=Instance.new("TextLabel"); exportPage.Size=UDim2.new(.5,-4,1,0); exportPage.Position=UDim2.new(.25,2,0,0); exportPage.Text="1/1"; exportPage.TextScaled=true; exportPage.ZIndex=22; exportPage.Parent=exportNav
+local exportNext=Instance.new("TextButton"); exportNext.Size=UDim2.new(.25,-2,1,0); exportNext.Position=UDim2.new(.75,2,0,0); exportNext.Text=">"; exportNext.TextScaled=true; exportNext.ZIndex=22; exportNext.Parent=exportNav
+local exportPages={}
+local exportIndex=1
+local function showExportPage()
+	exportBox.Text=exportPages[exportIndex] or ""
+	exportPage.Text=tostring(exportIndex).."/"..tostring(math.max(1,#exportPages))
+	exportBox.CursorPosition=1
+end
+local function paginateExport(text)
+	exportPages={}
+	local page={}
+	local chars=0
+	for line in (text.."\n"):gmatch("(.-)\n") do
+		if #page>0 and chars+#line+1>700 then
+			table.insert(exportPages,table.concat(page,"\n")); page={}; chars=0
+		end
+		table.insert(page,line); chars+=#line+1
+	end
+	if #page>0 then table.insert(exportPages,table.concat(page,"\n")) end
+	if #exportPages==0 then exportPages={text} end
+	exportIndex=1; showExportPage()
+end
+exportPrev.Activated:Connect(function() if exportIndex>1 then exportIndex-=1; showExportPage() end end)
+exportNext.Activated:Connect(function() if exportIndex<#exportPages then exportIndex+=1; showExportPage() end end)
 exportClose.Activated:Connect(function() exportPanel.Visible=false end)
 
 local toggle=Instance.new("TextButton")
@@ -112,7 +140,7 @@ btn(bar,"RST",.67,.13,function() distance=4; height=0; joinLast=false; status.Te
 btn(bar,"EXP",.80,.20,function()
 	local r=request:InvokeServer("export")
 	if not r or not r.ok then status.Text=(r and r.error) or "Erro export"; return end
-	exportBox.Text=r.text
+	paginateExport(r.text)
 	exportTitle.Text="EXPORT - "..tostring(r.count).." PECAS"
 	exportPanel.Visible=true
 	status.Text="Exportado"
