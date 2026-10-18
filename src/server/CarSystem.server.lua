@@ -11,9 +11,14 @@ local CAR_ASSET_ID=4520224711
 local SPAWN=CFrame.new(0,4,0)
 local FORWARD_SPEED=55
 local REVERSE_SPEED=28
-local ACCEL=42
-local BRAKE=65
-local TURN_RATE=105
+local ACCEL=30
+local BRAKE=72
+local COAST_DRAG=11
+local TURN_RATE_LOW=82
+local TURN_RATE_HIGH=34
+local LATERAL_GRIP=7
+local UPRIGHT_STRENGTH=18000
+local UPRIGHT_DAMPING=1400
 
 local function partsOf(root)
  local t={}
@@ -58,6 +63,7 @@ local function prepareCar()
  seat.Size=Vector3.new(1.8,.6,1.8)
  seat.Transparency=1
  seat.CanCollide=false
+ seat.CanTouch=false
  seat.Anchored=false
  seat.MaxSpeed=FORWARD_SPEED
  seat.Torque=100000
@@ -76,7 +82,23 @@ local function prepareCar()
  chassis.Anchored=false
  chassis.CFrame=CFrame.new(center.X,mn.Y+.55,center.Z)
  chassis.Parent=car
+ chassis.CustomPhysicalProperties=PhysicalProperties.new(1.2,.85,.05,100,100)
  table.insert(parts,chassis)
+
+ -- Upright stabilizer uses torque constraints, not CFrame corrections.
+ local uprightAttachment=Instance.new("Attachment")
+ uprightAttachment.Name="UprightAttachment"
+ uprightAttachment.Parent=chassis
+ local upright=Instance.new("AlignOrientation")
+ upright.Name="UprightStabilizer"
+ upright.Mode=Enum.OrientationAlignmentMode.OneAttachment
+ upright.Attachment0=uprightAttachment
+ upright.RigidityEnabled=false
+ upright.Responsiveness=8
+ upright.MaxTorque=UPRIGHT_STRENGTH
+ upright.MaxAngularVelocity=math.huge
+ upright.CFrame=CFrame.new()
+ upright.Parent=chassis
 
  for _,p in ipairs(parts) do
   p.Anchored=false
@@ -88,6 +110,38 @@ local function prepareCar()
  end
  if car:IsA("Model") then car.PrimaryPart=chassis; car:PivotTo(SPAWN) else chassis.CFrame=SPAWN end
  seat:SetAttribute("TrendCarDriverSeat",true)
+
+ -- Explicit interaction: touching the invisible seat must never auto-enter.
+ local promptPart=Instance.new("Part")
+ promptPart.Name="DrivePrompt"
+ promptPart.Size=Vector3.new(2.2,2.2,2.2)
+ promptPart.Transparency=1
+ promptPart.CanCollide=false
+ promptPart.CanTouch=false
+ promptPart.CanQuery=true
+ promptPart.Anchored=false
+ promptPart.CFrame=seat.CFrame* CFrame.new(-2.3,0,0)
+ promptPart.Parent=car
+ local pw=Instance.new("WeldConstraint"); pw.Part0=chassis; pw.Part1=promptPart; pw.Parent=chassis
+ local prompt=Instance.new("ProximityPrompt")
+ prompt.Name="PilotPrompt"
+ prompt.ActionText="Pilotar"
+ prompt.ObjectText="Veículo"
+ prompt.KeyboardKeyCode=Enum.KeyCode.E
+ prompt.GamepadKeyCode=Enum.KeyCode.ButtonX
+ prompt.HoldDuration=0
+ prompt.MaxActivationDistance=9
+ prompt.RequiresLineOfSight=false
+ prompt.Parent=promptPart
+ prompt.Triggered:Connect(function(plr)
+  if seat.Occupant then return end
+  local char=plr.Character
+  local hum=char and char:FindFirstChildOfClass("Humanoid")
+  local root=char and char:FindFirstChild("HumanoidRootPart")
+  if not hum or hum.Health<=0 or not root then return end
+  if (root.Position-promptPart.Position).Magnitude>12 then return end
+  seat:Sit(hum)
+ end)
 
  local speed=0
  local heading=math.atan2(-chassis.CFrame.LookVector.X,-chassis.CFrame.LookVector.Z)
@@ -121,22 +175,46 @@ local function prepareCar()
   if throttle>0.05 then target=-FORWARD_SPEED*throttle
   elseif throttle<-.05 then target=-REVERSE_SPEED*throttle end
 
-  local rate=(math.abs(target)>math.abs(speed)) and ACCEL or BRAKE
+  -- Acceleration, engine braking and coasting are intentionally different.
+  local reversing=(speed~=0 and target~=0 and math.sign(speed)~=math.sign(target))
+  local rate
+  if reversing then rate=BRAKE
+  elseif target==0 then rate=COAST_DRAG
+  else rate=ACCEL end
   speed += math.clamp(target-speed,-rate*dt,rate*dt)
+  if target==0 and math.abs(speed)<.15 then speed=0 end
 
-  -- Physics-only locomotion: never rewrite CFrame every Heartbeat.
-  -- Mixing CFrame corrections with assembly velocity caused visible jitter/teleporting.
-  local forward=chassis.CFrame.LookVector
-  local horizontal=forward*speed
-  chassis.AssemblyLinearVelocity=Vector3.new(horizontal.X,chassis.AssemblyLinearVelocity.Y,horizontal.Z)
+  local cf=chassis.CFrame
+  local forward=cf.LookVector
+  local right=cf.RightVector
+  local velocity=chassis.AssemblyLinearVelocity
+  local vertical=Vector3.new(0,velocity.Y,0)
 
+  -- Tire-like lateral grip: preserve longitudinal momentum but progressively
+  -- scrub sideways sliding instead of snapping the assembly to a CFrame.
+  local lateral=right*velocity:Dot(right)
+  local gripAlpha=1-math.exp(-LATERAL_GRIP*dt)
+  local corrected=velocity-lateral*gripAlpha
+  local desiredForward=forward*speed
+  local planar=Vector3.new(corrected.X,0,corrected.Z)
+  planar=planar:Lerp(Vector3.new(desiredForward.X,0,desiredForward.Z),1-math.exp(-8*dt))
+  chassis.AssemblyLinearVelocity=planar+vertical
+
+  -- Speed-sensitive steering: agile while parking, stable at high speed.
+  local absSpeed=math.abs(speed)
+  local speedRatio=math.clamp(absSpeed/FORWARD_SPEED,0,1)
+  local turnRate=math.rad(TURN_RATE_LOW+(TURN_RATE_HIGH-TURN_RATE_LOW)*speedRatio)
   local yawVelocity=0
-  if math.abs(speed)>.35 and math.abs(steer)>.02 then
+  if absSpeed>.5 and math.abs(steer)>.02 then
    local direction=speed>=0 and 1 or -1
-   local speedFactor=math.clamp(math.abs(speed)/12,.25,1)
-   yawVelocity=math.rad(TURN_RATE)*steer*direction*speedFactor
+   local authority=math.clamp(absSpeed/7,.2,1)
+   yawVelocity=turnRate*steer*direction*authority
   end
-  chassis.AssemblyAngularVelocity=Vector3.new(0,yawVelocity,0)
+
+  -- Keep the body stable without teleporting it. Pitch/roll are damped while
+  -- yaw remains free for steering.
+  local av=chassis.AssemblyAngularVelocity
+  chassis.AssemblyAngularVelocity=Vector3.new(av.X*.72,yawVelocity,av.Z*.72)
  end)
 
  print("[CarSystem] Carro dirigivel pronto | frente/re/volante | asset "..CAR_ASSET_ID)
