@@ -2,9 +2,14 @@ local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local UIS=game:GetService("UserInputService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local controlEvent=ReplicatedStorage:WaitForChild("TrendCarControl")
 
 local player=Players.LocalPlayer
+local controlEvent=ReplicatedStorage:WaitForChild("TrendCarControl")
+local playerControls=nil
+pcall(function()
+ local PlayerModule=require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+ playerControls=PlayerModule:GetControls()
+end)
 local camera=workspace.CurrentCamera
 local activeSeat=nil
 local CAMERA_HEIGHT=8
@@ -64,17 +69,32 @@ local function setDriverHidden(hidden)
 end
 
 local savedTouchGuiEnabled=nil
-local function setDefaultMobileControlsHidden(hidden)
+local function forceTouchGuiOff()
  local playerGui=player:FindFirstChildOfClass("PlayerGui")
- local touchGui=playerGui and playerGui:FindFirstChild("TouchGui")
- if touchGui then
-  if hidden then
-   if savedTouchGuiEnabled==nil then savedTouchGuiEnabled=touchGui.Enabled end
-   touchGui.Enabled=false
-  elseif savedTouchGuiEnabled~=nil then
-   touchGui.Enabled=savedTouchGuiEnabled
-   savedTouchGuiEnabled=nil
+ if not playerGui then return end
+ for _,child in ipairs(playerGui:GetChildren()) do
+  if child.Name=="TouchGui" and child:IsA("ScreenGui") then
+   if savedTouchGuiEnabled==nil then savedTouchGuiEnabled=child.Enabled end
+   child.Enabled=false
   end
+ end
+end
+
+local function setDefaultMobileControlsHidden(hidden)
+ if hidden then
+  if playerControls then pcall(function() playerControls:Disable() end) end
+  forceTouchGuiOff()
+ else
+  if playerControls then pcall(function() playerControls:Enable() end) end
+  local playerGui=player:FindFirstChildOfClass("PlayerGui")
+  if playerGui then
+   for _,child in ipairs(playerGui:GetChildren()) do
+    if child.Name=="TouchGui" and child:IsA("ScreenGui") then
+     child.Enabled=(savedTouchGuiEnabled~=false)
+    end
+   end
+  end
+  savedTouchGuiEnabled=nil
  end
 end
 
@@ -87,6 +107,10 @@ RunService.RenderStepped:Connect(function()
   setDefaultMobileControlsHidden(driving)
  end
  if driving then
+  -- PlayerModule/TouchGui can be rebuilt by Roblox after seating; enforce the
+  -- driving state continuously so jump/movement controls cannot reappear.
+  forceTouchGuiOff()
+  if playerControls then pcall(function() playerControls:Disable() end) end
   local char=player.Character
   if char then
    for _,d in ipairs(char:GetDescendants()) do
