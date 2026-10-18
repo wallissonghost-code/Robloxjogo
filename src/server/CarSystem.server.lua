@@ -11,14 +11,12 @@ local CAR_ASSET_ID=4520224711
 local SPAWN=CFrame.new(0,4,0)
 local FORWARD_SPEED=55
 local REVERSE_SPEED=28
-local ACCEL=30
-local BRAKE=72
-local COAST_DRAG=11
-local TURN_RATE_LOW=82
-local TURN_RATE_HIGH=34
-local LATERAL_GRIP=7
-local UPRIGHT_STRENGTH=18000
-local UPRIGHT_DAMPING=1400
+local ACCEL=58
+local BRAKE=85
+local COAST_DRAG=18
+local TURN_RATE_LOW=115
+local TURN_RATE_HIGH=58
+local LATERAL_GRIP=10
 
 local function partsOf(root)
  local t={}
@@ -85,20 +83,7 @@ local function prepareCar()
  chassis.CustomPhysicalProperties=PhysicalProperties.new(1.2,.85,.05,100,100)
  table.insert(parts,chassis)
 
- -- Upright stabilizer uses torque constraints, not CFrame corrections.
- local uprightAttachment=Instance.new("Attachment")
- uprightAttachment.Name="UprightAttachment"
- uprightAttachment.Parent=chassis
- local upright=Instance.new("AlignOrientation")
- upright.Name="UprightStabilizer"
- upright.Mode=Enum.OrientationAlignmentMode.OneAttachment
- upright.Attachment0=uprightAttachment
- upright.RigidityEnabled=false
- upright.Responsiveness=8
- upright.MaxTorque=UPRIGHT_STRENGTH
- upright.MaxAngularVelocity=math.huge
- upright.CFrame=CFrame.new()
- upright.Parent=chassis
+
 
  for _,p in ipairs(parts) do
   p.Anchored=false
@@ -152,6 +137,7 @@ local function prepareCar()
  end)
  seat:GetPropertyChangedSignal("Occupant"):Connect(function()
   local hum=seat.Occupant
+  prompt.Enabled=(hum==nil)
   if hum then
    local plr=Players:GetPlayerFromCharacter(hum.Parent)
    if plr then pcall(function() chassis:SetNetworkOwner(nil) end) end
@@ -175,46 +161,40 @@ local function prepareCar()
   if throttle>0.05 then target=-FORWARD_SPEED*throttle
   elseif throttle<-.05 then target=-REVERSE_SPEED*throttle end
 
-  -- Acceleration, engine braking and coasting are intentionally different.
+  -- Arcade-mobile throttle: quick response without instant speed snapping.
   local reversing=(speed~=0 and target~=0 and math.sign(speed)~=math.sign(target))
-  local rate
-  if reversing then rate=BRAKE
-  elseif target==0 then rate=COAST_DRAG
-  else rate=ACCEL end
+  local rate=reversing and BRAKE or (target==0 and COAST_DRAG or ACCEL)
   speed += math.clamp(target-speed,-rate*dt,rate*dt)
-  if target==0 and math.abs(speed)<.15 then speed=0 end
+  if target==0 and math.abs(speed)<.12 then speed=0 end
 
   local cf=chassis.CFrame
   local forward=cf.LookVector
   local right=cf.RightVector
   local velocity=chassis.AssemblyLinearVelocity
-  local vertical=Vector3.new(0,velocity.Y,0)
 
-  -- Tire-like lateral grip: preserve longitudinal momentum but progressively
-  -- scrub sideways sliding instead of snapping the assembly to a CFrame.
-  local lateral=right*velocity:Dot(right)
-  local gripAlpha=1-math.exp(-LATERAL_GRIP*dt)
-  local corrected=velocity-lateral*gripAlpha
-  local desiredForward=forward*speed
-  local planar=Vector3.new(corrected.X,0,corrected.Z)
-  planar=planar:Lerp(Vector3.new(desiredForward.X,0,desiredForward.Z),1-math.exp(-8*dt))
-  chassis.AssemblyLinearVelocity=planar+vertical
+  -- Strong lateral grip keeps the car pointed where the player steers.
+  local verticalY=velocity.Y
+  local lateralSpeed=velocity:Dot(right)
+  local grip=1-math.exp(-LATERAL_GRIP*dt)
+  local planar=Vector3.new(velocity.X,0,velocity.Z)-right*lateralSpeed*grip
+  local desired=Vector3.new(forward.X,0,forward.Z)*speed
+  planar=planar:Lerp(desired,1-math.exp(-14*dt))
+  chassis.AssemblyLinearVelocity=Vector3.new(planar.X,verticalY,planar.Z)
 
-  -- Speed-sensitive steering: agile while parking, stable at high speed.
+  -- Steering responds from almost zero speed. High speed only reduces it
+  -- moderately, which feels much better with a touchscreen analog stick.
   local absSpeed=math.abs(speed)
-  local speedRatio=math.clamp(absSpeed/FORWARD_SPEED,0,1)
-  local turnRate=math.rad(TURN_RATE_LOW+(TURN_RATE_HIGH-TURN_RATE_LOW)*speedRatio)
-  local yawVelocity=0
-  if absSpeed>.5 and math.abs(steer)>.02 then
-   local direction=speed>=0 and 1 or -1
-   local authority=math.clamp(absSpeed/7,.2,1)
-   yawVelocity=turnRate*steer*direction*authority
+  local ratio=math.clamp(absSpeed/FORWARD_SPEED,0,1)
+  local turnDeg=TURN_RATE_LOW+(TURN_RATE_HIGH-TURN_RATE_LOW)*ratio
+  local direction=speed>=0 and 1 or -1
+  local movementAuthority=math.clamp(absSpeed/2.5,.55,1)
+  local yaw=0
+  if math.abs(steer)>.025 and absSpeed>.08 then
+   yaw=math.rad(turnDeg)*steer*direction*movementAuthority
   end
 
-  -- Keep the body stable without teleporting it. Pitch/roll are damped while
-  -- yaw remains free for steering.
   local av=chassis.AssemblyAngularVelocity
-  chassis.AssemblyAngularVelocity=Vector3.new(av.X*.72,yawVelocity,av.Z*.72)
+  chassis.AssemblyAngularVelocity=Vector3.new(av.X*.45,yaw,av.Z*.45)
  end)
 
  print("[CarSystem] Carro dirigivel pronto | frente/re/volante | asset "..CAR_ASSET_ID)
