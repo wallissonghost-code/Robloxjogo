@@ -6,18 +6,12 @@
       "$className": "Workspace",
       "Baseplate": {
         "$className": "Part",
-        "$properties": {"Anchored": true, "Size": [128, 1, 128], "Position": [0, 0, 0], "Material": "Grass"}
-      }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "LobbyBuilder": {"$path": "src/server/LobbyBuilder.server.lua"}
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "LobbyBuilder": {"$path": "src/client/LobbyBuilder.client.lua"}
+        "$properties": {
+          "Anchored": true,
+          "Size": [128, 1, 128],
+          "Position": [0, 0, 0],
+          "Material": "Grass"
+        }
       }
     }
   }
