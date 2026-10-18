@@ -36,6 +36,47 @@ local function bounds(parts)
  return mn,mx
 end
 
+local function createHalfLoop()
+ local old=workspace:FindFirstChild("HalfLoop180")
+ if old then old:Destroy() end
+ local model=Instance.new("Model")
+ model.Name="HalfLoop180"
+ model.Parent=workspace
+
+ local radius=30
+ local width=24
+ local segments=28
+ local thickness=1.4
+ local center=Vector3.new(0,radius,95)
+
+ -- 180-degree vertical test ramp: ground entry -> overhead exit.
+ for i=0,segments-1 do
+  local a0=math.pi+(math.pi*i/segments)
+  local a1=math.pi+(math.pi*(i+1)/segments)
+  local amid=(a0+a1)*.5
+  local arc=radius*(a1-a0)
+  local pos=center+Vector3.new(0,math.sin(amid)*radius,math.cos(amid)*radius)
+  local part=Instance.new("Part")
+  part.Name=string.format("Ramp_%02d",i+1)
+  part.Anchored=true
+  part.Size=Vector3.new(width,thickness,arc+0.35)
+  part.Material=Enum.Material.Asphalt
+  part.CFrame=CFrame.new(pos)*CFrame.Angles(amid-math.pi,0,0)
+  part.Parent=model
+ end
+
+ -- Straight approach so the player can build speed.
+ local approach=Instance.new("Part")
+ approach.Name="Approach"
+ approach.Anchored=true
+ approach.Size=Vector3.new(width,1.2,65)
+ approach.Material=Enum.Material.Asphalt
+ approach.CFrame=CFrame.new(center.X,.65,center.Z-radius-32)
+ approach.Parent=model
+end
+
+createHalfLoop()
+
 local function prepareCar()
  local ok,pack=pcall(function() return InsertService:LoadAsset(CAR_ASSET_ID) end)
  if not ok or not pack then warn("[CarSystem] Falha asset "..tostring(pack)); return end
@@ -186,8 +227,10 @@ local function prepareCar()
   local absSpeed=math.abs(speed)
   local ratio=math.clamp(absSpeed/FORWARD_SPEED,0,1)
   local turnDeg=TURN_RATE_LOW+(TURN_RATE_HIGH-TURN_RATE_LOW)*ratio
-  local direction=speed>=0 and 1 or -1
-  local movementAuthority=math.clamp(absSpeed/2.5,.55,1)
+  -- Internal speed is negative while visually driving forward on this asset.
+  -- Steering polarity must follow the visual direction, not the raw sign.
+  local direction=speed<=0 and 1 or -1
+  local movementAuthority=math.clamp(absSpeed/2,.7,1)
   local yaw=0
   if math.abs(steer)>.025 and absSpeed>.08 then
    yaw=math.rad(turnDeg)*steer*direction*movementAuthority
