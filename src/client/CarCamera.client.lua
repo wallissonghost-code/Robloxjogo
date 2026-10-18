@@ -35,7 +35,10 @@ RunService:BindToRenderStep("TrendCarCamera",Enum.RenderPriority.Camera.Value+1,
   camera.CameraType=Enum.CameraType.Scriptable
   local car=seat:FindFirstAncestor("TrendFlyingCar")
   local driveRoot=car and car:FindFirstChild("DriveRoot",true)
-  local cf=(driveRoot and driveRoot.CFrame) or seat.CFrame
+  local rawCF=(driveRoot and driveRoot.CFrame) or seat.CFrame
+  -- This imported car's visual nose is opposite DriveRoot.LookVector.
+  -- Rotate only the camera reference 180 degrees; vehicle physics stay untouched.
+  local cf=rawCF*CFrame.Angles(0,math.pi,0)
   if zoomDistance<=COCKPIT_THRESHOLD then
    -- First-person/cockpit view. The avatar is already hidden locally.
    local eye=seat.Position+Vector3.new(0,1.25,0)+cf.LookVector*.35
