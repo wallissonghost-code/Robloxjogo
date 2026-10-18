@@ -63,12 +63,28 @@ local function setDriverHidden(hidden)
  end
 end
 
+local savedTouchGuiEnabled=nil
+local function setDefaultMobileControlsHidden(hidden)
+ local playerGui=player:FindFirstChildOfClass("PlayerGui")
+ local touchGui=playerGui and playerGui:FindFirstChild("TouchGui")
+ if touchGui then
+  if hidden then
+   if savedTouchGuiEnabled==nil then savedTouchGuiEnabled=touchGui.Enabled end
+   touchGui.Enabled=false
+  elseif savedTouchGuiEnabled~=nil then
+   touchGui.Enabled=savedTouchGuiEnabled
+   savedTouchGuiEnabled=nil
+  end
+ end
+end
+
 local wasDriving=false
 RunService.RenderStepped:Connect(function()
  local driving=currentSeat()~=nil
  if driving~=wasDriving then
   wasDriving=driving
   setDriverHidden(driving)
+  setDefaultMobileControlsHidden(driving)
  end
  if driving then
   local char=player.Character
