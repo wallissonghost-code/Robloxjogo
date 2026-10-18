@@ -8,10 +8,21 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Size": [128, 1, 128],
+          "Size": [256, 1, 256],
           "Position": [0, 0, 0],
-          "Material": "Grass"
+          "Material": "Asphalt"
         }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "CarSystem": {"$path": "src/server/CarSystem.server.lua"}
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "CarCamera": {"$path": "src/client/CarCamera.client.lua"}
       }
     }
   }
