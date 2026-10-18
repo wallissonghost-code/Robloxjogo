@@ -15,6 +15,11 @@ local activeSeat=nil
 local CAMERA_HEIGHT=8
 local CAMERA_DISTANCE=14
 local LOOK_HEIGHT=2
+local zoomDistance=14
+local MIN_ZOOM=0
+local MAX_ZOOM=22
+local COCKPIT_THRESHOLD=2.2
+local lastPinchDistance=nil
 
 local function currentSeat()
  local char=player.Character
@@ -28,11 +33,23 @@ RunService:BindToRenderStep("TrendCarCamera",Enum.RenderPriority.Camera.Value+1,
  if seat then
   activeSeat=seat
   camera.CameraType=Enum.CameraType.Scriptable
-  local cf=seat.CFrame
-  local desired=cf.Position-cf.LookVector*CAMERA_DISTANCE+Vector3.new(0,CAMERA_HEIGHT,0)
-  local look=cf.Position+cf.LookVector*5+Vector3.new(0,LOOK_HEIGHT,0)
-  local target=CFrame.lookAt(desired,look)
-  camera.CFrame=camera.CFrame:Lerp(target,1-math.exp(-10*dt))
+  local car=seat:FindFirstAncestor("TrendFlyingCar")
+  local driveRoot=car and car:FindFirstChild("DriveRoot",true)
+  local cf=(driveRoot and driveRoot.CFrame) or seat.CFrame
+  if zoomDistance<=COCKPIT_THRESHOLD then
+   -- First-person/cockpit view. The avatar is already hidden locally.
+   local eye=seat.Position+Vector3.new(0,1.25,0)+cf.LookVector*.35
+   local target=CFrame.lookAt(eye,eye+cf.LookVector*12+Vector3.new(0,.15,0))
+   camera.CFrame=camera.CFrame:Lerp(target,1-math.exp(-14*dt))
+  else
+   local t=(zoomDistance-COCKPIT_THRESHOLD)/(MAX_ZOOM-COCKPIT_THRESHOLD)
+   local distance=4+(zoomDistance-COCKPIT_THRESHOLD)
+   local height=3.2+t*7
+   local desired=cf.Position-cf.LookVector*distance+Vector3.new(0,height,0)
+   local look=cf.Position+cf.LookVector*6+Vector3.new(0,1.7,0)
+   local target=CFrame.lookAt(desired,look)
+   camera.CFrame=camera.CFrame:Lerp(target,1-math.exp(-11*dt))
+  end
  elseif activeSeat then
   activeSeat=nil
   camera.CameraType=Enum.CameraType.Custom
@@ -41,6 +58,28 @@ RunService:BindToRenderStep("TrendCarCamera",Enum.RenderPriority.Camera.Value+1,
  end
 end)
 
+
+-- Camera zoom: pinch on mobile, mouse wheel on desktop.
+UIS.TouchPinch:Connect(function(touchPositions,scale,velocity,state)
+ if not currentSeat() then lastPinchDistance=nil return end
+ if state==Enum.UserInputState.Begin then
+  lastPinchDistance=scale
+ elseif state==Enum.UserInputState.Change then
+  if lastPinchDistance then
+   local delta=scale-lastPinchDistance
+   zoomDistance=math.clamp(zoomDistance-delta*9,MIN_ZOOM,MAX_ZOOM)
+  end
+  lastPinchDistance=scale
+ else
+  lastPinchDistance=nil
+ end
+end)
+
+UIS.InputChanged:Connect(function(input)
+ if currentSeat() and input.UserInputType==Enum.UserInputType.MouseWheel then
+  zoomDistance=math.clamp(zoomDistance-input.Position.Z*2.2,MIN_ZOOM,MAX_ZOOM)
+ end
+end)
 
 local hiddenCharacter={}
 local function setDriverHidden(hidden)
