@@ -37,6 +37,41 @@ RunService:BindToRenderStep("TrendCarCamera",Enum.RenderPriority.Camera.Value+1,
 end)
 
 
+local hiddenCharacter={}
+local function setDriverHidden(hidden)
+ local char=player.Character
+ if not char then return end
+ if hidden then
+  table.clear(hiddenCharacter)
+  for _,d in ipairs(char:GetDescendants()) do
+   if d:IsA("BasePart") then
+    hiddenCharacter[d]=d.LocalTransparencyModifier
+    d.LocalTransparencyModifier=1
+   elseif d:IsA("Decal") then
+    hiddenCharacter[d]=d.Transparency
+    d.Transparency=1
+   end
+  end
+ else
+  for obj,value in pairs(hiddenCharacter) do
+   if obj and obj.Parent then
+    if obj:IsA("BasePart") then obj.LocalTransparencyModifier=value
+    elseif obj:IsA("Decal") then obj.Transparency=value end
+   end
+  end
+  table.clear(hiddenCharacter)
+ end
+end
+
+local wasDriving=false
+RunService.RenderStepped:Connect(function()
+ local driving=currentSeat()~=nil
+ if driving~=wasDriving then
+  wasDriving=driving
+  setDriverHidden(driving)
+ end
+end)
+
 -- Mobile driving HUD
 local gui=Instance.new("ScreenGui")
 gui.Name="TrendCarMobileHUD"; gui.ResetOnSpawn=false; gui.Enabled=false; gui.Parent=player:WaitForChild("PlayerGui")
