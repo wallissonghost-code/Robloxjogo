@@ -118,8 +118,8 @@ local function prepareCar()
    if input then throttle=input.throttle; steer=input.steer end
   end
   local target=0
-  if throttle>0.05 then target=FORWARD_SPEED*throttle
-  elseif throttle<-.05 then target=REVERSE_SPEED*throttle end
+  if throttle>0.05 then target=-FORWARD_SPEED*throttle
+  elseif throttle<-.05 then target=-REVERSE_SPEED*throttle end
 
   local rate=(math.abs(target)>math.abs(speed)) and ACCEL or BRAKE
   speed += math.clamp(target-speed,-rate*dt,rate*dt)
@@ -132,7 +132,7 @@ local function prepareCar()
   end
 
   local pos=chassis.Position
-  local forward=Vector3.new(math.sin(heading),0,math.cos(heading))
+  local forward=Vector3.new(-math.sin(heading),0,-math.cos(heading))
   local horizontal=forward*speed
   chassis.AssemblyLinearVelocity=Vector3.new(horizontal.X,chassis.AssemblyLinearVelocity.Y,horizontal.Z)
   chassis.AssemblyAngularVelocity=Vector3.zero
