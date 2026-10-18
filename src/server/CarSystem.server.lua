@@ -1,6 +1,11 @@
 local InsertService=game:GetService("InsertService")
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+
+local controlEvent=ReplicatedStorage:FindFirstChild("TrendCarControl") or Instance.new("RemoteEvent")
+controlEvent.Name="TrendCarControl"; controlEvent.Parent=ReplicatedStorage
+local mobileControls={}
 
 local CAR_ASSET_ID=4520224711
 local SPAWN=CFrame.new(0,4,0)
@@ -86,6 +91,11 @@ local function prepareCar()
 
  local speed=0
  local heading=math.atan2(-chassis.CFrame.LookVector.X,-chassis.CFrame.LookVector.Z)
+ controlEvent.OnServerEvent:Connect(function(player,throttle,steer)
+  if seat.Occupant and Players:GetPlayerFromCharacter(seat.Occupant.Parent)==player then
+   mobileControls[player]={throttle=math.clamp(tonumber(throttle) or 0,-1,1),steer=math.clamp(tonumber(steer) or 0,-1,1)}
+  end
+ end)
  seat:GetPropertyChangedSignal("Occupant"):Connect(function()
   local hum=seat.Occupant
   if hum then
@@ -93,6 +103,7 @@ local function prepareCar()
    if plr then pcall(function() chassis:SetNetworkOwner(nil) end) end
   else
    speed=0
+   table.clear(mobileControls)
   end
  end)
 
@@ -101,6 +112,11 @@ local function prepareCar()
   local hum=seat.Occupant
   local throttle=hum and seat.ThrottleFloat or 0
   local steer=hum and seat.SteerFloat or 0
+  if hum then
+   local driver=Players:GetPlayerFromCharacter(hum.Parent)
+   local input=driver and mobileControls[driver]
+   if input then throttle=input.throttle; steer=input.steer end
+  end
   local target=0
   if throttle>0.05 then target=FORWARD_SPEED*throttle
   elseif throttle<-.05 then target=REVERSE_SPEED*throttle end
