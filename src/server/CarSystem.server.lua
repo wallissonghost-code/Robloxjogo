@@ -59,7 +59,7 @@ local function prepareCar()
  seat.TurnSpeed=2
  seat.Parent=car
  -- Approximate cabin: centered, slightly above the lower half of the body.
- seat.CFrame=CFrame.new(center.X,mn.Y+math.max(1.4,size.Y*.48),center.Z+size.Z*.06)
+ seat.CFrame=CFrame.new(center.X,mn.Y+math.max(1.4,size.Y*.48),center.Z+size.Z*.06)*CFrame.Angles(0,math.rad(180),0)
  table.insert(parts,seat)
 
  -- Invisible chassis/root gives predictable custom movement.
