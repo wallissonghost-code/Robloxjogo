@@ -132,7 +132,7 @@ local function prepareCar()
   end
 
   local pos=chassis.Position
-  local forward=Vector3.new(-math.sin(heading),0,-math.cos(heading))
+  local forward=Vector3.new(math.sin(heading),0,math.cos(heading))
   local horizontal=forward*speed
   chassis.AssemblyLinearVelocity=Vector3.new(horizontal.X,chassis.AssemblyLinearVelocity.Y,horizontal.Z)
   chassis.AssemblyAngularVelocity=Vector3.zero
