@@ -124,21 +124,19 @@ local function prepareCar()
   local rate=(math.abs(target)>math.abs(speed)) and ACCEL or BRAKE
   speed += math.clamp(target-speed,-rate*dt,rate*dt)
 
-  -- Steering reverses naturally while backing up.
+  -- Physics-only locomotion: never rewrite CFrame every Heartbeat.
+  -- Mixing CFrame corrections with assembly velocity caused visible jitter/teleporting.
+  local forward=chassis.CFrame.LookVector
+  local horizontal=forward*speed
+  chassis.AssemblyLinearVelocity=Vector3.new(horizontal.X,chassis.AssemblyLinearVelocity.Y,horizontal.Z)
+
+  local yawVelocity=0
   if math.abs(speed)>.35 and math.abs(steer)>.02 then
    local direction=speed>=0 and 1 or -1
    local speedFactor=math.clamp(math.abs(speed)/12,.25,1)
-   heading += math.rad(TURN_RATE)*steer*direction*speedFactor*dt
+   yawVelocity=math.rad(TURN_RATE)*steer*direction*speedFactor
   end
-
-  local pos=chassis.Position
-  local forward=Vector3.new(-math.sin(heading),0,-math.cos(heading))
-  local horizontal=forward*speed
-  chassis.AssemblyLinearVelocity=Vector3.new(horizontal.X,chassis.AssemblyLinearVelocity.Y,horizontal.Z)
-  chassis.AssemblyAngularVelocity=Vector3.zero
-  -- Keep car upright while allowing vertical physics/gravity.
-  local targetCF=CFrame.lookAt(pos,pos+forward,Vector3.yAxis)
-  chassis.CFrame=chassis.CFrame:Lerp(targetCF,math.clamp(dt*10,0,1))
+  chassis.AssemblyAngularVelocity=Vector3.new(0,yawVelocity,0)
  end)
 
  print("[CarSystem] Carro dirigivel pronto | frente/re/volante | asset "..CAR_ASSET_ID)
