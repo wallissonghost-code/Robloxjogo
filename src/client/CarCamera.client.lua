@@ -70,6 +70,14 @@ RunService.RenderStepped:Connect(function()
   wasDriving=driving
   setDriverHidden(driving)
  end
+ if driving then
+  local char=player.Character
+  if char then
+   for _,d in ipairs(char:GetDescendants()) do
+    if d:IsA("BasePart") then d.LocalTransparencyModifier=1 end
+   end
+  end
+ end
 end)
 
 -- Mobile driving HUD
