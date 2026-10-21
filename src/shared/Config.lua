@@ -43,11 +43,11 @@ Config.Marker = {
 }
 Config.Camera = {
     MinHeight = 52,
-    MaxHeight = 650,
-    StartHeight = 475,
+    MaxHeight = 1400,
+    StartHeight = 0,
     PanSpeed = 0.0024,
     EdgePadding = 0,
-    Overscan = 1.02,
+    Overscan = 1.12,
 }
 Config.Debug=true
 return Config
