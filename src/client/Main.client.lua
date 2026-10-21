@@ -119,7 +119,12 @@ end)
 focus=Vector3.new(Config.Map.Origin.X,0,Config.Map.Origin.Z)
 setZoom(worldFitHeight())
 RunService:BindToRenderStep("PixelWarMapCamera",Enum.RenderPriority.Camera.Value+1,function()
-    camera.CFrame=CFrame.lookAt(Vector3.new(focus.X,height,focus.Z),Vector3.new(focus.X,0,focus.Z),Vector3.new(0,0,-1))
+    local target=Vector3.new(focus.X,Config.Map.Origin.Y,focus.Z)
+    local cameraPosition=Vector3.new(focus.X,height,focus.Z)
+    camera.CFrame=CFrame.lookAt(cameraPosition,target,Vector3.new(0,0,-1))
+    -- Keep Roblox's render-interest point on the world surface. On low graphics,
+    -- a stale Camera.Focus can cause distant top-down geometry to be culled.
+    camera.Focus=CFrame.new(target)
     local map=workspace:FindFirstChild("PixelWarMap")
     local markers=map and map:FindFirstChild("Markers")
     if markers then
