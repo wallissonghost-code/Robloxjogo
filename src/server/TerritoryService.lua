@@ -113,26 +113,77 @@ function TerritoryService.BuildMap()
         return dx*dx+dy*dy<=1
     end
     local function landAt(x,z)
-        local u=(x-0.5)/W; local v=(z-0.5)/H
-        -- recognizable low-resolution world silhouette, intentionally generated
-        -- from continent masses so no external/copyrighted map asset is required.
-        local northAmerica=ellipse(u,v,.20,.31,.15,.20) or ellipse(u,v,.14,.22,.09,.09) or ellipse(u,v,.28,.38,.09,.11)
-        northAmerica=northAmerica and not ellipse(u,v,.29,.25,.075,.075)
-        local central=ellipse(u,v,.285,.49,.035,.11)
-        local southAmerica=ellipse(u,v,.36,.66,.075,.23) or ellipse(u,v,.33,.57,.055,.09)
-        local greenland=ellipse(u,v,.39,.13,.055,.09)
-        local europe=ellipse(u,v,.52,.30,.075,.10) or ellipse(u,v,.48,.27,.04,.05)
-        local africa=ellipse(u,v,.53,.52,.105,.22) or ellipse(u,v,.58,.61,.045,.13)
-        local asia=ellipse(u,v,.68,.31,.19,.16) or ellipse(u,v,.78,.39,.13,.15) or ellipse(u,v,.62,.38,.10,.12)
-        asia=asia and not ellipse(u,v,.69,.48,.07,.07)
-        local india=ellipse(u,v,.66,.49,.045,.11)
-        local seAsia=ellipse(u,v,.76,.53,.06,.10)
-        local japan=ellipse(u,v,.845,.37,.018,.065)
-        local australia=ellipse(u,v,.80,.72,.09,.105) or ellipse(u,v,.85,.70,.04,.06)
-        local madagascar=ellipse(u,v,.61,.69,.018,.07)
-        local uk=ellipse(u,v,.465,.285,.018,.04)
-        local iceland=ellipse(u,v,.45,.20,.022,.018)
-        return northAmerica or central or southAmerica or greenland or europe or africa or asia or india or seAsia or japan or australia or madagascar or uk or iceland
+        local u=(x-0.5)/W
+        local v=(z-0.5)/H
+        -- Higher-resolution world layout with deliberate ocean separation.
+        -- Continents are composed from overlapping masses; ownership remains
+        -- cell-based so borders can later emerge dynamically between players.
+        local northAmerica =
+            ellipse(u,v,.145,.265,.105,.145) or
+            ellipse(u,v,.205,.315,.105,.145) or
+            ellipse(u,v,.255,.375,.075,.105) or
+            ellipse(u,v,.095,.205,.055,.070)
+        -- Hudson Bay / Great Lakes / Gulf help break the silhouette.
+        northAmerica = northAmerica
+            and not ellipse(u,v,.205,.235,.038,.050)
+            and not ellipse(u,v,.265,.335,.030,.024)
+            and not ellipse(u,v,.275,.445,.055,.050)
+
+        local centralAmerica =
+            ellipse(u,v,.282,.475,.025,.070) or
+            ellipse(u,v,.305,.515,.030,.045)
+
+        local southAmerica =
+            ellipse(u,v,.350,.615,.068,.130) or
+            ellipse(u,v,.385,.695,.055,.155) or
+            ellipse(u,v,.365,.555,.055,.070)
+        southAmerica = southAmerica and not ellipse(u,v,.315,.720,.030,.090)
+
+        local greenland = ellipse(u,v,.385,.135,.045,.075)
+        local caribbean = ellipse(u,v,.325,.505,.010,.010) or ellipse(u,v,.342,.515,.009,.008)
+
+        local europe =
+            ellipse(u,v,.515,.290,.060,.075) or
+            ellipse(u,v,.555,.300,.075,.075) or
+            ellipse(u,v,.485,.335,.030,.050)
+        local uk = ellipse(u,v,.475,.285,.014,.030)
+        local iceland = ellipse(u,v,.455,.215,.015,.012)
+
+        local africa =
+            ellipse(u,v,.545,.495,.082,.150) or
+            ellipse(u,v,.565,.585,.060,.135)
+        africa = africa
+            and not ellipse(u,v,.625,.425,.045,.055)
+            and not ellipse(u,v,.485,.600,.025,.060)
+
+        local asia =
+            ellipse(u,v,.650,.285,.115,.105) or
+            ellipse(u,v,.735,.300,.125,.115) or
+            ellipse(u,v,.810,.325,.090,.115) or
+            ellipse(u,v,.675,.390,.105,.100)
+        asia = asia
+            and not ellipse(u,v,.610,.410,.050,.045)
+            and not ellipse(u,v,.770,.440,.055,.050)
+
+        local india = ellipse(u,v,.675,.455,.035,.085)
+        local seAsia =
+            ellipse(u,v,.755,.475,.045,.085) or
+            ellipse(u,v,.790,.515,.035,.070)
+        local japan = ellipse(u,v,.865,.335,.012,.050)
+        local philippines = ellipse(u,v,.815,.500,.012,.045)
+        local indonesia =
+            ellipse(u,v,.785,.565,.050,.025) or
+            ellipse(u,v,.840,.575,.055,.025)
+
+        local australia =
+            ellipse(u,v,.835,.705,.075,.090) or
+            ellipse(u,v,.875,.680,.045,.070)
+        local newZealand = ellipse(u,v,.925,.760,.010,.045)
+        local madagascar = ellipse(u,v,.625,.660,.012,.055)
+
+        return northAmerica or centralAmerica or southAmerica or greenland or caribbean
+            or europe or uk or iceland or africa or asia or india or seAsia
+            or japan or philippines or indonesia or australia or newZealand or madagascar
     end
     local mask={}
     for z=1,H do mask[z]={}; for x=1,W do mask[z][x]=landAt(x,z) end end
