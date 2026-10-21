@@ -1,1 +1,27 @@
-{"name":"PixelWar","tree":{"$className":"DataModel","ReplicatedStorage":{"$className":"ReplicatedStorage","Shared":{"$path":"src/shared"}},"ServerScriptService":{"$className":"ServerScriptService","Server":{"$path":"src/server"}},"StarterPlayer":{"$className":"StarterPlayer","$properties":{"CharacterWalkSpeed":0,"CharacterJumpHeight":0,"CharacterJumpPower":0},"StarterPlayerScripts":{"$className":"StarterPlayerScripts","Client":{"$path":"src/client"}}},"Workspace":{"$className":"Workspace"}}}
+{
+  "name": "PixelWar",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": { "$path": "src/shared" }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Main": { "$path": "src/server/Main.server.lua" }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": {
+        "CharacterWalkSpeed": 0,
+        "CharacterJumpHeight": 0,
+        "CharacterJumpPower": 0
+      },
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Main": { "$path": "src/client/Main.client.lua" }
+      }
+    },
+    "Workspace": { "$className": "Workspace" }
+  }
+}
