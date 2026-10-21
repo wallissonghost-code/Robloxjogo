@@ -1,5 +1,7 @@
 # Etapa 2 — nações e capitais (0.2.0-nations)
 
+Registro histórico. Estado atual: [Etapa 3 — expansão e economia](EXPANSION_ECONOMY.md).
+
 Base: `58ea2106072e5aecaa7d1bdf46d5417345fae714`, branch `main`.
 
 ## Fluxo disponível

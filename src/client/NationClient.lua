@@ -5,18 +5,25 @@ local NationClient = {}
 NationClient.__index = NationClient
 
 local messages = {
-    Founded = "Capital fundada! Seu território está marcado com uma estrela.",
+    Founded = "Capital fundada! Selecione terra junto à sua fronteira para expandir.",
     AlreadyFounded = "Você já possui uma capital nesta partida.",
     InvalidLand = "Escolha uma célula de terra. Água não pode ser ocupada.",
-    Occupied = "Essa célula acabou de ser ocupada. Escolha outra.",
+    Occupied = "Essa célula já foi ocupada. Escolha terra livre.",
     InvalidIdentity = "Não foi possível identificar o jogador. Entre novamente.",
+    InvalidPercent = "Escolha 10, 25, 35, 50 ou 75%.",
+    InsufficientTroops = "Tropas insuficientes para esse envio. Aguarde a geração.",
+    NotAdjacent = "Selecione terra livre encostada na sua fronteira.",
+    ExpansionBusy = "Sua expansão já está em andamento.",
+    NoNation = "Funde sua capital primeiro.",
+    DuplicateRequest = "Este comando já foi processado.",
+    Unavailable = "Esta ação ainda não está disponível.",
 }
 
-function NationClient.new(view, grid, config, status, hint, action)
+function NationClient.new(view, grid, config, status, hint, action, hud)
     local self = setmetatable({View = view, Grid = grid, Config = config,
-        Status = status, Hint = hint, Action = action, Replica = NationReplica.new(grid),
+        Status = status, Hint = hint, Action = action, Hud = hud, Replica = NationReplica.new(grid),
         UserId = Players.LocalPlayer.UserId, Running = true, Synced = false,
-        RequestId = 0, Connections = {}}, NationClient)
+        Percent = config.DefaultSendPercent, RequestId = 0, Connections = {}}, NationClient)
     self:Refresh()
     local remote = ReplicatedStorage:WaitForChild("NationProtocol", 30)
     if not remote then
@@ -30,35 +37,40 @@ function NationClient.new(view, grid, config, status, hint, action)
         if packet.Kind == "Result" then
             if packet.RequestId ~= self.Pending then return end
             self.Pending = nil
-            self.Notice = messages[packet.Code] or "Não foi possível fundar a capital."
+            self.Notice = packet.Code == "ExpansionStarted"
+                and string.format("Envio confirmado pelo servidor: %d tropas.", packet.Sent)
+                or messages[packet.Code] or "Não foi possível executar a ação."
         else
-            local hadNation = self.Replica.Nations[self.UserId] ~= nil
+            local prior = self.Replica.Nations[self.UserId]
             local dirty, reason = self.Replica:Apply(packet)
             if reason == "Resync" then self:RequestSync(); return end
             if dirty then
                 if packet.Kind == "Snapshot" then self.Synced = true end
                 view:ApplyNationState(self.Replica, dirty)
                 local nation = self.Replica.Nations[self.UserId]
-                if nation and not hadNation then
+                if nation and not prior then
                     self.SelectedId = nation.CapitalId
                     view:SetSelection(nation.CapitalId)
                     view:FocusCell(nation.CapitalId)
+                elseif prior and prior.ExpansionActive and nation and not nation.ExpansionActive then
+                    self.Notice = string.format("Expansão concluída: %d células. Sobra devolvida.", nation.ExpansionClaimed)
+                elseif nation and nation.ExpansionActive and not self.Pending then
+                    self.Notice = nil
                 end
             end
         end
         self:Refresh()
     end)
     self.Connections[#self.Connections + 1] = action.Activated:Connect(function()
-        if not self.Synced or self.Pending then return end
+        local intent = self:GetIntent()
+        if not intent then return end
         local nation = self.Replica.Nations[self.UserId]
-        if nation then view:FocusCell(nation.CapitalId); return end
-        local id = self.SelectedId
-        if not grid:IsLand(id) or self.Replica.Owners[id] ~= nil then return end
+        if intent == "Focus" then view:FocusCell(nation.CapitalId); return end
         self.RequestId = self.RequestId + 1
         self.Pending = self.RequestId
         self.Notice = nil
         self:Refresh()
-        remote:FireServer("ChooseCapital", id, self.Pending)
+        remote:FireServer(intent, self.SelectedId, self.Pending, self.Percent)
         local sent = self.Pending
         task.delay(8, function()
             if not self.Running or self.Pending ~= sent then return end
@@ -67,8 +79,43 @@ function NationClient.new(view, grid, config, status, hint, action)
             self:RequestSync()
         end)
     end)
+    if hud then
+        for percentage, item in pairs(hud.Percentages) do
+            self.Connections[#self.Connections + 1] = item.Activated:Connect(function() self:SelectPercent(percentage) end)
+        end
+    end
     self:RequestSync()
     return self
+end
+
+function NationClient:SelectPercent(percentage)
+    if self.Pending then return end
+    for _, allowed in ipairs(self.Config.SendPercentages) do
+        if percentage == allowed then self.Percent = percentage; self.Notice = nil; self:Refresh(); return end
+    end
+end
+
+function NationClient:GetIntent()
+    if not self.Synced then return nil, "Sync" end
+    if self.Pending then return nil, "Pending" end
+    local nation, id = self.Replica.Nations[self.UserId], self.SelectedId
+    if not nation then
+        if self.Grid:IsLand(id) and self.Replica.Owners[id] == nil then return "ChooseCapital" end
+        return nil, "SelectLand"
+    end
+    if nation.ExpansionActive then return nil, "ExpansionBusy" end
+    if not id or self.Replica.Owners[id] == self.UserId then return "Focus" end
+    if not self.Grid:IsLand(id) then return nil, "InvalidLand" end
+    if self.Replica.Owners[id] ~= nil then return nil, "Enemy" end
+    local adjacent = false
+    for _, other in ipairs(self.Grid:GetNeighbors(id)) do
+        if self.Replica.Owners[other] == self.UserId then adjacent = true; break end
+    end
+    if not adjacent then return nil, "NotAdjacent" end
+    if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
+        return nil, "InsufficientTroops"
+    end
+    return "Expand"
 end
 
 function NationClient:RequestSync()
@@ -97,42 +144,36 @@ function NationClient:Refresh()
     for _ in pairs(self.Replica.Nations) do count = count + 1 end
     self.Status.Text = self.Config.Version .. " • " .. count .. " nações"
     if nation then
-        self.Status.Text = self.Status.Text .. string.format(" • %d célula(s) • %.2f%% do mundo",
+        self.Status.Text = self.Status.Text .. string.format(" • %d células • %.2f%% do mundo",
             nation.TerritoryCount, nation.TerritoryCount / self.Grid.LandCount * 100)
     end
-    local enabled = false
-    local hint = "Toque em terra livre e confirme sua capital."
-    if not self.Synced then
-        self.Action.Text = "Sincronizando…"
-    elseif self.Pending then
-        self.Action.Text = "Fundando…"
-    elseif nation then
-        self.Action.Text, enabled = "Minha capital", true
-        hint = "Capital fundada • Expansão chega na próxima etapa."
-    elseif self.SelectedId and self.Grid:IsLand(self.SelectedId)
-        and self.Replica.Owners[self.SelectedId] == nil then
-        self.Action.Text, enabled = "Fundar capital aqui", true
-    else
-        self.Action.Text = "Selecione terra livre"
-    end
+    local intent, reason = self:GetIntent()
+    local texts = {Focus = "Minha capital", ChooseCapital = "Fundar capital aqui", Expand = "Expandir", Sync = "Sincronizando…",
+        Pending = "Enviando…", SelectLand = "Selecione terra livre", ExpansionBusy = "Expandindo…",
+        InvalidLand = "Escolha terra", Enemy = "Combate na próxima etapa", NotAdjacent = "Escolha sua fronteira",
+        InsufficientTroops = "Aguarde mais tropas"}
+    self.Action.Text = texts[intent or reason] or "Selecione uma célula"
+    local hint = nation and "Toque em terra livre na sua fronteira e escolha o envio." or "Toque em terra livre e confirme sua capital."
     if self.SelectedId then
         local owner = self.Replica.Owners[self.SelectedId]
         local selectedNation = owner ~= nil and self.Replica.Nations[owner]
-        local x, y = self.Grid:ToCoordinates(self.SelectedId)
         if selectedNation then
-            hint = string.format("%s • %d célula(s) • %s", selectedNation.Name,
-                selectedNation.TerritoryCount, owner == self.UserId and "Seu território" or "Outra nação")
-        elseif not self.Grid:IsLand(self.SelectedId) then
-            hint = "Água: escolha terra para fundar sua capital."
-        elseif x then
-            hint = string.format("Terra livre (%d, %d) • %s", x, y,
-                nation and "Expansão ainda indisponível" or "Confirme no botão abaixo")
+            hint = string.format("%s • %d tropas • %d células", selectedNation.Name, selectedNation.Troops, selectedNation.TerritoryCount)
+        elseif reason == "NotAdjacent" or reason == "InvalidLand" or reason == "InsufficientTroops" then
+            hint = messages[reason]
+        elseif intent == "Expand" then
+            local sent = math.floor(nation.Troops * self.Percent / 100)
+            hint = string.format("Até %d células • %d tropas/célula • sobra retorna",
+                math.min(self.Config.Expansion.MaxCellsPerOrder, math.floor(sent / self.Config.Expansion.CostPerCell)), self.Config.Expansion.CostPerCell)
+        elseif intent == "ChooseCapital" then
+            hint = "Terra livre • Confirme a capital no botão abaixo"
         end
     end
     self.Hint.Text = self.Notice or hint
-    self.Action.Active = enabled
-    self.Action.AutoButtonColor = enabled
-    self.Action.BackgroundColor3 = enabled and Color3.fromRGB(38, 112, 97) or Color3.fromRGB(44, 55, 64)
+    self.Action.Active = intent ~= nil
+    self.Action.AutoButtonColor = intent ~= nil
+    self.Action.BackgroundColor3 = intent and Color3.fromRGB(38, 112, 97) or Color3.fromRGB(44, 55, 64)
+    if self.Hud then self.Hud:UpdateEconomy(nation, self.Percent) end
 end
 
 function NationClient:Destroy()

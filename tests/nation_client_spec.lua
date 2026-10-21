@@ -18,9 +18,12 @@ local function signal()
 end
 local Config = dofile("src/shared/Config.lua")
 local grid = dofile("src/shared/MapGrid.lua").new(Config.Map, dofile("src/shared/WorldDefinition.lua"))
-local nations = dofile("src/server/NationService.lua").new(dofile("src/server/MapService.lua").new(grid),Config.Nations)
+local economy = dofile("src/server/EconomyService.lua").new(Config.Economy)
+local nations = dofile("src/server/NationService.lua").new(dofile("src/server/MapService.lua").new(grid),Config.Nations,economy)
+local expansion = dofile("src/server/ExpansionService.lua").new(nations,Config.Expansion,Config.SendPercentages)
+local match = dofile("src/server/MatchService.lua").new(nations,economy,expansion,Config.Tick)
 local now, timers = 0, {}
-local gateway = dofile("src/server/CommandService.lua").new(nations,Config.Network,function() return now end)
+local gateway = dofile("src/server/CommandService.lua").new(nations,Config.Network,function() return now end,expansion)
 local transport = {OnClientEvent=signal(), sent={}}
 function transport:FireServer(...)
     self.sent[#self.sent+1] = {...}
@@ -48,7 +51,10 @@ local view = {FocusCell=function(self,id) self.focus=id end,
     SetSelection=function(self,id) self.selection=id end,
     ApplyNationState=function(self,replica) self.owners=replica.Owners end}
 local status,hint,action = {},{},{Activated=signal()}
-local client = dofile("src/client/NationClient.lua").new(view,grid,Config,status,hint,action)
+local hud = {Stats={},Preview={},Percentages={}}
+for _,percentage in ipairs(Config.SendPercentages) do hud.Percentages[percentage]={Activated=signal()} end
+hud.UpdateEconomy=dofile("src/client/StrategyHud.lua").UpdateEconomy
+local client = dofile("src/client/NationClient.lua").new(view,grid,Config,status,hint,action,hud)
 local count = 0
 local function check(value,message) count=count+1; assert(value,message) end
 local function deliverNext(dropResult)
@@ -86,6 +92,33 @@ action.Activated:Fire()
 check(#transport.sent==0, "My capital action is local focus only")
 transport.OnClientEvent:Fire({Kind="Result",RequestId=999,Code="InvalidLand"})
 check(client.Synced and action.Text=="Minha capital", "Unrelated result ignored")
+local border
+for _,id in ipairs(grid:GetNeighbors(b)) do if nations:GetOwner(id)==nil then border=id;break end end
+check(border~=nil,"Test position has available border")
+client:Inspect(border)
+hud.Percentages[25].Activated:Fire()
+check(client.Percent==25 and hud.Preview.Text:find("25 tropas",1,true),"Real HUD shows selected percent amount")
+check(action.Active and action.Text=="Expandir","Adjacent land offers expansion")
+action.Activated:Fire()
+check(transport.sent[1][1]=="Expand" and transport.sent[1][4]==25,"UI sends percentage, not balance")
+deliverNext()
+check(nations:GetOwner(border)==nil and client.Replica.Owners[border]==nil,"Order does not predict conquest")
+check(client.Replica.Nations[userId].Troops==75 and not action.Active,"HUD receives authoritative debit")
+transport.OnClientEvent:Fire(match:Step(0.25))
+check(client.Replica.Owners[border]==userId,"Progressive pulse reaches client")
+check(client.Replica.Nations[userId].Troops==80,"Unused escrow refund reaches client")
+check(hud.Stats.Text:find("Tropas 80/225",1,true),"Capacity scales with territory in actual HUD")
+transport.OnClientEvent:Fire(match:Step(0.75))
+check(client.Replica.Nations[userId].Troops==86 and hud.Stats.Text:find("Ouro 51.6",1,true),"Batch income visible in HUD")
+hud.Percentages[75].Activated:Fire()
+check(hud.Preview.Text:find("64 tropas",1,true),"Preview rounds down after income")
+client:SelectPercent(100)
+check(client.Percent==75,"UI rejects unsupported percentage")
+client:Inspect(a)
+check(not action.Active and action.Text=="Combate na próxima etapa","Enemy cannot be expanded into")
+local sentBefore=#transport.sent
+action.Activated:Fire()
+check(#transport.sent==sentBefore,"Disabled enemy action cannot send a command")
 client:RequestSync()
 local sent=#transport.sent
 client:Destroy()

@@ -1,6 +1,6 @@
 -- Shared public configuration only. Never put credentials or authority here.
 local Config = {
-    Version = "0.2.0-nations",
+    Version = "0.3.0-expansion-economy",
     Map = {
         Version = 1,
         Width = 240,
@@ -13,7 +13,7 @@ local Config = {
     },
     View = {
         MinZoom = 1,
-        MaxZoom = 8,
+        MaxZoom = 24,
         ZoomStep = 1.4,
         DragThreshold = 8,
         WaterColor = {19, 43, 62},

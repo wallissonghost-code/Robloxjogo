@@ -150,4 +150,28 @@ local before=ng:GetState(7).Troops
 check(gateway:Handle(7,"Seven","Expand",target,1,75).Code=="DuplicateRequest","Replay rejected")
 check(ng:GetState(7).Troops==before,"Replay cannot spend twice")
 invariants(ng)
+-- Two accepted orders race for one neutral border: only one spends on that cell.
+local nr,er,xr,mr=setup()
+local center=grid:ToId(6,6)
+nr:Create(20,"Left",grid:ToId(5,6)); nr:Create(21,"Right",grid:ToId(7,6))
+check(xr:Start(20,center,50)~=nil and xr:Start(21,center,50)~=nil,"Both requests can target currently free cell")
+for _=1,4 do
+    local changed,cells={},{}; xr:Step(changed,cells); nr:Publish(changed,cells)
+    local total=0
+    nr:ForEachState(function(s)
+        total=total+s.Troops+s.ExpansionRemaining+(s.TerritoryCount-1)*Config.Expansion.CostPerCell
+    end)
+    check(total==200,"Concurrent orders conserve spent and reserved troops")
+    invariants(nr)
+end
+check(nr:GetOwner(center)==20 or nr:GetOwner(center)==21,"One final target owner")
+local loser=nr:GetOwner(center)==20 and 21 or 20
+check(nr:GetState(loser).Troops==100 and nr:GetState(loser).TerritoryCount==1,"Losing order gets full refund")
+-- The capacity counts committed troops too, so capped regeneration cannot duplicate escrow.
+local nc,ec,xc,mc=setup(); nc:Create(30,"Cap",capital)
+local capped=nc:GetState(30); capped.Troops=capped.MaxTroops
+xc:Start(30,target,50)
+ec:Step(nc,100,{})
+check(capped.Troops+capped.ExpansionRemaining==capped.MaxTroops,"Committed troops included in capacity")
+invariants(nc)
 print(string.format("PASS: %d expansion/economy checks",checks))

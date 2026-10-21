@@ -67,6 +67,7 @@ function MapView:Layout()
     local maxX, maxY = math.max(0, (width - size.X) / 2), math.max(0, (height - size.Y) / 2)
     self.Pan = Vector2.new(math.clamp(self.Pan.X, -maxX, maxX), math.clamp(self.Pan.Y, -maxY, maxY))
     self.Canvas.Size = UDim2.fromOffset(width, height)
+    self.Selection.Size = UDim2.fromOffset(math.max(16, width / self.Grid.Width), math.max(16, height / self.Grid.Height))
     self.Canvas.Position = UDim2.fromOffset(size.X / 2 + self.Pan.X, size.Y / 2 + self.Pan.Y)
     for _, marker in pairs(self.Markers) do marker.NameLabel.Visible = self.Zoom >= 3 end
 end
@@ -101,7 +102,7 @@ function MapView:ApplyNationState(replica, dirtyChunks)
             name.Name = "NameLabel"
             name.AnchorPoint = Vector2.new(0.5, 0)
             name.Position = UDim2.new(0.5, 0, 1, 2)
-            name.Size = UDim2.fromOffset(112, 20)
+            name.Size = UDim2.fromOffset(112, 34)
             name.BackgroundTransparency = 1
             name.TextColor3 = Color3.fromRGB(255, 255, 255)
             name.TextStrokeTransparency = 0.2
@@ -115,7 +116,7 @@ function MapView:ApplyNationState(replica, dirtyChunks)
         local x, y = self.Grid:ToCoordinates(nation.CapitalId)
         marker.Position = UDim2.fromScale((x - 0.5) / self.Grid.Width, (y - 0.5) / self.Grid.Height)
         marker.TextColor3 = Color3.fromRGB(table.unpack(nation.Color))
-        marker.NameLabel.Text = nation.Name
+        marker.NameLabel.Text = string.format("%s\n%d tropas", nation.Name, nation.Troops or 0)
         marker.NameLabel.Visible = self.Zoom >= 3
     end
 end
@@ -123,7 +124,7 @@ end
 function MapView:FocusCell(cellId)
     local x, y = self.Grid:ToCoordinates(cellId)
     if not x then return end
-    self:SetZoom(math.max(4, self.Zoom))
+    self:SetZoom(math.max(12, self.Zoom))
     -- Layout sets absolute offset size; use it immediately without waiting a frame.
     local size = Vector2.new(self.Canvas.Size.X.Offset, self.Canvas.Size.Y.Offset)
     self.Pan = Vector2.new((0.5 - (x - 0.5) / self.Grid.Width) * size.X,

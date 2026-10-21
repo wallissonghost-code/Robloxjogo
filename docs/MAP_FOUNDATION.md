@@ -1,6 +1,6 @@
 # Etapa 1 — base do mapa (0.1.0-map-foundation)
 
-Registro histórico da etapa 1. Estado atual: [Etapa 2 — nações e capitais](NATION_FOUNDING.md).
+Registro histórico da etapa 1. Estado atual: [Etapa 3 — expansão e economia](EXPANSION_ECONOMY.md).
 
 ## Estado encontrado
 
