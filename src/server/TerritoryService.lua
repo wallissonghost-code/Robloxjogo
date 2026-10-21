@@ -272,7 +272,7 @@ function TerritoryService.ExpandToward(player,part,percent)
                 return da<db
             end)
             -- Advance a small front each pulse instead of drawing a single-cell snake.
-            local pulse=math.min(3,#candidates,math.floor(budget/Config.Territory.TroopsPerNeutralCell))
+            local pulse=math.min(Config.Territory.FrontWidth or 5,#candidates,math.floor(budget/Config.Territory.TroopsPerNeutralCell))
             if pulse<=0 then break end
             for i=1,pulse do
                 local cell=candidates[i]
