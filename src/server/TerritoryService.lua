@@ -201,18 +201,95 @@ function TerritoryService.BuildMap()
     end end end
 end
 
-function TerritoryService.TryClaim(player,part)
-    local map=workspace:FindFirstChild("PixelWarMap"); if not map or not part or part.Parent~=map.Cells then return false end
-    local x,z=part:GetAttribute("GridX"),part:GetAttribute("GridZ"); local cell=x and z and cells[key(x,z)]
+local function setOwner(player,cell)
+    cell.Owner=player
+    cell.Part.Color=colorFor(player)
+    cell.Part:SetAttribute("OwnerUserId",player.UserId)
+    owned[player]=owned[player] or {}
+    owned[player][key(cell.X,cell.Z)]=cell
+end
+
+local function territoryCount(player)
+    local n=0
+    for _ in pairs(owned[player] or {}) do n+=1 end
+    return n
+end
+
+local function distanceScore(cell,tx,tz)
+    local dx=cell.X-tx; local dz=cell.Z-tz
+    return dx*dx+dz*dz
+end
+
+function TerritoryService.SpawnPlayer(player,part)
+    local map=workspace:FindFirstChild("PixelWarMap")
+    if not map or not part or part.Parent~=map.Cells or territoryCount(player)>0 then return false end
+    local x,z=part:GetAttribute("GridX"),part:GetAttribute("GridZ")
+    local cell=x and z and cells[key(x,z)]
     if not cell or cell.Owner then return false end
-    local list=owned[player]; local first=not list or next(list)==nil
-    if not first and not isAdjacentToPlayer(cell,player) then return false end
-    local cost=first and 0 or Config.Territory.NeutralClaimCost
-    if cost>0 and not TroopService.Spend(player,cost) then return false end
-    cell.Owner=player; cell.Part.Color=colorFor(player); cell.Part:SetAttribute("OwnerUserId",player.UserId)
-    owned[player]=owned[player] or {}; owned[player][key(x,z)]=cell
-    local count=0; for _ in pairs(owned[player]) do count+=1 end
-    player:SetAttribute("TerritoryCells",count); updateMarker(player); return true
+    setOwner(player,cell)
+    player:SetAttribute("TerritoryCells",1)
+    updateMarker(player)
+    return true
+end
+
+function TerritoryService.ExpandToward(player,part,percent)
+    local map=workspace:FindFirstChild("PixelWarMap")
+    if not map or not part or part.Parent~=map.Cells then return false end
+    if territoryCount(player)==0 then return TerritoryService.SpawnPlayer(player,part) end
+    local tx,tz=part:GetAttribute("GridX"),part:GetAttribute("GridZ")
+    if not tx or not tz then return false end
+    local force=TroopService.SendPercent(player,percent)
+    if force<=0 then return false end
+
+    task.spawn(function()
+        local budget=force
+        local claimed=0
+        while budget>=Config.Territory.TroopsPerNeutralCell and claimed<Config.Territory.MaxCellsPerOrder do
+            local candidates={}
+            local seen={}
+            for _,ownCell in pairs(owned[player] or {}) do
+                for _,n in ipairs(neighbors(ownCell)) do
+                    if n and not n.Owner and not seen[n] then
+                        seen[n]=true
+                        table.insert(candidates,n)
+                    end
+                end
+            end
+            if #candidates==0 then break end
+            table.sort(candidates,function(a,b)
+                local da=distanceScore(a,tx,tz)
+                local db=distanceScore(b,tx,tz)
+                if da==db then
+                    -- Prefer cells supported by more friendly neighbours.
+                    local aa,bb=0,0
+                    for _,n in ipairs(neighbors(a)) do if n and n.Owner==player then aa+=1 end end
+                    for _,n in ipairs(neighbors(b)) do if n and n.Owner==player then bb+=1 end end
+                    return aa>bb
+                end
+                return da<db
+            end)
+            -- Advance a small front each pulse instead of drawing a single-cell snake.
+            local pulse=math.min(3,#candidates,math.floor(budget/Config.Territory.TroopsPerNeutralCell))
+            if pulse<=0 then break end
+            for i=1,pulse do
+                local cell=candidates[i]
+                if cell and not cell.Owner then
+                    setOwner(player,cell)
+                    budget-=Config.Territory.TroopsPerNeutralCell
+                    claimed+=1
+                end
+            end
+            player:SetAttribute("TerritoryCells",territoryCount(player))
+            updateMarker(player)
+            task.wait(Config.Territory.ExpansionStepDelay)
+        end
+    end)
+    return true
+end
+
+function TerritoryService.TryClaim(player,part)
+    if territoryCount(player)==0 then return TerritoryService.SpawnPlayer(player,part) end
+    return TerritoryService.ExpandToward(player,part,Config.Territory.DefaultSendPercent)
 end
 
 function TerritoryService.RemovePlayer(player)
