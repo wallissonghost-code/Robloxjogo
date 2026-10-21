@@ -5,7 +5,7 @@ local UserInputService=game:GetService("UserInputService")
 local RunService=game:GetService("RunService")
 local player=Players.LocalPlayer
 local Config=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-local mapCommand=ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("MapCommand")
+local mapCommand=nil
 pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack,false); StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health,false); StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList,false); StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu,false) end)
 require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule")):GetControls():Disable()
 local function hideTouch(g) if g.Name=="TouchGui" and g:IsA("ScreenGui") then g.Enabled=false end end
@@ -17,6 +17,11 @@ local focus=Vector3.new(Config.Map.Origin.X,0,Config.Map.Origin.Z); local height
 local touches={}; local mouseDragging=false; local mouseStart,lastMousePosition; local pinchActive=false; local lastPinchDistance
 
 local selectedPercent=Config.Territory.DefaultSendPercent or 50
+
+task.spawn(function()
+    local remotes=ReplicatedStorage:WaitForChild("Remotes",15)
+    if remotes then mapCommand=remotes:WaitForChild("MapCommand",15) end
+end)
 local hud=Instance.new("ScreenGui")
 hud.Name="StrategyHUD"; hud.ResetOnSpawn=false; hud.IgnoreGuiInset=true; hud.Parent=player.PlayerGui
 local bar=Instance.new("Frame"); bar.Name="BottomBar"; bar.AnchorPoint=Vector2.new(.5,1); bar.Position=UDim2.new(.5,0,1,-16); bar.Size=UDim2.new(0,620,0,74); bar.BackgroundColor3=Color3.fromRGB(20,29,48); bar.BackgroundTransparency=.08; bar.Parent=hud
@@ -81,7 +86,7 @@ end
 local function claimAt(pos)
     local map=workspace:FindFirstChild("PixelWarMap"); local folder=map and map:FindFirstChild("Cells"); if not folder then return end
     local ray=camera:ViewportPointToRay(pos.X,pos.Y); local params=RaycastParams.new(); params.FilterType=Enum.RaycastFilterType.Include; params.FilterDescendantsInstances={folder}
-    local result=workspace:Raycast(ray.Origin,ray.Direction*1000,params); if result then mapCommand:FireServer(result.Instance,selectedPercent) end
+    local result=workspace:Raycast(ray.Origin,ray.Direction*1000,params); if result and mapCommand then mapCommand:FireServer(result.Instance,selectedPercent) end
 end
 UserInputService.InputBegan:Connect(function(input,processed)
     if processed then return end
