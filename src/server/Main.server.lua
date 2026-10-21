@@ -6,7 +6,7 @@ Players.CharacterAutoLoads = false
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local TroopService = require(script.Parent:WaitForChild("TroopService"))
 local TerritoryService = require(script.Parent:WaitForChild("TerritoryService"))
-local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Remotes = require(script.Parent:WaitForChild("Remotes"))\nlocal BotService = require(script.Parent:WaitForChild("BotService"))
 
 TroopService.Init(Config)
 TerritoryService.Init(Config, TroopService)
