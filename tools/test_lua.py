@@ -29,7 +29,8 @@ try:
     paths = list(Path("src/shared").glob("*.lua"))
     paths += list(Path("src/client").glob("*.lua"))
     paths += [Path("src/server/MapService.lua"), Path("src/server/NationService.lua"),
-              Path("src/server/CommandService.lua")]
+              Path("src/server/CommandService.lua"), Path("src/server/EconomyService.lua"),
+              Path("src/server/ExpansionService.lua"), Path("src/server/MatchService.lua")]
     bootstrap = Path("src/server/Bootstrap.server.lua")
     if bootstrap.exists():
         paths.append(bootstrap)

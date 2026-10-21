@@ -19,8 +19,19 @@ local Config = {
         WaterColor = {19, 43, 62},
         LandColor = {137, 167, 143},
     },
-    -- Reserved for the next stages; these values do not start an economy yet.
     SendPercentages = {10, 25, 35, 50, 75},
+    DefaultSendPercent = 50,
+    Economy = {
+        StartingTroops = 100, StartingGold = 50,
+        BaseTroopCapacity = 150, CapacityPerCell = 25,
+        BaseTroopsPerSecond = 3, TroopsPerCell = 1,
+        BaseGoldPerSecond = 1, GoldPerCell = 0.2,
+        MaxGold = 1e12,
+    },
+    Expansion = {CostPerCell = 10, MaxCellsPerOrder = 24,
+        CellsPerPulse = 2, MaxCandidatesPerPulse = 16},
+    Tick = {ExpansionInterval = 0.25, EconomyInterval = 1,
+        MaxElapsed = 5, MaxCatchUpPulses = 4},
     Nations = {
         Palette = {
             {67, 169, 242}, {240, 113, 99}, {234, 191, 72}, {169, 127, 229},

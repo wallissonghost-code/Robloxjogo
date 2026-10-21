@@ -10,13 +10,69 @@ end
 local function publicNation(nation)
     return {Id = nation.Id, Name = nation.Name, CapitalId = nation.CapitalId,
         TerritoryCount = nation.TerritoryCount,
+        Troops = math.floor(nation.Troops or 0), Gold = nation.Gold or 0,
+        MaxTroops = nation.MaxTroops or 0, TroopsPerSecond = nation.TroopsPerSecond or 0,
+        GoldPerSecond = nation.GoldPerSecond or 0,
+        ExpansionActive = nation.ExpansionActive == true,
+        ExpansionRemaining = nation.ExpansionRemaining or 0,
+        ExpansionClaimed = nation.ExpansionClaimed or 0,
         Color = {nation.Color[1], nation.Color[2], nation.Color[3]}}
 end
 
-function NationService.new(map, config)
+function NationService.new(map, config, economy)
     assert(#config.Palette > 0, "A nation palette is required")
-    return setmetatable({Map = map, Config = config, Revision = 0,
+    return setmetatable({Map = map, Config = config, Economy = economy, Revision = 0,
         _nations = {}, _owners = {}}, NationService)
+end
+
+-- These references are only used by trusted server services, never sent to clients.
+function NationService:GetState(userId) return self._nations[userId] end
+function NationService:ForEachState(callback)
+    for _, nation in pairs(self._nations) do callback(nation) end
+end
+
+function NationService:Publish(changed, cells)
+    local records = {}
+    for id in pairs(changed) do
+        if self._nations[id] then records[#records + 1] = publicNation(self._nations[id]) end
+    end
+    if #records == 0 and #cells == 0 then return nil end
+    self.Revision = self.Revision + 1
+    return {Kind = "Delta", Revision = self.Revision, Nations = records, RemovedNations = {}, Cells = cells}
+end
+
+function NationService:IsAdjacent(userId, cellId)
+    for _, neighbor in ipairs(self.Map.Grid:GetNeighbors(cellId)) do
+        if self._owners[neighbor] == userId then return true end
+    end
+    return false
+end
+
+function NationService:_refreshFrontier(cellId)
+    local ownerId = self._owners[cellId]
+    local nation = ownerId ~= nil and self._nations[ownerId]
+    if not nation then return end
+    local frontier = false
+    for _, neighbor in ipairs(self.Map.Grid:GetNeighbors(cellId)) do
+        if self._owners[neighbor] ~= ownerId then frontier = true; break end
+    end
+    nation.Frontier[cellId] = frontier or nil
+end
+
+function NationService:_refreshLocalFrontiers(cellId)
+    self:_refreshFrontier(cellId)
+    for _, neighbor in ipairs(self.Map.Grid:GetNeighbors(cellId)) do self:_refreshFrontier(neighbor) end
+end
+
+function NationService:ClaimNeutral(userId, cellId)
+    local nation = self._nations[userId]
+    if not nation or not self.Map:IsValidLandCell(cellId) or self._owners[cellId] ~= nil
+        or not self:IsAdjacent(userId, cellId) then return false end
+    self._owners[cellId], nation.Cells[cellId] = userId, true
+    nation.TerritoryCount = nation.TerritoryCount + 1
+    self:_refreshLocalFrontiers(cellId)
+    if self.Economy then self.Economy:Recalculate(nation) end
+    return true
 end
 
 function NationService:GetNation(userId)
@@ -45,14 +101,13 @@ function NationService:Create(userId, displayName, capitalId)
     end
     local color = self.Config.Palette[colorIndex]
     local nation = {Id = userId, Name = displayName, CapitalId = capitalId,
-        TerritoryCount = 1, Cells = {[capitalId] = true}, PaletteIndex = colorIndex,
+        TerritoryCount = 1, Cells = {[capitalId] = true}, Frontier = {}, PaletteIndex = colorIndex,
         Color = {color[1], color[2], color[3]}}
     self._nations[userId] = nation
     self._owners[capitalId] = userId
-    self.Revision = self.Revision + 1
-    return {Kind = "Delta", Revision = self.Revision,
-        Nations = {publicNation(nation)}, RemovedNations = {},
-        Cells = {{Id = capitalId, OwnerId = userId}}}, "Founded"
+    self:_refreshLocalFrontiers(capitalId)
+    if self.Economy then self.Economy:Initialize(nation) end
+    return self:Publish({[userId] = true}, {{Id = capitalId, OwnerId = userId}}), "Founded"
 end
 
 function NationService:Remove(userId)
@@ -64,6 +119,7 @@ function NationService:Remove(userId)
         changes[#changes + 1] = {Id = cellId, OwnerId = false}
     end
     self._nations[userId] = nil
+    for cellId in pairs(nation.Cells) do self:_refreshLocalFrontiers(cellId) end
     self.Revision = self.Revision + 1
     return {Kind = "Delta", Revision = self.Revision,
         Nations = {}, RemovedNations = {userId}, Cells = changes}
