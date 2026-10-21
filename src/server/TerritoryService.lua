@@ -109,7 +109,7 @@ function TerritoryService.BuildMap()
     local widthStuds,heightStuds=W*Config.Map.CellSize,H*Config.Map.CellSize
     local startX=Config.Map.Origin.X-widthStuds/2+Config.Map.CellSize/2
     local startZ=Config.Map.Origin.Z-heightStuds/2+Config.Map.CellSize/2
-    local water=Instance.new("Part"); water.Name="Water"; water.Anchored=true; water.CanCollide=false; water.CanQuery=false; water.Size=Vector3.new(widthStuds,Config.Map.CellHeight*0.45,heightStuds); water.Position=Vector3.new(Config.Map.Origin.X,Config.Map.Origin.Y-Config.Map.CellHeight*0.65,Config.Map.Origin.Z); water.Material=Enum.Material.SmoothPlastic; water.Color=Config.Map.WaterColor; water.Parent=map
+    local water=Instance.new("Part"); water.Name="Water"; water.Anchored=true; water.CanCollide=false; water.CanQuery=false; water.Size=Vector3.new(widthStuds*3,Config.Map.CellHeight*0.45,heightStuds*3); water.Position=Vector3.new(Config.Map.Origin.X,Config.Map.Origin.Y-Config.Map.CellHeight*0.65,Config.Map.Origin.Z); water.Material=Enum.Material.SmoothPlastic; water.Color=Config.Map.WaterColor; water.Parent=map
 
     local function ellipse(u,v,cx,cy,rx,ry)
         local dx=(u-cx)/rx; local dy=(v-cy)/ry
@@ -190,6 +190,30 @@ function TerritoryService.BuildMap()
     end
     local mask={}
     for z=1,H do mask[z]={}; for x=1,W do mask[z][x]=landAt(x,z) end end
+
+    -- Coarse world silhouette for low graphics / long-distance rendering.
+    local lod=Instance.new("Folder"); lod.Name="WorldLOD"; lod.Parent=map
+    local lodStep=4
+    for z=1,H,lodStep do
+        for x=1,W,lodStep do
+            local landCount=0
+            for dz=0,lodStep-1 do
+                for dx=0,lodStep-1 do
+                    local zz,xx=z+dz,x+dx
+                    if zz<=H and xx<=W and mask[zz][xx] then landCount+=1 end
+                end
+            end
+            if landCount>=3 then
+                local p=Instance.new("Part")
+                p.Name="L_"..x.."_"..z
+                p.Anchored=true; p.CanCollide=false; p.CanQuery=false; p.CastShadow=false
+                p.Material=Enum.Material.SmoothPlastic; p.Color=Config.Map.NeutralColor
+                p.Size=Vector3.new(Config.Map.CellSize*lodStep,Config.Map.CellHeight*0.32,Config.Map.CellSize*lodStep)
+                p.Position=Vector3.new(startX+(x-1+(lodStep-1)/2)*Config.Map.CellSize,Config.Map.Origin.Y-Config.Map.CellHeight*0.32,startZ+(z-1+(lodStep-1)/2)*Config.Map.CellSize)
+                p.Parent=lod
+            end
+        end
+    end
     local function coast(x,z)
         if not mask[z][x] then return false end
         for _,d in ipairs({{1,0},{-1,0},{0,1},{0,-1}}) do local xx,zz=x+d[1],z+d[2]; if xx<1 or xx>W or zz<1 or zz>H or not mask[zz][xx] then return true end end
