@@ -4,7 +4,8 @@ local TerritoryService = {}
 local Config
 local TroopService
 local cells = {}
-local owned = {}\nlocal countryBots = {}
+local owned = {}
+local countryBots = {}
 
 local function key(x,z) return x..":"..z end
 local function colorFor(player)
