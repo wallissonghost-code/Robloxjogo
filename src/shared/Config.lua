@@ -14,22 +14,32 @@ Config.Map = {
 Config.Player = {
     StartingTroops = 2500,
     BaseTroopCapacity = 250000,
-    TroopsPerTick = 35,
+    BaseTroopsPerSecond = 110,
+    TerritoryRatePerCell = 1.65,
+    MaxTroopsPerSecond = 1200,
     RegenInterval = 1,
 }
 Config.Bot = {
     StartingTroops = 1500,
     BaseTroopCapacity = 180000,
-    TroopsPerTick = 24,
+    TroopsPerTick = 70,
     ThinkInterval = 1.2,
     InternalExpansionTarget = 0.78,
 }
 Config.Territory = {
     SendPercents = {10,25,35,50,75},
     DefaultSendPercent = 50,
-    ExpansionStepDelay = 0.045,
+    ExpansionStepDelay = 0.035,
     TroopsPerNeutralCell = 18,
-    MaxCellsPerOrder = 90,
+    MaxCellsPerOrder = 160,
+    FrontWidth = 5,
+}
+Config.Marker = {
+    FarMinCells = 85,
+    MediumMinCells = 22,
+    NearMinCells = 1,
+    FarHeight = 320,
+    MediumHeight = 170,
 }
 Config.Camera = {
     MinHeight = 52,
