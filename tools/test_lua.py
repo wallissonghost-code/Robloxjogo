@@ -28,7 +28,8 @@ try:
     # These new modules intentionally use syntax common to Lua 5.4 and Luau.
     paths = list(Path("src/shared").glob("*.lua"))
     paths += list(Path("src/client").glob("*.lua"))
-    paths += [Path("src/server/MapService.lua")]
+    paths += [Path("src/server/MapService.lua"), Path("src/server/NationService.lua"),
+              Path("src/server/CommandService.lua")]
     bootstrap = Path("src/server/Bootstrap.server.lua")
     if bootstrap.exists():
         paths.append(bootstrap)
@@ -37,10 +38,12 @@ try:
             raise RuntimeError(lua.lua_tolstring(state, -1, None).decode())
         lua.lua_settop(state, 0)
     print(f"Syntax OK: {len(paths)} new source files", flush=True)
-    status = lua.luaL_loadfilex(state, b"tests/map_spec.lua", None)
-    if not status:
-        status = lua.lua_pcallk(state, 0, -1, 0, 0, None)
-    if status:
-        raise RuntimeError(lua.lua_tolstring(state, -1, None).decode())
+    for test in sorted(Path("tests").glob("*_spec.lua")):
+        status = lua.luaL_loadfilex(state, str(test).encode(), None)
+        if not status:
+            status = lua.lua_pcallk(state, 0, -1, 0, 0, None)
+        if status:
+            raise RuntimeError(lua.lua_tolstring(state, -1, None).decode())
+        lua.lua_settop(state, 0)
 finally:
     lua.lua_close(state)

@@ -123,7 +123,7 @@ end
 
 -- Merge identical horizontal spans on consecutive rows, within each chunk.
 -- Future ownership changes can rebuild one chunk instead of the whole world.
-function MapGrid:GetLandRectangles(chunkId)
+function MapGrid:GetLandRectangles(chunkId, owners)
     local columns = math.ceil(self.Width / self.ChunkSize)
     local rows = math.ceil(self.Height / self.ChunkSize)
     if not integer(chunkId) or chunkId < 1 or chunkId > columns * rows then return {} end
@@ -137,14 +137,16 @@ function MapGrid:GetLandRectangles(chunkId)
         while x <= x1 do
             if self:IsLand(self:ToId(x, y)) then
                 local startX = x
+                local ownerId = owners and owners[self:ToId(x, y)]
                 repeat x = x + 1 until x > x1 or not self:IsLand(self:ToId(x, y))
+                    or (owners and owners[self:ToId(x, y)]) ~= ownerId
                 local width = x - startX
-                local key = startX .. ":" .. width
+                local key = startX .. ":" .. width .. ":" .. tostring(ownerId)
                 local rectangle = previous[key]
                 if rectangle then
                     rectangle.Height = rectangle.Height + 1
                 else
-                    rectangle = {X = startX, Y = y, Width = width, Height = 1}
+                    rectangle = {X = startX, Y = y, Width = width, Height = 1, OwnerId = ownerId}
                     rectangles[#rectangles + 1] = rectangle
                 end
                 current[key] = rectangle
