@@ -16,6 +16,42 @@ local mapW,mapH=Config.Map.Width*Config.Map.CellSize,Config.Map.Height*Config.Ma
 local focus=Vector3.new(Config.Map.Origin.X,0,Config.Map.Origin.Z); local height=Config.Camera.StartHeight
 local touches={}; local mouseDragging=false; local mouseStart,lastMousePosition; local pinchActive=false; local lastPinchDistance
 
+local selectedPercent=Config.Territory.DefaultSendPercent or 50
+local hud=Instance.new("ScreenGui")
+hud.Name="StrategyHUD"; hud.ResetOnSpawn=false; hud.IgnoreGuiInset=true; hud.Parent=player.PlayerGui
+local bar=Instance.new("Frame"); bar.Name="BottomBar"; bar.AnchorPoint=Vector2.new(.5,1); bar.Position=UDim2.new(.5,0,1,-16); bar.Size=UDim2.new(0,620,0,74); bar.BackgroundColor3=Color3.fromRGB(20,29,48); bar.BackgroundTransparency=.08; bar.Parent=hud
+local barCorner=Instance.new("UICorner"); barCorner.CornerRadius=UDim.new(0,18); barCorner.Parent=bar
+local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(45,60,85); stroke.Thickness=2; stroke.Parent=bar
+
+local troopsLabel=Instance.new("TextLabel"); troopsLabel.BackgroundTransparency=1; troopsLabel.Position=UDim2.fromOffset(18,8); troopsLabel.Size=UDim2.fromOffset(145,30); troopsLabel.Font=Enum.Font.GothamBold; troopsLabel.TextColor3=Color3.fromRGB(235,239,250); troopsLabel.TextSize=22; troopsLabel.TextXAlignment=Enum.TextXAlignment.Left; troopsLabel.Parent=bar
+local rateLabel=Instance.new("TextLabel"); rateLabel.BackgroundTransparency=1; rateLabel.Position=UDim2.fromOffset(18,39); rateLabel.Size=UDim2.fromOffset(145,22); rateLabel.Font=Enum.Font.GothamBold; rateLabel.TextColor3=Color3.fromRGB(255,145,79); rateLabel.TextSize=16; rateLabel.TextXAlignment=Enum.TextXAlignment.Left; rateLabel.Text="+"..tostring(Config.Player.TroopsPerTick).."/s"; rateLabel.Parent=bar
+
+local sendLabel=Instance.new("TextLabel"); sendLabel.BackgroundTransparency=1; sendLabel.Position=UDim2.fromOffset(500,8); sendLabel.Size=UDim2.fromOffset(105,52); sendLabel.Font=Enum.Font.GothamBold; sendLabel.TextColor3=Color3.fromRGB(225,232,248); sendLabel.TextSize=15; sendLabel.TextWrapped=true; sendLabel.Parent=bar
+local percentButtons={}
+for i,pct in ipairs(Config.Territory.SendPercents) do
+    local button=Instance.new("TextButton"); button.Name="P"..pct; button.Position=UDim2.fromOffset(165+(i-1)*66,14); button.Size=UDim2.fromOffset(60,46); button.BackgroundColor3=Color3.fromRGB(30,41,63); button.TextColor3=Color3.fromRGB(190,199,220); button.Font=Enum.Font.GothamBold; button.TextSize=18; button.Text=tostring(pct).."%"; button.Parent=bar
+    local corner=Instance.new("UICorner"); corner.CornerRadius=UDim.new(0,12); corner.Parent=button
+    percentButtons[pct]=button
+    button.Activated:Connect(function() selectedPercent=pct end)
+end
+local function compact(v)
+    if v>=1000000 then return string.format("%.2fM",v/1000000) end
+    if v>=1000 then return string.format(v>=10000 and "%.1fK" or "%.2fK",v/1000) end
+    return tostring(math.floor(v))
+end
+local function refreshHud()
+    local troops=player:GetAttribute("Troops") or 0
+    troopsLabel.Text="♟  "..compact(troops)
+    sendLabel.Text="Envia\n"..compact(math.floor(troops*selectedPercent/100))
+    for pct,b in pairs(percentButtons) do
+        local active=pct==selectedPercent
+        b.BackgroundColor3=active and Color3.fromRGB(255,183,67) or Color3.fromRGB(30,41,63)
+        b.TextColor3=active and Color3.fromRGB(20,24,31) or Color3.fromRGB(190,199,220)
+    end
+end
+player:GetAttributeChangedSignal("Troops"):Connect(refreshHud)
+RunService.Heartbeat:Connect(refreshHud)
+
 local function viewportGroundHalfExtents(h)
     local vp=camera.ViewportSize
     local halfZ=h*math.tan(math.rad(camera.FieldOfView/2))
