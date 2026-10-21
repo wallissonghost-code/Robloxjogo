@@ -63,12 +63,14 @@ local function viewportGroundHalfExtents(h)
     local halfX=halfZ*(vp.X/math.max(vp.Y,1))
     return halfX,halfZ
 end
-local function minFitHeight()
+local function worldFitHeight()
     local vp=camera.ViewportSize
+    local aspect=vp.X/math.max(vp.Y,1)
     local f=math.tan(math.rad(camera.FieldOfView/2))
-    local byH=(mapH/2)/(f*Config.Camera.Overscan)
-    local byW=(mapW/2)/(f*(vp.X/math.max(vp.Y,1))*Config.Camera.Overscan)
-    return math.min(byH,byW)
+    local margin=Config.Camera.Overscan or 1.12
+    local byH=((mapH*margin)/2)/f
+    local byW=((mapW*margin)/2)/(f*aspect)
+    return math.max(byH,byW)
 end
 local function clampFocus()
     local hx,hz=viewportGroundHalfExtents(height)
@@ -76,7 +78,7 @@ local function clampFocus()
     focus=Vector3.new(math.clamp(focus.X,Config.Map.Origin.X-maxX,Config.Map.Origin.X+maxX),0,math.clamp(focus.Z,Config.Map.Origin.Z-maxZ,Config.Map.Origin.Z+maxZ))
 end
 local function setZoom(v)
-    height=math.clamp(v,Config.Camera.MinHeight,math.min(Config.Camera.MaxHeight,minFitHeight()))
+    height=math.clamp(v,Config.Camera.MinHeight,math.max(Config.Camera.MaxHeight,worldFitHeight()))
     clampFocus()
 end
 local function pan(delta)
@@ -113,7 +115,9 @@ UserInputService.InputEnded:Connect(function(input)
         mouseDragging=false; mouseStart=nil; lastMousePosition=nil
     end
 end)
-setZoom(Config.Camera.StartHeight)
+-- Start with the complete world centered and visible.
+focus=Vector3.new(Config.Map.Origin.X,0,Config.Map.Origin.Z)
+setZoom(worldFitHeight())
 RunService:BindToRenderStep("PixelWarMapCamera",Enum.RenderPriority.Camera.Value+1,function()
     camera.CFrame=CFrame.lookAt(Vector3.new(focus.X,height,focus.Z),Vector3.new(focus.X,0,focus.Z),Vector3.new(0,0,-1))
     local map=workspace:FindFirstChild("PixelWarMap")
