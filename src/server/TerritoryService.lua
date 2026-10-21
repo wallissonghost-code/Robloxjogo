@@ -174,20 +174,73 @@ function TerritoryService.BuildMap()
     local startX = Config.Map.Origin.X - widthStuds/2 + Config.Map.CellSize/2
     local startZ = Config.Map.Origin.Z - heightStuds/2 + Config.Map.CellSize/2
 
+    -- Water is one continuous board behind the playable land.
+    local water = Instance.new("Part")
+    water.Name = "Water"
+    water.Anchored = true
+    water.CanCollide = false
+    water.CanQuery = false
+    water.Size = Vector3.new(widthStuds + 36, Config.Map.CellHeight * 0.45, heightStuds + 36)
+    water.Position = Vector3.new(Config.Map.Origin.X, Config.Map.Origin.Y - Config.Map.CellHeight * 0.65, Config.Map.Origin.Z)
+    water.Material = Enum.Material.SmoothPlastic
+    water.Color = Config.Map.WaterColor
+    water.Parent = map
+
+    local function isLand(x, z)
+        -- Deterministic low-resolution island mask. The lobes make coastlines
+        -- irregular while keeping every playable cell connected.
+        local nx = (x - (Config.Map.Width + 1)/2) / (Config.Map.Width/2)
+        local nz = (z - (Config.Map.Height + 1)/2) / (Config.Map.Height/2)
+        local wobble =
+            0.10 * math.sin(z * 0.63) +
+            0.07 * math.sin(x * 0.41) +
+            0.05 * math.sin((x + z) * 0.31)
+        local body = (nx*nx)/1.02 + (nz*nz)/0.76
+        local westBay = ((nx + 0.55)^2)/0.13 + ((nz - 0.05)^2)/0.20
+        local eastPeninsula = ((nx - 0.70)^2)/0.20 + ((nz + 0.12)^2)/0.12
+        local land = body < (0.91 + wobble)
+        if westBay < 0.50 then land = false end
+        if eastPeninsula < 0.82 then land = true end
+        return land
+    end
+
+    local landMask = {}
+    for z = 1, Config.Map.Height do
+        landMask[z] = {}
+        for x = 1, Config.Map.Width do
+            landMask[z][x] = isLand(x,z)
+        end
+    end
+
+    local function isCoast(x,z)
+        if not landMask[z][x] then return false end
+        local dirs = {{1,0},{-1,0},{0,1},{0,-1}}
+        for _,d in ipairs(dirs) do
+            local xx,zz=x+d[1],z+d[2]
+            if xx < 1 or xx > Config.Map.Width or zz < 1 or zz > Config.Map.Height or not landMask[zz][xx] then
+                return true
+            end
+        end
+        return false
+    end
+
     for z = 1, Config.Map.Height do
         for x = 1, Config.Map.Width do
-            local part = Instance.new("Part")
-            part.Name = string.format("C_%d_%d", x, z)
-            part.Anchored = true
-            part.CanCollide = false
-            part.Size = Vector3.new(Config.Map.CellSize - Config.Map.CellGap, Config.Map.CellHeight, Config.Map.CellSize - Config.Map.CellGap)
-            part.Position = Vector3.new(startX + (x-1)*Config.Map.CellSize, Config.Map.Origin.Y, startZ + (z-1)*Config.Map.CellSize)
-            part.Material = Enum.Material.SmoothPlastic
-            part.Color = Config.Map.NeutralColor
-            part:SetAttribute("GridX", x)
-            part:SetAttribute("GridZ", z)
-            part.Parent = cellFolder
-            cells[key(x,z)] = {X=x, Z=z, Part=part, Owner=nil}
+            if landMask[z][x] then
+                local part = Instance.new("Part")
+                part.Name = string.format("C_%d_%d", x, z)
+                part.Anchored = true
+                part.CanCollide = false
+                part.Size = Vector3.new(Config.Map.CellSize - Config.Map.CellGap, Config.Map.CellHeight, Config.Map.CellSize - Config.Map.CellGap)
+                part.Position = Vector3.new(startX + (x-1)*Config.Map.CellSize, Config.Map.Origin.Y, startZ + (z-1)*Config.Map.CellSize)
+                part.Material = Enum.Material.SmoothPlastic
+                part.Color = isCoast(x,z) and Config.Map.CoastColor or Config.Map.NeutralColor
+                part:SetAttribute("BaseColor", part.Color)
+                part:SetAttribute("GridX", x)
+                part:SetAttribute("GridZ", z)
+                part.Parent = cellFolder
+                cells[key(x,z)] = {X=x, Z=z, Part=part, Owner=nil}
+            end
         end
     end
 end
@@ -223,7 +276,7 @@ function TerritoryService.RemovePlayer(player)
     if list then
         for _, cell in pairs(list) do
             cell.Owner = nil
-            cell.Part.Color = Config.Map.NeutralColor
+            cell.Part.Color = cell.Part:GetAttribute("BaseColor") or Config.Map.NeutralColor
             cell.Part:SetAttribute("OwnerUserId", nil)
         end
     end
