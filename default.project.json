@@ -1,27 +1,18 @@
 {
-  "name": "PixelWar",
+  "name": "Robloxjogo",
   "tree": {
     "$className": "DataModel",
-    "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Shared": { "$path": "src/shared" }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "Server": { "$path": "src/server" }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "$properties": {
-        "CharacterWalkSpeed": 0,
-        "CharacterJumpHeight": 0,
-        "CharacterJumpPower": 0
-      },
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "Main": { "$path": "src/client/Main.client.lua" }
+    "Workspace": {
+      "$className": "Workspace",
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Size": [256, 1, 256],
+          "Position": [0, 0, 0],
+          "Material": "Grass"
+        }
       }
-    },
-    "Workspace": { "$className": "Workspace" }
+    }
   }
 }
