@@ -1,6 +1,6 @@
 -- Shared public configuration only. Never put credentials or authority here.
 local Config = {
-    Version = "0.1.0-map-foundation",
+    Version = "0.2.0-nations",
     Map = {
         Version = 1,
         Width = 240,

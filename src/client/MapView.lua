@@ -11,7 +11,20 @@ function MapView.new(viewport, grid, config)
     canvas.Parent = viewport
     local self = setmetatable({Viewport = viewport, Canvas = canvas, Grid = grid,
         Config = config, Zoom = config.MinZoom, Pan = Vector2.zero,
-        Chunks = {}, RectangleCount = 0}, MapView)
+        Chunks = {}, RectangleCount = 0, Owners = {}, Nations = {}, Markers = {}}, MapView)
+    local selection = Instance.new("Frame")
+    selection.Name = "SelectedCell"
+    selection.AnchorPoint = Vector2.new(0.5, 0.5)
+    selection.BackgroundTransparency = 1
+    selection.Size = UDim2.fromOffset(16, 16)
+    selection.ZIndex = 4
+    selection.Visible = false
+    selection.Parent = canvas
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 2
+    stroke.Parent = selection
+    self.Selection = selection
     local count = math.ceil(grid.Width / grid.ChunkSize) * math.ceil(grid.Height / grid.ChunkSize)
     for chunkId = 1, count do self:RebuildChunk(chunkId) end
     self:Layout()
@@ -29,11 +42,12 @@ function MapView:RebuildChunk(chunkId)
         end
     end
     local frames = {}
-    for _, rectangle in ipairs(self.Grid:GetLandRectangles(chunkId)) do
+    for _, rectangle in ipairs(self.Grid:GetLandRectangles(chunkId, self.Owners)) do
         local frame = Instance.new("Frame")
         frame.Name = "Land"
         frame.BorderSizePixel = 0
-        frame.BackgroundColor3 = Color3.fromRGB(table.unpack(self.Config.LandColor))
+        local nation = rectangle.OwnerId ~= nil and self.Nations[rectangle.OwnerId]
+        frame.BackgroundColor3 = Color3.fromRGB(table.unpack(nation and nation.Color or self.Config.LandColor))
         frame.Position = UDim2.fromScale((rectangle.X - 1) / self.Grid.Width,
             (rectangle.Y - 1) / self.Grid.Height)
         frame.Size = UDim2.fromScale(rectangle.Width / self.Grid.Width,
@@ -54,6 +68,67 @@ function MapView:Layout()
     self.Pan = Vector2.new(math.clamp(self.Pan.X, -maxX, maxX), math.clamp(self.Pan.Y, -maxY, maxY))
     self.Canvas.Size = UDim2.fromOffset(width, height)
     self.Canvas.Position = UDim2.fromOffset(size.X / 2 + self.Pan.X, size.Y / 2 + self.Pan.Y)
+    for _, marker in pairs(self.Markers) do marker.NameLabel.Visible = self.Zoom >= 3 end
+end
+
+function MapView:SetSelection(cellId)
+    local x, y = self.Grid:ToCoordinates(cellId)
+    self.Selection.Visible = x ~= nil
+    if x then self.Selection.Position = UDim2.fromScale((x - 0.5) / self.Grid.Width, (y - 0.5) / self.Grid.Height) end
+end
+
+function MapView:ApplyNationState(replica, dirtyChunks)
+    self.Owners, self.Nations = replica.Owners, replica.Nations
+    for chunkId in pairs(dirtyChunks) do self:RebuildChunk(chunkId) end
+    for id, marker in pairs(self.Markers) do
+        if not self.Nations[id] then marker:Destroy(); self.Markers[id] = nil end
+    end
+    for id, nation in pairs(self.Nations) do
+        local marker = self.Markers[id]
+        if not marker then
+            marker = Instance.new("TextLabel")
+            marker.Name = "Capital"
+            marker.AnchorPoint = Vector2.new(0.5, 0.5)
+            marker.Size = UDim2.fromOffset(16, 16)
+            marker.BackgroundTransparency = 1
+            marker.Text = "★"
+            marker.TextSize = 17
+            marker.TextStrokeTransparency = 0
+            marker.Font = Enum.Font.GothamBold
+            marker.ZIndex = 3
+            marker.Parent = self.Canvas
+            local name = Instance.new("TextLabel")
+            name.Name = "NameLabel"
+            name.AnchorPoint = Vector2.new(0.5, 0)
+            name.Position = UDim2.new(0.5, 0, 1, 2)
+            name.Size = UDim2.fromOffset(112, 20)
+            name.BackgroundTransparency = 1
+            name.TextColor3 = Color3.fromRGB(255, 255, 255)
+            name.TextStrokeTransparency = 0.2
+            name.Font = Enum.Font.GothamMedium
+            name.TextSize = 12
+            name.TextTruncate = Enum.TextTruncate.AtEnd
+            name.ZIndex = 3
+            name.Parent = marker
+            self.Markers[id] = marker
+        end
+        local x, y = self.Grid:ToCoordinates(nation.CapitalId)
+        marker.Position = UDim2.fromScale((x - 0.5) / self.Grid.Width, (y - 0.5) / self.Grid.Height)
+        marker.TextColor3 = Color3.fromRGB(table.unpack(nation.Color))
+        marker.NameLabel.Text = nation.Name
+        marker.NameLabel.Visible = self.Zoom >= 3
+    end
+end
+
+function MapView:FocusCell(cellId)
+    local x, y = self.Grid:ToCoordinates(cellId)
+    if not x then return end
+    self:SetZoom(math.max(4, self.Zoom))
+    -- Layout sets absolute offset size; use it immediately without waiting a frame.
+    local size = Vector2.new(self.Canvas.Size.X.Offset, self.Canvas.Size.Y.Offset)
+    self.Pan = Vector2.new((0.5 - (x - 0.5) / self.Grid.Width) * size.X,
+        (0.5 - (y - 0.5) / self.Grid.Height) * size.Y)
+    self:Layout()
 end
 
 function MapView:PanBy(delta)

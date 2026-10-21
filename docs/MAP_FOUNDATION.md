@@ -1,5 +1,7 @@
 # Etapa 1 — base do mapa (0.1.0-map-foundation)
 
+Registro histórico da etapa 1. Estado atual: [Etapa 2 — nações e capitais](NATION_FOUNDING.md).
+
 ## Estado encontrado
 
 Base: `e260072807766c38debd09753db510f4351e7409` (`main`).
