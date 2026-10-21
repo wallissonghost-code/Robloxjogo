@@ -4,7 +4,7 @@ local TerritoryService = {}
 local Config
 local TroopService
 local cells = {}
-local owned = {}
+local owned = {}\nlocal countryBots = {}
 
 local function key(x,z) return x..":"..z end
 local function colorFor(player)
@@ -84,7 +84,7 @@ local function updateMarker(player)
             local ok,image=pcall(Players.GetUserThumbnailAsync,Players,player.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size100x100)
             if ok and avatar.Parent then avatar.Image=image end
         end)
-        local name=Instance.new("TextLabel"); name.Name="PlayerName"; name.BackgroundTransparency=1; name.Position=UDim2.fromOffset(40,0); name.Size=UDim2.fromOffset(170,30); name.Font=Enum.Font.GothamBold; name.TextColor3=Color3.new(1,1,1); name.TextStrokeTransparency=0.1; name.TextXAlignment=Enum.TextXAlignment.Left; name.Text=player.DisplayName; name.Parent=gui
+        local name=Instance.new("TextLabel"); name.Name="PlayerName"; name.BackgroundTransparency=1; name.Position=UDim2.fromOffset(40,0); name.Size=UDim2.fromOffset(170,30); name.Font=Enum.Font.GothamBold; name.TextColor3=Color3.new(1,1,1); name.TextStrokeTransparency=0.1; name.TextXAlignment=Enum.TextXAlignment.Left; name.Text=player.DisplayName or player.Name; name.Parent=gui
         local troops=Instance.new("TextLabel"); troops.Name="Troops"; troops.BackgroundTransparency=1; troops.Position=UDim2.fromOffset(40,29); troops.Size=UDim2.fromOffset(170,22); troops.Font=Enum.Font.GothamBold; troops.TextColor3=Color3.new(1,1,1); troops.TextStrokeTransparency=0.15; troops.TextXAlignment=Enum.TextXAlignment.Left; troops.Parent=gui
     end
     marker.Position=Vector3.new(center.Part.Position.X,Config.Map.CellHeight+0.8,center.Part.Position.Z)
@@ -291,6 +291,78 @@ function TerritoryService.TryClaim(player,part)
     if territoryCount(player)==0 then return TerritoryService.SpawnPlayer(player,part) end
     return TerritoryService.ExpandToward(player,part,Config.Territory.DefaultSendPercent)
 end
+
+local function nearestFreeCellForWorld(longitude,latitude)
+    local W,H=Config.Map.Width,Config.Map.Height
+    local targetX=math.clamp(math.floor(((longitude+180)/360)*W)+1,1,W)
+    local targetZ=math.clamp(math.floor(((90-latitude)/180)*H)+1,1,H)
+    local best,bestD=nil,math.huge
+    for _,cell in pairs(cells) do
+        if not cell.Owner then
+            local d=(cell.X-targetX)^2+(cell.Z-targetZ)^2
+            if d<bestD then bestD,best=d,cell end
+        end
+    end
+    return best
+end
+
+local function botFront(bot,internalOnly)
+    local candidates,seen={},{}
+    for _,ownCell in pairs(owned[bot] or {}) do
+        for _,n in ipairs(neighbors(ownCell)) do
+            if n and not n.Owner and not seen[n] then
+                local d=(n.X-bot.HomeX)^2+(n.Z-bot.HomeZ)^2
+                if not internalOnly or d<=bot.HomeRadius*bot.HomeRadius then
+                    seen[n]=true; table.insert(candidates,n)
+                end
+            end
+        end
+    end
+    table.sort(candidates,function(a,b)
+        local da=(a.X-bot.HomeX)^2+(a.Z-bot.HomeZ)^2
+        local db=(b.X-bot.HomeX)^2+(b.Z-bot.HomeZ)^2
+        return da<db
+    end)
+    return candidates
+end
+
+function TerritoryService.CreateCountryBots(definitions)
+    for i,data in ipairs(definitions) do
+        local seed=nearestFreeCellForWorld(data[2],data[3])
+        if seed then
+            local bot={Name=data[1],DisplayName=data[1],UserId=-(10000+i),Troops=Config.Bot.StartingTroops,HomeRadius=math.max(3,math.floor(math.sqrt(Config.Map.Width*Config.Map.Height/195)*0.72))}
+            bot.HomeX,bot.HomeZ=seed.X,seed.Z
+            countryBots[#countryBots+1]=bot
+            setOwner(bot,seed)
+            updateMarker(bot)
+        end
+    end
+    task.spawn(function()
+        while true do
+            task.wait(Config.Bot.ThinkInterval)
+            for _,bot in ipairs(countryBots) do
+                bot.Troops=math.min(Config.Bot.BaseTroopCapacity,bot.Troops+Config.Bot.TroopsPerTick)
+                local homeArea=math.pi*bot.HomeRadius*bot.HomeRadius
+                local internal=territoryCount(bot)<homeArea*Config.Bot.InternalExpansionTarget
+                local front=botFront(bot,internal)
+                if #front>0 and bot.Troops>=Config.Territory.TroopsPerNeutralCell then
+                    local steps=math.min(2,#front,math.floor(bot.Troops/Config.Territory.TroopsPerNeutralCell))
+                    for n=1,steps do
+                        local cell=front[n]
+                        if cell and not cell.Owner then
+                            setOwner(bot,cell)
+                            bot.Troops-=Config.Territory.TroopsPerNeutralCell
+                        end
+                    end
+                    updateMarker(bot)
+                else
+                    updateMarker(bot)
+                end
+            end
+        end
+    end)
+end
+
 
 function TerritoryService.RemovePlayer(player)
     local list=owned[player]
