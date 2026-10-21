@@ -29,7 +29,7 @@ local barCorner=Instance.new("UICorner"); barCorner.CornerRadius=UDim.new(0,18);
 local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(45,60,85); stroke.Thickness=2; stroke.Parent=bar
 
 local troopsLabel=Instance.new("TextLabel"); troopsLabel.BackgroundTransparency=1; troopsLabel.Position=UDim2.fromOffset(18,8); troopsLabel.Size=UDim2.fromOffset(145,30); troopsLabel.Font=Enum.Font.GothamBold; troopsLabel.TextColor3=Color3.fromRGB(235,239,250); troopsLabel.TextSize=22; troopsLabel.TextXAlignment=Enum.TextXAlignment.Left; troopsLabel.Parent=bar
-local rateLabel=Instance.new("TextLabel"); rateLabel.BackgroundTransparency=1; rateLabel.Position=UDim2.fromOffset(18,39); rateLabel.Size=UDim2.fromOffset(145,22); rateLabel.Font=Enum.Font.GothamBold; rateLabel.TextColor3=Color3.fromRGB(255,145,79); rateLabel.TextSize=16; rateLabel.TextXAlignment=Enum.TextXAlignment.Left; rateLabel.Text="+"..tostring(Config.Player.TroopsPerTick).."/s"; rateLabel.Parent=bar
+local rateLabel=Instance.new("TextLabel"); rateLabel.BackgroundTransparency=1; rateLabel.Position=UDim2.fromOffset(18,39); rateLabel.Size=UDim2.fromOffset(145,22); rateLabel.Font=Enum.Font.GothamBold; rateLabel.TextColor3=Color3.fromRGB(255,145,79); rateLabel.TextSize=16; rateLabel.TextXAlignment=Enum.TextXAlignment.Left; rateLabel.Text="+0/s"; rateLabel.Parent=bar
 
 local sendLabel=Instance.new("TextLabel"); sendLabel.BackgroundTransparency=1; sendLabel.Position=UDim2.fromOffset(500,8); sendLabel.Size=UDim2.fromOffset(105,52); sendLabel.Font=Enum.Font.GothamBold; sendLabel.TextColor3=Color3.fromRGB(225,232,248); sendLabel.TextSize=15; sendLabel.TextWrapped=true; sendLabel.Parent=bar
 local percentButtons={}
@@ -116,4 +116,18 @@ end)
 setZoom(Config.Camera.StartHeight)
 RunService:BindToRenderStep("PixelWarMapCamera",Enum.RenderPriority.Camera.Value+1,function()
     camera.CFrame=CFrame.lookAt(Vector3.new(focus.X,height,focus.Z),Vector3.new(focus.X,0,focus.Z),Vector3.new(0,0,-1))
+    local map=workspace:FindFirstChild("PixelWarMap")
+    local markers=map and map:FindFirstChild("Markers")
+    if markers then
+        for _,marker in ipairs(markers:GetChildren()) do
+            local gui=marker:FindFirstChild("Label")
+            if gui and gui:IsA("BillboardGui") then
+                local count=gui:GetAttribute("TerritoryCells") or 0
+                local minCells=Config.Marker.NearMinCells
+                if height>=Config.Marker.FarHeight then minCells=Config.Marker.FarMinCells
+                elseif height>=Config.Marker.MediumHeight then minCells=Config.Marker.MediumMinCells end
+                gui.Enabled=count>=minCells
+            end
+        end
+    end
 end)
