@@ -33,6 +33,4 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(TerritoryService.RemovePlayer)
 
-Remotes.ClaimCell.OnServerEvent:Connect(function(player, cellPart)
-    TerritoryService.TryClaim(player, cellPart)
-end)
+Remotes.MapCommand.OnServerEvent:Connect(function(player, cellPart, sendPercent)\n    TerritoryService.ExpandToward(player, cellPart, sendPercent)\nend)
