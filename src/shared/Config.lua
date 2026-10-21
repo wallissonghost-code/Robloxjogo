@@ -47,7 +47,7 @@ Config.Camera = {
     StartHeight = 0,
     PanSpeed = 0.0024,
     EdgePadding = 0,
-    Overscan = 1.12,
+    Overscan = 0.96,
 }
 Config.Debug=true
 return Config
