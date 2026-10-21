@@ -67,9 +67,9 @@ local function worldFitHeight()
     local vp=camera.ViewportSize
     local aspect=vp.X/math.max(vp.Y,1)
     local f=math.tan(math.rad(camera.FieldOfView/2))
-    local margin=Config.Camera.Overscan or 1.12
-    local byH=((mapH*margin)/2)/f
-    local byW=((mapW*margin)/2)/(f*aspect)
+    local fit=Config.Camera.Overscan or 0.96
+    local byH=((mapH*fit)/2)/f
+    local byW=((mapW*fit)/2)/(f*aspect)
     return math.max(byH,byW)
 end
 local function clampFocus()
@@ -78,7 +78,7 @@ local function clampFocus()
     focus=Vector3.new(math.clamp(focus.X,Config.Map.Origin.X-maxX,Config.Map.Origin.X+maxX),0,math.clamp(focus.Z,Config.Map.Origin.Z-maxZ,Config.Map.Origin.Z+maxZ))
 end
 local function setZoom(v)
-    height=math.clamp(v,Config.Camera.MinHeight,math.max(Config.Camera.MaxHeight,worldFitHeight()))
+    height=math.clamp(v,Config.Camera.MinHeight,worldFitHeight())
     clampFocus()
 end
 local function pan(delta)
