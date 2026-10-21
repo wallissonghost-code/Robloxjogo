@@ -1,13 +1,15 @@
 local Config = {}
 
 Config.Map = {
-    Width = 48,
-    Height = 28,
-    CellSize = 4,
+    Width = 64,
+    Height = 36,
+    CellSize = 3,
     CellHeight = 0.35,
     CellGap = 0.08,
     Origin = Vector3.new(0, 0, 0),
-    NeutralColor = Color3.fromRGB(229, 227, 220),
+    NeutralColor = Color3.fromRGB(218, 216, 207),
+    WaterColor = Color3.fromRGB(79, 151, 199),
+    CoastColor = Color3.fromRGB(231, 225, 190),
 }
 
 Config.Player = {
