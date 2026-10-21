@@ -1,0 +1,30 @@
+{
+  "name": "WorldWarPixel",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "WarShared": {
+        "$path": "game/shared"
+      }
+    },
+    "ServerScriptService": {
+      "WarServer": {
+        "$path": "game/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "WarClient": {
+          "$path": "game/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": false,
+        "Gravity": 0
+      }
+    }
+  }
+}
