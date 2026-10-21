@@ -81,8 +81,10 @@ local function updateMarker(player)
         local avatar=Instance.new("ImageLabel"); avatar.Name="Avatar"; avatar.BackgroundTransparency=1; avatar.Size=UDim2.fromOffset(34,34); avatar.Position=UDim2.fromOffset(0,8); avatar.Parent=gui
         local corner=Instance.new("UICorner"); corner.CornerRadius=UDim.new(1,0); corner.Parent=avatar
         task.spawn(function()
-            local ok,image=pcall(Players.GetUserThumbnailAsync,Players,player.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size100x100)
-            if ok and avatar.Parent then avatar.Image=image end
+            if typeof(player)=="Instance" then
+                local ok,image=pcall(Players.GetUserThumbnailAsync,Players,player.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size100x100)
+                if ok and avatar.Parent then avatar.Image=image end
+            end
         end)
         local name=Instance.new("TextLabel"); name.Name="PlayerName"; name.BackgroundTransparency=1; name.Position=UDim2.fromOffset(40,0); name.Size=UDim2.fromOffset(170,30); name.Font=Enum.Font.GothamBold; name.TextColor3=Color3.new(1,1,1); name.TextStrokeTransparency=0.1; name.TextXAlignment=Enum.TextXAlignment.Left; name.Text=player.DisplayName or player.Name; name.Parent=gui
         local troops=Instance.new("TextLabel"); troops.Name="Troops"; troops.BackgroundTransparency=1; troops.Position=UDim2.fromOffset(40,29); troops.Size=UDim2.fromOffset(170,22); troops.Font=Enum.Font.GothamBold; troops.TextColor3=Color3.new(1,1,1); troops.TextStrokeTransparency=0.15; troops.TextXAlignment=Enum.TextXAlignment.Left; troops.Parent=gui
