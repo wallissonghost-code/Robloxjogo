@@ -18,6 +18,69 @@ local touches={}; local mouseDragging=false; local mouseStart,lastMousePosition;
 
 local selectedPercent=Config.Territory.DefaultSendPercent or 50
 
+-- Render the strategic map as one large SurfaceGui-backed plane on the client.
+-- The server Parts remain the authoritative grid and raycast targets, but no
+-- longer need to be individually drawn at long distance.
+task.spawn(function()
+    local map=workspace:WaitForChild("PixelWarMap",30)
+    local folder=map and map:WaitForChild("Cells",30)
+    if not folder then return end
+
+    local visual=Instance.new("Part")
+    visual.Name="StrategicMapVisual"
+    visual.Anchored=true
+    visual.CanCollide=false
+    visual.CanQuery=false
+    visual.CanTouch=false
+    visual.CastShadow=false
+    visual.Transparency=1
+    visual.Size=Vector3.new(mapW,0.05,mapH)
+    visual.Position=Vector3.new(Config.Map.Origin.X,Config.Map.Origin.Y+Config.Map.CellHeight+0.04,Config.Map.Origin.Z)
+    visual.Parent=map
+
+    local surface=Instance.new("SurfaceGui")
+    surface.Name="MapSurface"
+    surface.Face=Enum.NormalId.Top
+    surface.AlwaysOnTop=false
+    surface.LightInfluence=0
+    surface.Brightness=1
+    surface.SizingMode=Enum.SurfaceGuiSizingMode.FixedSize
+    surface.CanvasSize=Vector2.new(Config.Map.Width,Config.Map.Height)
+    surface.ClipsDescendants=true
+    surface.Parent=visual
+
+    local canvas=Instance.new("Frame")
+    canvas.Name="Canvas"
+    canvas.Size=UDim2.fromScale(1,1)
+    canvas.BackgroundTransparency=1
+    canvas.BorderSizePixel=0
+    canvas.Parent=surface
+
+    local function attachCell(part)
+        if not part:IsA("BasePart") then return end
+        local x,z=part:GetAttribute("GridX"),part:GetAttribute("GridZ")
+        if not x or not z then return end
+
+        local pixel=Instance.new("Frame")
+        pixel.Name=part.Name
+        pixel.BorderSizePixel=0
+        pixel.Position=UDim2.fromOffset(x-1,z-1)
+        pixel.Size=UDim2.fromOffset(1,1)
+        pixel.BackgroundColor3=part.Color
+        pixel.Parent=canvas
+
+        -- Hide only the local 3D rendering. The Part still exists for raycasts
+        -- and server ownership, while the consolidated surface draws its color.
+        part.LocalTransparencyModifier=1
+        part:GetPropertyChangedSignal("Color"):Connect(function()
+            if pixel.Parent then pixel.BackgroundColor3=part.Color end
+        end)
+    end
+
+    for _,part in ipairs(folder:GetChildren()) do attachCell(part) end
+    folder.ChildAdded:Connect(attachCell)
+end)
+
 task.spawn(function()
     local remotes=ReplicatedStorage:WaitForChild("Remotes",15)
     if remotes then mapCommand=remotes:WaitForChild("MapCommand",15) end
