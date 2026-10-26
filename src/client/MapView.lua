@@ -77,6 +77,9 @@ function MapView:_layoutRoutes()
                 route.Line.Size = UDim2.fromOffset(d.Magnitude, math.max(3, 5 * self.Zoom ^ .25))
                 route.Line.Rotation = math.deg(math.atan2(d.Y, d.X))
                 route.Target.Position = UDim2.fromOffset(b.X, b.Y)
+                local progress = math.clamp(nation.NavalProgress or 0, 0, 1)
+                local traveler = a:Lerp(b, progress)
+                route.Traveler.Position = UDim2.fromOffset(traveler.X, traveler.Y)
             end
         end
     end
@@ -156,7 +159,12 @@ function MapView:ApplyNationState(replica, dirtyChunks)
             target.Size = UDim2.fromOffset(15,15); target.BackgroundColor3 = Color3.fromRGB(table.unpack(nation.Color))
             target.BorderSizePixel = 0; target.ZIndex = 6; target.Parent = holder
             local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(255,255,255); stroke.Thickness = 2; stroke.Parent = target
-            self.Routes[id] = {Container=holder, Line=line, Target=target}
+            local traveler = Instance.new("Frame")
+            traveler.Name = "TroopTransport"; traveler.AnchorPoint = Vector2.new(.5,.5)
+            traveler.Size = UDim2.fromOffset(11,11); traveler.BorderSizePixel = 0
+            traveler.BackgroundColor3 = Color3.fromRGB(table.unpack(nation.Color)); traveler.ZIndex = 7; traveler.Parent = holder
+            local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(1,0); tc.Parent = traveler
+            self.Routes[id] = {Container=holder, Line=line, Target=target, Traveler=traveler}
         end
     end
     self:_layoutRoutes()
