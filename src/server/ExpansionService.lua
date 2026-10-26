@@ -40,16 +40,21 @@ function ExpansionService:StartNaval(userId, targetId, percentage)
     if self.Nations:GetOwner(targetId) ~= nil then return nil, "Occupied" end
     if self.Nations:IsAdjacent(userId, targetId) then return self:Start(userId, targetId, percentage) end
     local grid = self.Nations.Map.Grid
+    if not grid:IsCoastal(targetId) then return nil, "NoSeaLane" end
     local tx, ty = grid:ToCoordinates(targetId)
     local best, bestDistance
     for cellId in pairs(nation.Cells) do
         if grid:IsCoastal(cellId) then
             local x, y = grid:ToCoordinates(cellId)
             local d = math.sqrt((x - tx)^2 + (y - ty)^2)
-            if not bestDistance or d < bestDistance then best, bestDistance = cellId, d end
+            local mx, my = math.floor((x + tx) / 2 + .5), math.floor((y + ty) / 2 + .5)
+            local middle = grid:ToId(mx, my)
+            if middle and not grid:IsLand(middle) and (not bestDistance or d < bestDistance) then
+                best, bestDistance = cellId, d
+            end
         end
     end
-    if not best then return nil, "NoCoast" end
+    if not best then return nil, "NoSeaLane" end
     local sent = math.floor(nation.Troops * percentage / 100)
     if sent < self.Config.CostPerCell then return nil, "InsufficientTroops" end
     nation.Troops = nation.Troops - sent
