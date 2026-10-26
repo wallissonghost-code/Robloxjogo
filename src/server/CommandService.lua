@@ -26,7 +26,7 @@ function CommandService:Handle(userId, displayName, action, cellId, requestId, p
         limit.LastSync = now
         return self.Nations:Snapshot()
     end
-    if action ~= "ChooseCapital" and action ~= "Expand" then return nil end
+    if action ~= "ChooseCapital" and action ~= "Expand" and action ~= "NavalMove" then return nil end
     if type(requestId) ~= "number" or requestId ~= requestId
         or requestId < 1 or requestId > 1e9 or requestId % 1 ~= 0 then return nil end
     if requestId <= (limit.LastRequestId or 0) then
@@ -35,7 +35,8 @@ function CommandService:Handle(userId, displayName, action, cellId, requestId, p
     limit.LastRequestId = requestId
     local delta, code, sent
     if action == "ChooseCapital" then delta, code = self.Nations:Create(userId, displayName, cellId)
-    elseif self.Expansion then delta, code, sent = self.Expansion:Start(userId, cellId, percentage)
+    elseif action == "Expand" and self.Expansion then delta, code, sent = self.Expansion:Start(userId, cellId, percentage)
+    elseif action == "NavalMove" and self.Expansion then delta, code, sent = self.Expansion:StartNaval(userId, cellId, percentage)
     else code = "Unavailable" end
     return {Kind = "Result", RequestId = requestId, Code = code, Sent = sent or 0}, delta
 end
