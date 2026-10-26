@@ -30,11 +30,43 @@ function ExpansionService:Start(userId, targetId, percentage)
     return self.Nations:Publish({[userId] = true}, {}), "ExpansionStarted", sent
 end
 
+function ExpansionService:StartNaval(userId, targetId, percentage)
+    local nation = self.Nations:GetState(userId)
+    if not nation then return nil, "NoNation" end
+    if type(percentage) ~= "number" or not self.Allowed[percentage] then return nil, "InvalidPercent" end
+    if self._orders[userId] then return nil, "ExpansionBusy" end
+    if not self.Nations.Map:IsValidLandCell(targetId) then return nil, "InvalidLand" end
+    if self.Nations:GetOwner(targetId) ~= nil then return nil, "Occupied" end
+    if self.Nations:IsAdjacent(userId, targetId) then return self:Start(userId, targetId, percentage) end
+    local grid = self.Nations.Map.Grid
+    local tx, ty = grid:ToCoordinates(targetId)
+    local best, bestDistance
+    for cellId in pairs(nation.Cells) do
+        if grid:IsCoastal(cellId) then
+            local x, y = grid:ToCoordinates(cellId)
+            local d = math.sqrt((x - tx)^2 + (y - ty)^2)
+            if not bestDistance or d < bestDistance then best, bestDistance = cellId, d end
+        end
+    end
+    if not best then return nil, "NoCoast" end
+    local sent = math.floor(nation.Troops * percentage / 100)
+    if sent < self.Config.CostPerCell then return nil, "InsufficientTroops" end
+    nation.Troops = nation.Troops - sent
+    local pulses = math.clamp(math.ceil(bestDistance * (self.Config.NavalPulsesPerCell or .45)),
+        self.Config.NavalMinPulses or 8, self.Config.NavalMaxPulses or 90)
+    nation.ExpansionActive, nation.ExpansionRemaining, nation.ExpansionClaimed = true, sent, 0
+    nation.NavalActive, nation.NavalFrom, nation.NavalTo, nation.NavalProgress = true, best, targetId, 0
+    self._orders[userId] = {Naval = true, From = best, Target = targetId, Remaining = sent,
+        Claimed = 0, Pulses = pulses, Elapsed = 0}
+    return self.Nations:Publish({[userId] = true}, {}), "NavalStarted", sent
+end
+
 function ExpansionService:_finish(userId, nation, order)
     -- Only unused escrow returns; generation never includes troops committed to an order.
     nation.Troops = math.min(nation.MaxTroops, nation.Troops + order.Remaining)
     nation.ExpansionActive, nation.ExpansionRemaining = false, 0
     nation.ExpansionClaimed = order.Claimed
+    nation.NavalActive, nation.NavalFrom, nation.NavalTo, nation.NavalProgress = false, nil, nil, 0
     self._orders[userId] = nil
 end
 
@@ -50,6 +82,21 @@ function ExpansionService:Step(changed, cells)
         if not nation then
             self._orders[userId] = nil
         else
+            if order.Naval then
+                order.Elapsed = order.Elapsed + 1
+                nation.NavalProgress = math.min(1, order.Elapsed / order.Pulses)
+                nation.ExpansionRemaining = order.Remaining
+                if order.Elapsed >= order.Pulses then
+                    if self.Nations:ClaimRemoteNeutral(userId, order.Target) then
+                        order.Remaining = math.max(0, order.Remaining - self.Config.CostPerCell)
+                        order.Claimed = 1
+                        cells[#cells + 1] = {Id = order.Target, OwnerId = userId}
+                    end
+                    self:_finish(userId, nation, order)
+                end
+                changed[userId] = true
+                continue
+            end
             local claimed, examined = 0, 0
             while order.Head <= #order.Queue and order.Remaining >= self.Config.CostPerCell
                 and order.Claimed < self.Config.MaxCellsPerOrder
