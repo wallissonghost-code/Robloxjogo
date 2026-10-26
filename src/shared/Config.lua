@@ -1,6 +1,6 @@
 -- Shared public configuration only. Never put credentials or authority here.
 local Config = {
-    Version = "0.3.0-expansion-economy",
+    Version = "0.4.0-naval-routes",
     Map = {
         Version = 1,
         Width = 240,
@@ -29,7 +29,8 @@ local Config = {
         MaxGold = 1e12,
     },
     Expansion = {CostPerCell = 10, MaxCellsPerOrder = 24,
-        CellsPerPulse = 2, MaxCandidatesPerPulse = 16},
+        CellsPerPulse = 2, MaxCandidatesPerPulse = 16,
+        NavalMinPulses = 8, NavalPulsesPerCell = 0.45, NavalMaxPulses = 90},
     Tick = {ExpansionInterval = 0.25, EconomyInterval = 1,
         MaxElapsed = 5, MaxCatchUpPulses = 4},
     Nations = {
