@@ -1,11 +1,11 @@
 -- Shared public configuration only. Never put credentials or authority here.
 local Config = {
-    Version = "0.4.0-naval-routes",
+    Version = "0.5.0-wave-expansion",
     Map = {
         Version = 1,
-        Width = 240,
-        Height = 120,
-        ChunkSize = 16,
+        Width = 360,
+        Height = 180,
+        ChunkSize = 18,
         MinLongitude = -180,
         MaxLongitude = 180,
         MinLatitude = -60,
@@ -28,9 +28,10 @@ local Config = {
         BaseGoldPerSecond = 1, GoldPerCell = 0.2,
         MaxGold = 1e12,
     },
-    Expansion = {CostPerCell = 10, MaxCellsPerOrder = 24,
-        CellsPerPulse = 2, MaxCandidatesPerPulse = 16,
-        NavalMinPulses = 8, NavalPulsesPerCell = 0.45, NavalMaxPulses = 90},
+    Expansion = {CostPerCell = 4, MaxCellsPerOrder = 120,
+        CellsPerPulse = 3, MaxCandidatesPerPulse = 32,
+        WaveLateralWeight = 0.55,
+        NavalCellsPerSecond = 12},
     Tick = {ExpansionInterval = 0.25, EconomyInterval = 1,
         MaxElapsed = 5, MaxCatchUpPulses = 4},
     Nations = {
