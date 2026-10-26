@@ -25,7 +25,8 @@ function NationClient.new(view, grid, config, status, hint, action, hud)
     local self = setmetatable({View = view, Grid = grid, Config = config,
         Status = status, Hint = hint, Action = action, Hud = hud, Replica = NationReplica.new(grid),
         UserId = Players.LocalPlayer.UserId, Running = true, Synced = false,
-        Percent = config.DefaultSendPercent, RequestId = 0, Connections = {}}, NationClient)
+        Percent = config.DefaultSendPercent, RequestId = 0, Connections = {},
+        ArmedCellId = nil, ArmedIntent = nil}, NationClient)
     self:Refresh()
     local remote = ReplicatedStorage:WaitForChild("NationProtocol", 30)
     if not remote then
@@ -78,7 +79,7 @@ end
 function NationClient:SelectPercent(percentage)
     if self.Pending then return end
     for _, allowed in ipairs(self.Config.SendPercentages) do
-        if percentage == allowed then self.Percent = percentage; self.Notice = nil; self:Refresh(); return end
+        if percentage == allowed then self.Percent = percentage; self.Notice = nil; self.ArmedCellId, self.ArmedIntent = nil, nil; self:Refresh(); return end
     end
 end
 
@@ -151,12 +152,21 @@ function NationClient:Inspect(cellId)
     self.View:SetSelection(cellId)
     self:Refresh()
 
-    -- Once a nation exists, tapping valid neutral frontier land is the command:
-    -- immediately expand using the percentage already selected in the bottom HUD.
     if self.Replica.Nations[self.UserId] then
         local intent = self:GetIntent()
         if intent == "Expand" or intent == "NavalMove" then
-            self:SendIntent(intent)
+            if self.ArmedCellId == cellId and self.ArmedIntent == intent then
+                self.ArmedCellId, self.ArmedIntent = nil, nil
+                self:SendIntent(intent)
+            else
+                self.ArmedCellId, self.ArmedIntent = cellId, intent
+                self.Notice = intent == "NavalMove"
+                    and "Toque novamente para confirmar a rota marítima."
+                    or "Toque novamente para iniciar a expansão."
+                self:Refresh()
+            end
+        else
+            self.ArmedCellId, self.ArmedIntent = nil, nil
         end
     end
 end
@@ -176,7 +186,7 @@ function NationClient:Refresh()
         InvalidLand = "Escolha terra", Enemy = "Combate na próxima etapa", NotAdjacent = "Escolha sua fronteira",
         InsufficientTroops = "Aguarde mais tropas"}
     self.Action.Text = texts[intent or reason] or "Selecione uma célula"
-    local hint = nation and "Toque em terra livre na sua fronteira e escolha o envio." or "Toque em terra livre e confirme sua capital."
+    local hint = nation and "Toque duas vezes no destino para confirmar a expansão." or "Toque em terra livre e confirme sua capital."
     if self.SelectedId then
         local owner = self.Replica.Owners[self.SelectedId]
         local selectedNation = owner ~= nil and self.Replica.Nations[owner]
