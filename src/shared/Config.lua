@@ -1,6 +1,6 @@
 -- Shared public configuration only. Never put credentials or authority here.
 local Config = {
-    Version = "0.5.0-wave-expansion",
+    Version = "0.5.1-naval-screen-fix",
     Map = {
         Version = 1,
         Width = 360,
@@ -31,7 +31,7 @@ local Config = {
     Expansion = {CostPerCell = 4, MaxCellsPerOrder = 120,
         CellsPerPulse = 3, MaxCandidatesPerPulse = 32,
         WaveLateralWeight = 0.55,
-        NavalCellsPerSecond = 12},
+        NavalCellsPerSecond = 3},
     Tick = {ExpansionInterval = 0.25, EconomyInterval = 1,
         MaxElapsed = 5, MaxCatchUpPulses = 4},
     Nations = {
