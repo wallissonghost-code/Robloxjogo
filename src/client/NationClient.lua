@@ -18,6 +18,7 @@ local messages = {
     DuplicateRequest = "Este comando já foi processado.",
     Unavailable = "Esta ação ainda não está disponível.",
     NoCoast = "Você precisa possuir uma costa para atravessar o mar.",
+    NoSeaLane = "Esse destino não possui uma rota marítima válida.",
     NavalStarted = "Travessia marítima iniciada.",
 }
 
@@ -100,6 +101,7 @@ function NationClient:GetIntent()
         if self.Replica.Owners[other] == self.UserId then adjacent = true; break end
     end
     if not adjacent then
+        if not self.Grid:IsCoastal(id) then return nil, "NotAdjacent" end
         if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
             return nil, "InsufficientTroops"
         end
