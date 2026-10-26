@@ -25,8 +25,9 @@ function ExpansionService:Start(userId, targetId, percentage)
 
     nation.Troops = nation.Troops - sent
     nation.ExpansionActive, nation.ExpansionRemaining, nation.ExpansionClaimed = true, sent, 0
+    local tx, ty = self.Nations.Map.Grid:ToCoordinates(targetId)
     self._orders[userId] = {Queue = {targetId}, Head = 1, Seen = {[targetId] = true},
-        Remaining = sent, Claimed = 0}
+        Remaining = sent, Claimed = 0, TargetX = tx, TargetY = ty}
     return self.Nations:Publish({[userId] = true}, {}), "ExpansionStarted", sent
 end
 
@@ -52,8 +53,9 @@ function ExpansionService:StartNaval(userId, targetId, percentage)
     local sent = math.floor(nation.Troops * percentage / 100)
     if sent < self.Config.CostPerCell then return nil, "InsufficientTroops" end
     nation.Troops = nation.Troops - sent
-    local pulses = math.clamp(math.ceil(bestDistance * (self.Config.NavalPulsesPerCell or .45)),
-        self.Config.NavalMinPulses or 8, self.Config.NavalMaxPulses or 90)
+    local interval = 0.25
+    local speed = math.max(0.1, self.Config.NavalCellsPerSecond or 12)
+    local pulses = math.max(1, math.ceil((bestDistance / speed) / interval))
     nation.ExpansionActive, nation.ExpansionRemaining, nation.ExpansionClaimed = true, sent, 0
     nation.NavalActive, nation.NavalFrom, nation.NavalTo, nation.NavalProgress = true, best, targetId, 0
     self._orders[userId] = {Naval = true, From = best, Target = targetId, Remaining = sent,
@@ -108,12 +110,17 @@ function ExpansionService:Step(changed, cells)
                     order.Remaining = order.Remaining - self.Config.CostPerCell
                     order.Claimed, claimed = order.Claimed + 1, claimed + 1
                     cells[#cells + 1] = {Id = cellId, OwnerId = userId}
+                    local candidates = {}
                     for _, neighbor in ipairs(self.Nations.Map.Grid:GetNeighbors(cellId)) do
                         if not order.Seen[neighbor] and self.Nations:GetOwner(neighbor) == nil then
                             order.Seen[neighbor] = true
-                            order.Queue[#order.Queue + 1] = neighbor
+                            local x, y = self.Nations.Map.Grid:ToCoordinates(neighbor)
+                            local dx, dy = x - order.TargetX, y - order.TargetY
+                            candidates[#candidates + 1] = {Id = neighbor, Score = dx * dx + dy * dy + math.random() * (self.Config.WaveLateralWeight or .55)}
                         end
                     end
+                    table.sort(candidates, function(a, b) return a.Score < b.Score end)
+                    for _, candidate in ipairs(candidates) do order.Queue[#order.Queue + 1] = candidate.Id end
                 end
             end
             nation.ExpansionRemaining, nation.ExpansionClaimed = order.Remaining, order.Claimed
