@@ -88,7 +88,8 @@ end
 function MapView:Layout()
     local size = self.Viewport.AbsoluteSize
     if size.X <= 0 or size.Y <= 0 then return end
-    local fit = math.min(size.X / self.Grid.Width, size.Y / self.Grid.Height) * 0.96
+    -- Cover the viewport completely: never reveal the 3D world behind the 2D map.
+    local fit = math.max(size.X / self.Grid.Width, size.Y / self.Grid.Height)
     local width, height = self.Grid.Width * fit * self.Zoom, self.Grid.Height * fit * self.Zoom
     local maxX, maxY = math.max(0, (width - size.X) / 2), math.max(0, (height - size.Y) / 2)
     self.Pan = Vector2.new(math.clamp(self.Pan.X, -maxX, maxX), math.clamp(self.Pan.Y, -maxY, maxY))
