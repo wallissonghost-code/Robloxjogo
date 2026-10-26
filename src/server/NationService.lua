@@ -16,6 +16,8 @@ local function publicNation(nation)
         ExpansionActive = nation.ExpansionActive == true,
         ExpansionRemaining = nation.ExpansionRemaining or 0,
         ExpansionClaimed = nation.ExpansionClaimed or 0,
+        NavalActive = nation.NavalActive == true, NavalFrom = nation.NavalFrom,
+        NavalTo = nation.NavalTo, NavalProgress = nation.NavalProgress or 0,
         Color = {nation.Color[1], nation.Color[2], nation.Color[3]}}
 end
 
@@ -68,6 +70,16 @@ function NationService:ClaimNeutral(userId, cellId)
     local nation = self._nations[userId]
     if not nation or not self.Map:IsValidLandCell(cellId) or self._owners[cellId] ~= nil
         or not self:IsAdjacent(userId, cellId) then return false end
+    self._owners[cellId], nation.Cells[cellId] = userId, true
+    nation.TerritoryCount = nation.TerritoryCount + 1
+    self:_refreshLocalFrontiers(cellId)
+    if self.Economy then self.Economy:Recalculate(nation) end
+    return true
+end
+
+function NationService:ClaimRemoteNeutral(userId, cellId)
+    local nation = self._nations[userId]
+    if not nation or not self.Map:IsValidLandCell(cellId) or self._owners[cellId] ~= nil then return false end
     self._owners[cellId], nation.Cells[cellId] = userId, true
     nation.TerritoryCount = nation.TerritoryCount + 1
     self:_refreshLocalFrontiers(cellId)
