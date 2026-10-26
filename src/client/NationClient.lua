@@ -17,6 +17,8 @@ local messages = {
     NoNation = "Funde sua capital primeiro.",
     DuplicateRequest = "Este comando já foi processado.",
     Unavailable = "Esta ação ainda não está disponível.",
+    NoCoast = "Você precisa possuir uma costa para atravessar o mar.",
+    NavalStarted = "Travessia marítima iniciada.",
 }
 
 function NationClient.new(view, grid, config, status, hint, action, hud)
@@ -96,7 +98,12 @@ function NationClient:GetIntent()
     for _, other in ipairs(self.Grid:GetNeighbors(id)) do
         if self.Replica.Owners[other] == self.UserId then adjacent = true; break end
     end
-    if not adjacent then return nil, "NotAdjacent" end
+    if not adjacent then
+        if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
+            return nil, "InsufficientTroops"
+        end
+        return "NavalMove"
+    end
     if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
         return nil, "InsufficientTroops"
     end
@@ -148,7 +155,7 @@ function NationClient:Inspect(cellId)
     -- immediately expand using the percentage already selected in the bottom HUD.
     if self.Replica.Nations[self.UserId] then
         local intent = self:GetIntent()
-        if intent == "Expand" then
+        if intent == "Expand" or intent == "NavalMove" then
             self:SendIntent(intent)
         end
     end
@@ -164,7 +171,7 @@ function NationClient:Refresh()
             nation.TerritoryCount, nation.TerritoryCount / self.Grid.LandCount * 100)
     end
     local intent, reason = self:GetIntent()
-    local texts = {Focus = "Minha capital", ChooseCapital = "Fundar capital aqui", Expand = "Expandir", Sync = "Sincronizando…",
+    local texts = {Focus = "Minha capital", ChooseCapital = "Fundar capital aqui", Expand = "Expandir", NavalMove = "Enviar pelo mar", Sync = "Sincronizando…",
         Pending = "Enviando…", SelectLand = "Selecione terra livre", ExpansionBusy = "Expandindo…",
         InvalidLand = "Escolha terra", Enemy = "Combate na próxima etapa", NotAdjacent = "Escolha sua fronteira",
         InsufficientTroops = "Aguarde mais tropas"}
@@ -177,7 +184,7 @@ function NationClient:Refresh()
             hint = string.format("%s • %d tropas • %d células", selectedNation.Name, selectedNation.Troops, selectedNation.TerritoryCount)
         elseif reason == "NotAdjacent" or reason == "InvalidLand" or reason == "InsufficientTroops" then
             hint = messages[reason]
-        elseif intent == "Expand" then
+        elseif intent == "Expand" or intent == "NavalMove" then
             local sent = math.floor(nation.Troops * self.Percent / 100)
             hint = string.format("Até %d células • %d tropas/célula • sobra retorna",
                 math.min(self.Config.Expansion.MaxCellsPerOrder, math.floor(sent / self.Config.Expansion.CostPerCell)), self.Config.Expansion.CostPerCell)
