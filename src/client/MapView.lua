@@ -11,7 +11,7 @@ function MapView.new(viewport, grid, config)
     canvas.Parent = viewport
     local self = setmetatable({Viewport = viewport, Canvas = canvas, Grid = grid,
         Config = config, Zoom = config.MinZoom, Pan = Vector2.zero,
-        Chunks = {}, RectangleCount = 0, Owners = {}, Nations = {}, Markers = {}}, MapView)
+        Chunks = {}, RectangleCount = 0, Owners = {}, Nations = {}, Markers = {}, Routes = {}}, MapView)
     local selection = Instance.new("Frame")
     selection.Name = "SelectedCell"
     selection.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -59,6 +59,29 @@ function MapView:RebuildChunk(chunkId)
     self.Chunks[chunkId] = frames
 end
 
+function MapView:_layoutRoutes()
+    local canvasSize = self.Canvas.AbsoluteSize
+    for id, route in pairs(self.Routes) do
+        local nation = self.Nations[id]
+        if not nation or not nation.NavalActive or not nation.NavalFrom or not nation.NavalTo then
+            route.Container:Destroy()
+            self.Routes[id] = nil
+        else
+            local ax, ay = self.Grid:ToCoordinates(nation.NavalFrom)
+            local bx, by = self.Grid:ToCoordinates(nation.NavalTo)
+            if ax and bx then
+                local a = Vector2.new((ax - .5) / self.Grid.Width * canvasSize.X, (ay - .5) / self.Grid.Height * canvasSize.Y)
+                local b = Vector2.new((bx - .5) / self.Grid.Width * canvasSize.X, (by - .5) / self.Grid.Height * canvasSize.Y)
+                local d, mid = b - a, (a + b) / 2
+                route.Line.Position = UDim2.fromOffset(mid.X, mid.Y)
+                route.Line.Size = UDim2.fromOffset(d.Magnitude, math.max(3, 5 * self.Zoom ^ .25))
+                route.Line.Rotation = math.deg(math.atan2(d.Y, d.X))
+                route.Target.Position = UDim2.fromOffset(b.X, b.Y)
+            end
+        end
+    end
+end
+
 function MapView:Layout()
     local size = self.Viewport.AbsoluteSize
     if size.X <= 0 or size.Y <= 0 then return end
@@ -70,6 +93,7 @@ function MapView:Layout()
     self.Selection.Size = UDim2.fromOffset(math.max(16, width / self.Grid.Width), math.max(16, height / self.Grid.Height))
     self.Canvas.Position = UDim2.fromOffset(size.X / 2 + self.Pan.X, size.Y / 2 + self.Pan.Y)
     for _, marker in pairs(self.Markers) do marker.NameLabel.Visible = self.Zoom >= 3 end
+    self:_layoutRoutes()
 end
 
 function MapView:SetSelection(cellId)
@@ -120,6 +144,24 @@ function MapView:ApplyNationState(replica, dirtyChunks)
         marker.NameLabel.Visible = self.Zoom >= 3
     end
 end
+
+    for id, nation in pairs(self.Nations) do
+        if nation.NavalActive and nation.NavalFrom and nation.NavalTo and not self.Routes[id] then
+            local holder = Instance.new("Frame")
+            holder.Name = "NavalRoute"; holder.BackgroundTransparency = 1
+            holder.Size = UDim2.fromScale(1, 1); holder.ZIndex = 5; holder.Parent = self.Canvas
+            local line = Instance.new("Frame")
+            line.Name = "RouteLine"; line.AnchorPoint = Vector2.new(.5,.5); line.BorderSizePixel = 0
+            line.BackgroundColor3 = Color3.fromRGB(table.unpack(nation.Color)); line.ZIndex = 5; line.Parent = holder
+            local target = Instance.new("Frame")
+            target.Name = "Destination"; target.AnchorPoint = Vector2.new(.5,.5)
+            target.Size = UDim2.fromOffset(15,15); target.BackgroundColor3 = Color3.fromRGB(table.unpack(nation.Color))
+            target.BorderSizePixel = 0; target.ZIndex = 6; target.Parent = holder
+            local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(255,255,255); stroke.Thickness = 2; stroke.Parent = target
+            self.Routes[id] = {Container=holder, Line=line, Target=target}
+        end
+    end
+    self:_layoutRoutes()
 
 function MapView:FocusCell(cellId)
     local x, y = self.Grid:ToCoordinates(cellId)
