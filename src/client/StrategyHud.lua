@@ -1,82 +1,102 @@
--- Responsive strategy controls: bottom in portrait, side panel in landscape.
+-- Compact floating strategy HUD. The map remains the primary surface on mobile.
 local StrategyHud = {}
 StrategyHud.__index = StrategyHud
 
-local function label(parent, text, x, y, width, height, textSize)
-    local item = Instance.new("TextLabel")
-    item.BackgroundTransparency = 1
-    item.Position = UDim2.fromOffset(x, y)
-    item.Size = UDim2.new(width, -x * 2, 0, height)
-    item.Font = Enum.Font.GothamMedium
-    item.TextColor3 = Color3.fromRGB(230, 238, 242)
-    item.TextSize = textSize
-    item.TextWrapped = true
-    item.Text = text
-    item.Parent = parent
-    return item
-end
+local BG = Color3.fromRGB(18, 27, 45)
+local BG2 = Color3.fromRGB(28, 39, 60)
+local TEXT = Color3.fromRGB(238, 242, 250)
+local MUTED = Color3.fromRGB(177, 188, 211)
+local GREEN = Color3.fromRGB(61, 219, 151)
+local GOLD = Color3.fromRGB(247, 196, 67)
+local ACTIVE = Color3.fromRGB(255, 177, 56)
 
-local function button(parent, text)
-    local item = Instance.new("TextButton")
-    item.Text = text
-    item.TextSize = 15
-    item.Font = Enum.Font.GothamBold
-    item.TextColor3 = Color3.fromRGB(235, 243, 248)
-    item.BackgroundColor3 = Color3.fromRGB(34, 62, 79)
-    item.BorderSizePixel = 0
-    item.Parent = parent
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = item
-    return item
+local function round(parent, radius)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, radius); c.Parent = parent
+end
+local function stroke(parent)
+    local s = Instance.new("UIStroke"); s.Color = Color3.fromRGB(53, 66, 94); s.Thickness = 1.5; s.Transparency = .2; s.Parent = parent
+end
+local function text(parent, value, size, bold)
+    local t = Instance.new("TextLabel")
+    t.BackgroundTransparency = 1; t.Text = value; t.TextColor3 = TEXT
+    t.Font = bold and Enum.Font.GothamBold or Enum.Font.GothamMedium
+    t.TextSize = size; t.TextXAlignment = Enum.TextXAlignment.Center
+    t.TextYAlignment = Enum.TextYAlignment.Center; t.Parent = parent
+    return t
+end
+local function button(parent, value)
+    local b = Instance.new("TextButton")
+    b.Text = value; b.TextSize = 15; b.Font = Enum.Font.GothamBold
+    b.TextColor3 = MUTED; b.BackgroundColor3 = BG2; b.BorderSizePixel = 0; b.Parent = parent
+    round(b, 9)
+    return b
+end
+local function compact(v)
+    v = tonumber(v) or 0
+    if v >= 1e6 then return string.format("%.2fM", v / 1e6) end
+    if v >= 1e3 then return string.format(v >= 1e4 and "%.1fK" or "%.2fK", v / 1e3) end
+    return tostring(math.floor(v))
 end
 
 function StrategyHud.new(gui, config)
     local root = Instance.new("Frame")
-    root.Name = "StrategyScreen"
-    root.Size = UDim2.fromScale(1, 1)
-    root.BorderSizePixel = 0
-    root.BackgroundColor3 = Color3.fromRGB(12, 25, 37)
-    root.Parent = gui
-    label(root, "DOMÍNIO MUNDIAL", 8, 0, 1, 26, 17)
-    local status = label(root, "Carregando…", 8, 26, 1, 28, 11)
+    root.Name = "StrategyScreen"; root.Size = UDim2.fromScale(1, 1)
+    root.BackgroundTransparency = 1; root.BorderSizePixel = 0; root.Parent = gui
 
     local viewport = Instance.new("Frame")
-    viewport.Name = "MapViewport"
+    viewport.Name = "MapViewport"; viewport.Size = UDim2.fromScale(1, 1)
     viewport.BorderSizePixel = 0
     viewport.BackgroundColor3 = Color3.fromRGB(table.unpack(config.View.WaterColor))
-    viewport.ClipsDescendants, viewport.Active = true, true
-    viewport.Parent = root
+    viewport.ClipsDescendants = true; viewport.Active = true; viewport.Parent = root
 
-    local panel = Instance.new("ScrollingFrame")
-    panel.Name = "Commands"
-    panel.BackgroundTransparency = 1
-    panel.BorderSizePixel = 0
-    panel.CanvasSize = UDim2.fromOffset(0, 238)
-    panel.ScrollBarThickness = 3
-    panel.ScrollingDirection = Enum.ScrollingDirection.Y
-    panel.Parent = root
-    local stats = label(panel, "Funde sua capital para começar", 4, 0, 1, 36, 13)
-    local preview = label(panel, "Envio: —", 4, 38, 1, 18, 12)
-    local hint = label(panel, "Toque em terra livre", 4, 104, 1, 32, 12)
-    local action = button(panel, "Sincronizando…")
-    action.Name = "MapAction"
-    action.Position, action.Size = UDim2.new(0, 4, 0, 138), UDim2.new(1, -8, 0, 44)
-    action.Active = false
+    local status = text(root, "Carregando…", 12, true)
+    status.Name = "WorldStatus"; status.AnchorPoint = Vector2.new(1, 0)
+    status.BackgroundTransparency = .08; status.BackgroundColor3 = BG
+    status.TextXAlignment = Enum.TextXAlignment.Right
+    status.Position = UDim2.new(1, -12, 0, 10); status.Size = UDim2.fromOffset(250, 36)
+    round(status, 16); stroke(status)
+    local statusPad = Instance.new("UIPadding"); statusPad.PaddingRight = UDim.new(0, 13); statusPad.PaddingLeft = UDim.new(0, 13); statusPad.Parent = status
+
+    local hint = text(root, "Toque em terra livre para começar", 12, true)
+    hint.Name = "Hint"; hint.AnchorPoint = Vector2.new(.5, 0)
+    hint.BackgroundTransparency = .08; hint.BackgroundColor3 = BG
+    hint.Position = UDim2.new(.5, 0, 0, 10); hint.Size = UDim2.fromOffset(390, 36)
+    hint.TextTruncate = Enum.TextTruncate.AtEnd; round(hint, 14); stroke(hint)
+
+    local panel = Instance.new("Frame")
+    panel.Name = "BottomCommandBar"; panel.AnchorPoint = Vector2.new(.5, 1)
+    panel.BackgroundColor3 = BG; panel.BackgroundTransparency = .03; panel.BorderSizePixel = 0
+    panel.Parent = root; round(panel, 18); stroke(panel)
+
+    local stats = text(panel, "⚔ —", 19, true)
+    stats.Name = "Stats"; stats.TextXAlignment = Enum.TextXAlignment.Left
+    local preview = text(panel, "Envio —", 12, true)
+    preview.Name = "SendPreview"; preview.TextColor3 = TEXT
+
     local percentages = {}
+    local percentBox = Instance.new("Frame")
+    percentBox.Name = "Percentages"; percentBox.BackgroundColor3 = BG2; percentBox.BorderSizePixel = 0; percentBox.Parent = panel
+    round(percentBox, 12)
     for index, percentage in ipairs(config.SendPercentages) do
-        local item = button(panel, percentage .. "%")
-        item.Position = UDim2.new((index - 1) / #config.SendPercentages, 4, 0, 58)
-        item.Size = UDim2.new(1 / #config.SendPercentages, -8, 0, 44)
+        local item = button(percentBox, percentage .. "%")
+        item.Name = "Send" .. percentage
+        item.Position = UDim2.new((index - 1) / #config.SendPercentages, 2, 0, 2)
+        item.Size = UDim2.new(1 / #config.SendPercentages, -4, 1, -4)
         percentages[percentage] = item
     end
-    local minus, reset, plus = button(panel, "−"), button(panel, "Ver mundo"), button(panel, "+")
-    minus.Position, minus.Size = UDim2.new(0, 4, 0, 190), UDim2.new(0.2, -8, 0, 44)
-    reset.Position, reset.Size = UDim2.new(0.2, 4, 0, 190), UDim2.new(0.6, -8, 0, 44)
-    plus.Position, plus.Size = UDim2.new(0.8, 4, 0, 190), UDim2.new(0.2, -8, 0, 44)
-    local self = setmetatable({Root = root, Viewport = viewport, Panel = panel,
-        Status = status, Hint = hint, Action = action, Stats = stats, Preview = preview,
-        Percentages = percentages, Minus = minus, Reset = reset, Plus = plus}, StrategyHud)
+
+    local action = button(panel, "Selecione terra")
+    action.Name = "MapAction"; action.TextColor3 = TEXT; action.TextSize = 14
+    action.Active = false
+
+    local minus, reset, plus = button(root, "−"), button(root, "◎"), button(root, "+")
+    minus.Name, reset.Name, plus.Name = "ZoomOut", "WorldView", "ZoomIn"
+    minus.AnchorPoint, reset.AnchorPoint, plus.AnchorPoint = Vector2.new(1,0), Vector2.new(1,0), Vector2.new(1,0)
+    minus.Size, reset.Size, plus.Size = UDim2.fromOffset(38,38), UDim2.fromOffset(42,38), UDim2.fromOffset(38,38)
+
+    local self = setmetatable({Root=root, Viewport=viewport, Panel=panel, Status=status, Hint=hint,
+        Action=action, Stats=stats, Preview=preview, Percentages=percentages,
+        Minus=minus, Reset=reset, Plus=plus, PercentBox=percentBox}, StrategyHud)
     self.Resize = root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() self:Layout() end)
     self:Layout()
     return self
@@ -84,36 +104,57 @@ end
 
 function StrategyHud:Layout()
     local size = self.Root.AbsoluteSize
-    local landscape = size.X >= 620 and size.X > size.Y * 1.25
-    if landscape then
-        self.Panel.Position = UDim2.fromOffset(size.X - 304, 56)
-        self.Panel.Size = UDim2.fromOffset(296, math.max(80, size.Y - 64))
-        self.Viewport.Position = UDim2.fromOffset(8, 56)
-        self.Viewport.Size = UDim2.fromOffset(math.max(80, size.X - 324), math.max(80, size.Y - 64))
-    else
-        local panelHeight = math.min(238, math.max(100, size.Y * 0.48))
-        self.Panel.Position = UDim2.fromOffset(8, size.Y - panelHeight - 4)
-        self.Panel.Size = UDim2.fromOffset(math.max(80, size.X - 16), panelHeight)
-        self.Viewport.Position = UDim2.fromOffset(8, 56)
-        self.Viewport.Size = UDim2.fromOffset(math.max(80, size.X - 16), math.max(60, size.Y - panelHeight - 68))
-    end
+    if size.X <= 0 or size.Y <= 0 then return end
+    local landscape = size.X > size.Y
+    local barW = math.min(size.X - 24, landscape and 860 or 560)
+    local barH = landscape and 70 or 82
+    self.Panel.Size = UDim2.fromOffset(barW, barH)
+    self.Panel.Position = UDim2.new(.5, 0, 1, -10)
+
+    local statsW = math.floor(barW * .28)
+    local percentW = math.floor(barW * .40)
+    local actionW = math.max(96, math.floor(barW * .16))
+    self.Stats.Position = UDim2.fromOffset(14, 7)
+    self.Stats.Size = UDim2.fromOffset(statsW - 14, barH - 14)
+    self.PercentBox.Position = UDim2.fromOffset(statsW, 10)
+    self.PercentBox.Size = UDim2.fromOffset(percentW, barH - 20)
+    self.Preview.Position = UDim2.fromOffset(statsW + percentW + 4, 5)
+    self.Preview.Size = UDim2.fromOffset(barW - statsW - percentW - actionW - 10, barH - 10)
+    self.Action.Position = UDim2.fromOffset(barW - actionW - 8, 8)
+    self.Action.Size = UDim2.fromOffset(actionW, barH - 16)
+
+    local topY = 10
+    self.Status.Position = UDim2.new(1, -12, 0, topY)
+    self.Status.Size = UDim2.fromOffset(math.min(260, size.X * .32), 36)
+    self.Hint.Position = UDim2.new(.5, 0, 0, topY)
+    self.Hint.Size = UDim2.fromOffset(math.min(390, size.X * .42), 36)
+    self.Minus.Position = UDim2.new(1, -102, 0, 54)
+    self.Reset.Position = UDim2.new(1, -56, 0, 54)
+    self.Plus.Position = UDim2.new(1, -12, 0, 54)
 end
 
 function StrategyHud:UpdateEconomy(nation, percentage)
     if nation then
-        self.Stats.Text = string.format("Tropas %d/%d  (+%g/s)\nOuro %.1f  (+%.1f/s)",
-            nation.Troops, nation.MaxTroops, nation.TroopsPerSecond, nation.Gold, nation.GoldPerSecond)
+        self.Stats.Text = string.format("⚔ %s   <font color=\"#3DDB97\">+%s/s</font>   <font color=\"#F7C443\">● %s</font>",
+            compact(nation.Troops), compact(nation.TroopsPerSecond), compact(nation.Gold))
+        self.Stats.RichText = true
         self.Preview.Text = nation.ExpansionActive
-            and string.format("Em expansão: %d tropas • %d células", nation.ExpansionRemaining, nation.ExpansionClaimed)
-            or string.format("Envio previsto: %d tropas (%d%%)", math.floor(nation.Troops * percentage / 100), percentage)
+            and string.format("Enviando\n%s", compact(nation.ExpansionRemaining))
+            or string.format("Envia\n%s", compact(math.floor(nation.Troops * percentage / 100)))
     else
-        self.Stats.Text, self.Preview.Text = "Funde sua capital para começar", "Envio: —"
+        self.Stats.RichText = false
+        self.Stats.Text = "⚔ —    +—/s    ● —"
+        self.Preview.Text = "Envia\n—"
     end
     for value, item in pairs(self.Percentages) do
-        item.BackgroundColor3 = value == percentage and Color3.fromRGB(38, 112, 97) or Color3.fromRGB(34, 62, 79)
+        local active = value == percentage
+        item.BackgroundColor3 = active and ACTIVE or BG2
+        item.TextColor3 = active and Color3.fromRGB(29, 31, 38) or MUTED
     end
 end
 
-function StrategyHud:Destroy() self.Resize:Disconnect() end
+function StrategyHud:Destroy()
+    if self.Resize then self.Resize:Disconnect() end
+end
 
 return StrategyHud
