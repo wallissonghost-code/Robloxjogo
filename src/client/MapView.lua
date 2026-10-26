@@ -143,8 +143,6 @@ function MapView:ApplyNationState(replica, dirtyChunks)
         marker.NameLabel.Text = string.format("%s\n%d tropas", nation.Name, nation.Troops or 0)
         marker.NameLabel.Visible = self.Zoom >= 3
     end
-end
-
     for id, nation in pairs(self.Nations) do
         if nation.NavalActive and nation.NavalFrom and nation.NavalTo and not self.Routes[id] then
             local holder = Instance.new("Frame")
@@ -162,6 +160,7 @@ end
         end
     end
     self:_layoutRoutes()
+end
 
 function MapView:FocusCell(cellId)
     local x, y = self.Grid:ToCoordinates(cellId)
