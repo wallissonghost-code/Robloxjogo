@@ -62,22 +62,7 @@ function NationClient.new(view, grid, config, status, hint, action, hud)
         self:Refresh()
     end)
     self.Connections[#self.Connections + 1] = action.Activated:Connect(function()
-        local intent = self:GetIntent()
-        if not intent then return end
-        local nation = self.Replica.Nations[self.UserId]
-        if intent == "Focus" then view:FocusCell(nation.CapitalId); return end
-        self.RequestId = self.RequestId + 1
-        self.Pending = self.RequestId
-        self.Notice = nil
-        self:Refresh()
-        remote:FireServer(intent, self.SelectedId, self.Pending, self.Percent)
-        local sent = self.Pending
-        task.delay(8, function()
-            if not self.Running or self.Pending ~= sent then return end
-            self.Pending = nil
-            self.Notice = "A resposta demorou. Verificando o estado no servidor…"
-            self:RequestSync()
-        end)
+        self:SendIntent(self:GetIntent())
     end)
     if hud then
         for percentage, item in pairs(hud.Percentages) do
@@ -131,11 +116,42 @@ function NationClient:RequestSync()
     retry()
 end
 
+function NationClient:SendIntent(intent)
+    if not intent or not self.Remote or self.Pending then return false end
+    local nation = self.Replica.Nations[self.UserId]
+    if intent == "Focus" then
+        if nation then self.View:FocusCell(nation.CapitalId) end
+        return true
+    end
+    self.RequestId = self.RequestId + 1
+    self.Pending = self.RequestId
+    self.Notice = nil
+    self:Refresh()
+    self.Remote:FireServer(intent, self.SelectedId, self.Pending, self.Percent)
+    local sent = self.Pending
+    task.delay(8, function()
+        if not self.Running or self.Pending ~= sent then return end
+        self.Pending = nil
+        self.Notice = "A resposta demorou. Verificando o estado no servidor…"
+        self:RequestSync()
+    end)
+    return true
+end
+
 function NationClient:Inspect(cellId)
     if self.Pending then return end
     self.SelectedId, self.Notice = cellId, nil
     self.View:SetSelection(cellId)
     self:Refresh()
+
+    -- Once a nation exists, tapping valid neutral frontier land is the command:
+    -- immediately expand using the percentage already selected in the bottom HUD.
+    if self.Replica.Nations[self.UserId] then
+        local intent = self:GetIntent()
+        if intent == "Expand" then
+            self:SendIntent(intent)
+        end
+    end
 end
 
 function NationClient:Refresh()
