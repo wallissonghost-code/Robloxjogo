@@ -101,11 +101,13 @@ function NationClient:GetIntent()
         if self.Replica.Owners[other] == self.UserId then adjacent = true; break end
     end
     if not adjacent then
-        if not self.Grid:IsCoastal(id) then return nil, "NotAdjacent" end
         if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
             return nil, "InsufficientTroops"
         end
-        return "NavalMove"
+        -- Distant land is a directional expansion target by default.
+        -- The authoritative server keeps the wave on connected land only.
+        -- Coastal targets can still be sent through the explicit naval action button.
+        return "Expand"
     end
     if math.floor(nation.Troops * self.Percent / 100) < self.Config.Expansion.CostPerCell then
         return nil, "InsufficientTroops"
@@ -183,12 +185,12 @@ function NationClient:Refresh()
             nation.TerritoryCount, nation.TerritoryCount / self.Grid.LandCount * 100)
     end
     local intent, reason = self:GetIntent()
-    local texts = {Focus = "Minha capital", ChooseCapital = "Fundar capital aqui", Expand = "Expandir", NavalMove = "Enviar pelo mar", Sync = "Sincronizando…",
+    local texts = {Focus = "Minha capital", ChooseCapital = "Fundar capital aqui", Expand = "Expandir para lá", NavalMove = "Enviar pelo mar", Sync = "Sincronizando…",
         Pending = "Enviando…", SelectLand = "Selecione terra livre", ExpansionBusy = "Expandindo…",
         InvalidLand = "Escolha terra", Enemy = "Combate na próxima etapa", NotAdjacent = "Escolha sua fronteira",
         InsufficientTroops = "Aguarde mais tropas"}
     self.Action.Text = texts[intent or reason] or "Selecione uma célula"
-    local hint = nation and "Toque duas vezes no destino para confirmar a expansão." or "Toque em terra livre e confirme sua capital."
+    local hint = nation and "Toque duas vezes onde quer que a expansão avance." or "Toque em terra livre e confirme sua capital."
     if self.SelectedId then
         local owner = self.Replica.Owners[self.SelectedId]
         local selectedNation = owner ~= nil and self.Replica.Nations[owner]
