@@ -19,14 +19,30 @@ function ExpansionService:Start(userId, targetId, percentage)
     if self._orders[userId] then return nil, "ExpansionBusy" end
     if not self.Nations.Map:IsValidLandCell(targetId) then return nil, "InvalidLand" end
     if self.Nations:GetOwner(targetId) ~= nil then return nil, "Occupied" end
-    if not self.Nations:IsAdjacent(userId, targetId) then return nil, "NotAdjacent" end
+    local tx, ty = self.Nations.Map.Grid:ToCoordinates(targetId)
+    local startId, bestDistance
+    if self.Nations:IsAdjacent(userId, targetId) then
+        startId = targetId
+    else
+        for cellId in pairs(nation.Frontier) do
+            for _, neighbor in ipairs(self.Nations.Map.Grid:GetNeighbors(cellId)) do
+                if self.Nations:GetOwner(neighbor) == nil then
+                    local x, y = self.Nations.Map.Grid:ToCoordinates(neighbor)
+                    local distance = (x - tx)^2 + (y - ty)^2
+                    if not bestDistance or distance < bestDistance then
+                        startId, bestDistance = neighbor, distance
+                    end
+                end
+            end
+        end
+    end
+    if not startId then return nil, "NotAdjacent" end
     local sent = math.floor(nation.Troops * percentage / 100)
     if sent < self.Config.CostPerCell then return nil, "InsufficientTroops" end
 
     nation.Troops = nation.Troops - sent
     nation.ExpansionActive, nation.ExpansionRemaining, nation.ExpansionClaimed = true, sent, 0
-    local tx, ty = self.Nations.Map.Grid:ToCoordinates(targetId)
-    self._orders[userId] = {Queue = {targetId}, Head = 1, Seen = {[targetId] = true},
+    self._orders[userId] = {Queue = {startId}, Head = 1, Seen = {[startId] = true},
         Remaining = sent, Claimed = 0, TargetX = tx, TargetY = ty}
     return self.Nations:Publish({[userId] = true}, {}), "ExpansionStarted", sent
 end
