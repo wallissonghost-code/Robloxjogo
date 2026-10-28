@@ -233,12 +233,12 @@ function BuildingService.tick()
 	end
 end
 
--- Territory calls this for every ownership change: captured structures change hands
--- (keeping their level), structures on land that becomes neutral are destroyed.
+-- Territory calls this for every ownership change: walls and bunkers are destroyed
+-- when captured; other structures change hands. Neutralized structures are destroyed.
 function BuildingService.onOwnerChanged(cell, old, new)
 	local b = buildings[cell]
 	if not b then return end
-	if new <= 0 then
+	if new <= 0 or (new ~= old and (b.kind == "wall" or b.kind == "bunker")) then
 		BuildingService.destroy(cell)
 		return
 	end
