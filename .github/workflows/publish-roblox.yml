@@ -81,19 +81,26 @@ jobs:
           test -s build/game.rbxl
           ls -lh build/game.rbxl
 
+      - name: Normalize uploaded Roblox place to binary
+        if: ${{ hashFiles('Mundial_War (1).rbxlx') != '' }}
+        run: |
+          set -euo pipefail
+          go install github.com/anaminus/rbxmk/rbxmk@v0.9.1
+          mkdir -p build
+          printf '%s\n' 'fs.write("build/game.rbxl", fs.read("Mundial_War (1).rbxlx"))' > /tmp/convert-place.lua
+          "$(go env GOPATH)/bin/rbxmk" run /tmp/convert-place.lua
+          test -s build/game.rbxl
+          file build/game.rbxl
+          ls -lh build/game.rbxl
+
       - name: Publish Roblox game
         env:
           ROBLOX_API_KEY: ${{ secrets.MUSEU_EMPIRE_API_KEY }}
         run: |
           set -euo pipefail
           test -n "$ROBLOX_API_KEY"
-          if [ -s "Mundial_War (1).rbxlx" ]; then
-            PLACE_FILE="Mundial_War (1).rbxlx"
-            CONTENT_TYPE="application/xml"
-          else
-            PLACE_FILE="build/game.rbxl"
-            CONTENT_TYPE="application/octet-stream"
-          fi
+          PLACE_FILE="build/game.rbxl"
+          CONTENT_TYPE="application/octet-stream"
           echo "Publishing place file: ${PLACE_FILE}"
           URL="https://apis.roblox.com/universes/v1/${ROBLOX_UNIVERSE_ID}/places/${ROBLOX_PLACE_ID}/versions?versionType=Published"
           RESPONSE=$(mktemp)
