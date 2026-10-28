@@ -117,7 +117,6 @@ local function setMode(newMode, kind)
 	hud:showTray(mode == "build", mode == "build" and buildKind or nil)
 	hud:showWeapons(mode == "weapon", mode == "weapon" and buildKind or nil)
 	hud.tools.build.BackgroundColor3 = mode == "build" and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
-	hud.tools.weapons.BackgroundColor3 = mode == "weapon" and Color3.fromRGB(120, 48, 44) or Color3.fromRGB(34, 44, 58)
 	updateRanges(nil)
 end
 
@@ -332,7 +331,7 @@ local helpText = table.concat({
 	"<b>Mar:</b> construa um porto e clique numa costa do outro lado. No porto, compre barcos de defesa; clique num barco e depois na água para escolher a patrulha.",
 	"<b>Bombas:</b> 💣 aparece quando você tem base aérea ou silo. Clique no alvo e confirme com um segundo clique.",
 	"<b>Câmera:</b> arraste para mover, roda do mouse/pinça para zoom, WASD, F para ver o mundo, Espaço para sua capital.",
-	"<b>Atalhos:</b> 1–5 percentual, B construir, Esc cancelar, botão direito numa nação para diplomacia.",
+	"<b>Atalhos:</b> 1–4 percentual, B construir, Esc cancelar, botão direito numa nação para diplomacia.",
 }, "\n")
 
 hud = HUD.new(state, gui, {
