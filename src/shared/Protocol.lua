@@ -7,7 +7,6 @@ Protocol.EventRemote = "MW_Event"       -- server -> client: { k = kind, ... }
 Protocol.Actions = {
 	Sync = "sync",
 	Spawn = "spawn",           -- (cell)
-	SelectSpawn = "selectSpawn", -- (cell) provisional selection
 	Target = "target",         -- (cell, percent) land expansion/attack, or naval when no land route
 	Cancel = "cancel",         -- (orderId or nil = all)
 	Build = "build",           -- (cell, kind)
