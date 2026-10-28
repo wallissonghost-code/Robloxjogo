@@ -76,7 +76,7 @@ GameConfig.Oil = {
 	PerCell = 0.01,
 }
 
-GameConfig.TroopPercents = { 0.10, 0.25, 0.50, 0.75, 1.00 }
+GameConfig.TroopPercents = { 0.10, 0.25, 0.50, 0.75 }
 GameConfig.DefaultTroopPercent = 0.25
 
 -- Expansion and combat -------------------------------------------------------
