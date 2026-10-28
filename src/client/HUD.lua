@@ -227,8 +227,10 @@ function HUD.new(state, gui, handlers)
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 740)
 		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
-		self.tray.Size = UDim2.fromOffset(trayWidth, 148)
-		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 148)
+		-- Two rows of 76px cards at y=2 and y=82 need at least 166px of content.
+		-- Keep the outer tray tall enough for both prices plus vertical padding.
+		self.tray.Size = UDim2.fromOffset(trayWidth, 184)
+		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 184)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
