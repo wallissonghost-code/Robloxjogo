@@ -154,6 +154,15 @@ function HUD.new(state, gui, handlers)
 					return
 				end
 				hide()
+				if defs == self.Config.Buildings then
+					local me = self.state.me
+					local def = defs[kind]
+					local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
+					if not me or (me.gold or 0) < cost then
+						self:toast("Ouro insuficiente! Necessário: " .. self.Protocol.formatK(cost) .. " ouro.", "bad")
+						return
+					end
+				end
 				onPick(kind)
 			end)
 			buttons[kind] = b
@@ -333,6 +342,7 @@ function HUD:refreshTray()
 		local def = self.Config.Buildings[kind]
 		local cost = me and me.costs and me.costs[kind] or def.cost
 		local affordable = me and me.gold >= cost
+		b.AutoButtonColor = affordable and true or false
 		-- The cost is supplied by the server and includes existing-building scaling.
 		local costLabel = b:FindFirstChild("Cost")
 		if costLabel then
