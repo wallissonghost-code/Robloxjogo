@@ -82,19 +82,66 @@ function HUD.new(state, gui, handlers)
 
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
-		-- Single horizontal strip above the bottom HUD, with sideways scrolling.
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.fromOffset(760, 108), Visible = false, ZIndex = 30 })
-		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 7), Size = UDim2.new(1, -16, 0, 54), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, CanvasSize = UDim2.fromOffset(#order * 148 + 8, 0), ZIndex = 31 })
+		-- Only existing definitions in GameConfig are presented; no fabricated items.
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.fromOffset(760, 148), Visible = false, ZIndex = 30 })
+		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 7), Size = UDim2.new(1, -16, 1, -14), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 104 + 8, 0), ZIndex = 31 })
 		local buttons = {}
+		local tip = panel(gui, { Name = name .. "Details", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 45 })
+		make("UIPadding", tip, { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+		local detail = make("TextLabel", tip, { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Font = FONT, TextSize = 12, TextColor3 = TEXT, RichText = false, ZIndex = 46 })
+		local function hide() tip.Visible = false end
+		local function show(kind, b)
+			local def = defs[kind]
+			local me = self.state.me
+			local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
+			local lines = defs == self.Config.Buildings and self.state.Stats.lines(self.Config, kind, 1) or {}
+			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro\n" .. (def.purpose or "") .. (#lines > 0 and ("\n" .. table.concat(lines, " · ")) or "")
+			local pos = b.AbsolutePosition
+			local bounds = gui.AbsoluteSize
+			tip.Position = UDim2.fromOffset(math.clamp(pos.X, 8, math.max(8, bounds.X - 286)), math.clamp(t.AbsolutePosition.Y - 155, 55, math.max(55, bounds.Y - 180)))
+			tip.Visible = true
+		end
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { Position = UDim2.fromOffset((index - 1) * 148, 0), Size = UDim2.fromOffset(140, 46), ZIndex = 31, TextSize = 12 })
-			b.RichText = true
-			b.TextXAlignment = Enum.TextXAlignment.Left
-			make("UIPadding", b, { PaddingLeft = UDim.new(0, 8) })
-			b.Activated:Connect(function() onPick(kind) end)
+			local column = math.floor((index - 1) / 2)
+			local row = (index - 1) % 2
+			local b = button(grid, "", { Position = UDim2.fromOffset(column * 104, row * 63), Size = UDim2.fromOffset(96, 57), ZIndex = 31, TextSize = 12 })
+			b.TextWrapped = true
+			b.RichText = false
+			b.TextXAlignment = Enum.TextXAlignment.Center
+			local pressing, longPressed = false, false
+			b.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+					pressing, longPressed = true, false
+					task.delay(0.45, function()
+						if pressing and t.Visible then
+							longPressed = true
+							show(kind, b)
+						end
+					end)
+				end
+			end)
+			b.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+					pressing = false
+					hide()
+				end
+			end)
+			b.MouseEnter:Connect(function()
+				if not pressing then show(kind, b) end
+			end)
+			b.MouseLeave:Connect(hide)
+			b.Activated:Connect(function()
+				if longPressed then
+					task.defer(function() longPressed = false end)
+					return
+				end
+				hide()
+				onPick(kind)
+			end)
 			buttons[kind] = b
 		end
-		local info = make("TextLabel", t, { Position = UDim2.fromOffset(10, 66), Size = UDim2.new(1, -20, 0, 34), BackgroundTransparency = 1, TextColor3 = MUTED, Font = FONT, TextSize = 11, TextWrapped = true, RichText = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 31, Text = "" })
+		t:GetPropertyChangedSignal("Visible"):Connect(function() if not t.Visible then hide() end end)
+		local info = make("TextLabel", t, { Visible = false, Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1, Text = "" })
 		return t, buttons, info
 	end
 	self.tray, self.trayButtons, self.trayInfo = tray("BuildTray", self.Config.BuildingOrder, self.Config.Buildings, function(kind) self.h.onBuild(kind) end)
@@ -143,8 +190,8 @@ function HUD.new(state, gui, handlers)
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 740)
 		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
-		self.tray.Size = UDim2.fromOffset(trayWidth, 108)
-		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 108)
+		self.tray.Size = UDim2.fromOffset(trayWidth, 148)
+		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 148)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
@@ -258,7 +305,7 @@ function HUD:refreshTray()
 		local def = self.Config.Buildings[kind]
 		local cost = me and me.costs and me.costs[kind] or def.cost
 		local affordable = me and me.gold >= cost
-		b.Text = string.format("%s <b>%s</b>\n<font size=\"11\" color=\"%s\">💰 %s</font>", def.icon, def.name, affordable and "#f0c45c" or "#8a8f96", self.Protocol.formatK(cost))
+		b.Text = def.icon .. "\\n" .. def.name
 		b.BackgroundColor3 = (self.selectedBuild == kind) and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
 		b.TextTransparency = affordable and 0 or 0.35
 	end
@@ -280,7 +327,7 @@ function HUD:refreshWeapons()
 		local affordable = me and me.gold >= w.gold and ready ~= nil
 		local status = ready == nil and ("requer " .. self.Config.Buildings[w.launcher].name)
 			or (ready > 0 and string.format("recarga %ds", math.ceil(ready)) or ("💰 " .. self.Protocol.formatK(w.gold)))
-		b.Text = string.format("%s <b>%s</b>\n<font size=\"11\" color=\"%s\">%s</font>", w.icon, w.name, affordable and "#f0c45c" or "#8a8f96", status)
+		b.Text = w.icon .. "\\n" .. w.name
 		b.BackgroundColor3 = (self.selectedWeapon == kind) and Color3.fromRGB(120, 48, 44) or Color3.fromRGB(34, 44, 58)
 		b.TextTransparency = affordable and 0 or 0.35
 	end
