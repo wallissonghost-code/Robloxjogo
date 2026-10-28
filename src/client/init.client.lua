@@ -175,19 +175,26 @@ local function nationPopover(screenPos, id)
 	local n = state.nations[id]
 	if not n or id == state.you then return end
 	local rel = state:relation(state.you, id)
-	local body = string.format("👥 %s · %.1f%% do mundo\n%s", Protocol.formatK(n.troops), n.land / Map.landCount * 100, relationText(rel))
+	local sent = troopsToSend()
+	local body = string.format("👥 %s tropas  ·  %.1f%% do mundo\n%s", Protocol.formatK(n.troops), n.land / Map.landCount * 100, relationText(rel))
+	if rel ~= "ally" and state.me then
+		local pct = math.floor(state.percent * 100 + 0.5)
+		local comparison = sent > n.troops and "Seu ataque superaria as tropas inimigas." or (sent == n.troops and "Forças equivalentes: ataque arriscado." or "O inimigo superaria as tropas enviadas!")
+		local color = sent > n.troops and "#70D79A" or "#FFAD71"
+		body = body .. string.format("\n<font color=\"%s\"><b>%s</b></font>\nVocê enviaria %s (%d%%) contra %s tropas.", color, comparison, Protocol.formatK(sent), pct, Protocol.formatK(n.troops))
+	end
 	local buttons = {}
 	if state.you then
 		if rel == "ally" then
 			buttons[#buttons + 1] = { "🤝 Desfazer aliança", function() send(Actions.BreakAlliance, id) end, true }
 		else
-			buttons[#buttons + 1] = { "⚔ Atacar · " .. Protocol.formatK(troopsToSend()), function()
+			buttons[#buttons + 1] = { "⚔ ATACAR · " .. Protocol.formatK(troopsToSend()), function()
 				local order = pending
 				if order and order.kind == "order" and state.owner[order.cell] == id then
 					clearAim()
 					send(Actions.Target, order.cell, state.percent)
 				end
-			end }
+			end, false, "attack" }
 			buttons[#buttons + 1] = { "🤝 Formar aliança", function() send(Actions.Ally, id) end }
 		end
 	end
