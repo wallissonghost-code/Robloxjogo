@@ -82,9 +82,10 @@ function HUD.new(state, gui, handlers)
 
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
-		-- Only existing definitions in GameConfig are presented; no fabricated items.
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.fromOffset(760, 148), Visible = false, ZIndex = 30 })
-		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 7), Size = UDim2.new(1, -16, 1, -14), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 104 + 8, 0), ZIndex = 31 })
+		-- Compact, native Roblox UI: no external asset IDs required.
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 104), Visible = false, ZIndex = 30 })
+		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 104) })
+		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 1, -12), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(#order * 94 + 8, 0), ZIndex = 31 })
 		local buttons = {}
 		local tip = panel(gui, { Name = name .. "Details", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 45 })
 		make("UIPadding", tip, { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
@@ -102,9 +103,9 @@ function HUD.new(state, gui, handlers)
 			tip.Visible = true
 		end
 		for index, kind in ipairs(order) do
-			local column = math.floor((index - 1) / 2)
-			local row = (index - 1) % 2
-			local b = button(grid, "", { Position = UDim2.fromOffset(column * 104, row * 63), Size = UDim2.fromOffset(96, 57), ZIndex = 31, TextSize = 12 })
+			local b = button(grid, "", { Position = UDim2.fromOffset((index - 1) * 94, 2), Size = UDim2.fromOffset(88, 82), ZIndex = 31, TextSize = 11 })
+			make("UICorner", b, { CornerRadius = UDim.new(0, 9) })
+			make("UIStroke", b, { Color = Color3.fromRGB(76, 101, 122), Transparency = 0.3, Thickness = 1 })
 			b.TextWrapped = true
 			b.RichText = false
 			b.TextXAlignment = Enum.TextXAlignment.Center
@@ -305,7 +306,9 @@ function HUD:refreshTray()
 		local def = self.Config.Buildings[kind]
 		local cost = me and me.costs and me.costs[kind] or def.cost
 		local affordable = me and me.gold >= cost
-		b.Text = def.icon .. "\\n" .. def.name
+		-- Native icon tile: readable on mobile without platform-dependent emoji fonts.
+		local glyphs = { city = "CT", port = "PT", tower = "SN", artillery = "AR", airfield = "AV", silo = "MS", factory = "FB", bunker = "BK", machinegun = "MG", tankfactory = "TK", airdefense = "AA", wall = "MR", trench = "TR", antinaval = "NV", flak = "FL", oilwell = "OL" }
+		b.Text = (glyphs[kind] or string.upper(string.sub(kind, 1, 2))) .. "\n" .. def.name
 		b.BackgroundColor3 = (self.selectedBuild == kind) and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
 		b.TextTransparency = affordable and 0 or 0.35
 	end
@@ -327,7 +330,7 @@ function HUD:refreshWeapons()
 		local affordable = me and me.gold >= w.gold and ready ~= nil
 		local status = ready == nil and ("requer " .. self.Config.Buildings[w.launcher].name)
 			or (ready > 0 and string.format("recarga %ds", math.ceil(ready)) or ("💰 " .. self.Protocol.formatK(w.gold)))
-		b.Text = w.icon .. "\\n" .. w.name
+		b.Text = w.icon .. "\n" .. w.name
 		b.BackgroundColor3 = (self.selectedWeapon == kind) and Color3.fromRGB(120, 48, 44) or Color3.fromRGB(34, 44, 58)
 		b.TextTransparency = affordable and 0 or 0.35
 	end
