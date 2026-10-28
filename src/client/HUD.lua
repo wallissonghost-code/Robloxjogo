@@ -204,13 +204,14 @@ function HUD.new(state, gui, handlers)
 	make("UIListLayout", self.requests, { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
 
 	-- Popover (nation / cell) ------------------------------------------------------------------
-	self.popover = panel(gui, { Name = "Popover", Size = UDim2.fromOffset(220, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 40 })
+	self.popover = panel(gui, { Name = "Popover", Size = UDim2.fromOffset(310, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 40 })
+	make("UIStroke", self.popover, { Color = Color3.fromRGB(92, 107, 137), Thickness = 1, Transparency = 0.25 })
 	make("UIPadding", self.popover, { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	make("UIListLayout", self.popover, { Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
-	self.popTitle = make("TextLabel", self.popover, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Font = BOLD, TextSize = 14, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 41 })
-	self.popBody = make("TextLabel", self.popover, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Font = FONT, TextSize = 12, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, RichText = true, ZIndex = 41 })
+	self.popTitle = make("TextLabel", self.popover, { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Font = BOLD, TextSize = 18, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 41 })
+	self.popBody = make("TextLabel", self.popover, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Font = FONT, TextSize = 13, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, RichText = true, ZIndex = 41 })
 	self.popButtons = make("Frame", self.popover, { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 41 })
-	make("UIGridLayout", self.popButtons, { CellSize = UDim2.new(0.5, -3, 0, 28), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+	make("UIGridLayout", self.popButtons, { CellSize = UDim2.new(0.5, -4, 0, 42), CellPadding = UDim2.fromOffset(8, 6), SortOrder = Enum.SortOrder.LayoutOrder })
 
 	-- Victory / help overlays ----------------------------------------------------------------------
 	self.center = panel(gui, { Name = "Center", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(420, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 50 })
@@ -437,15 +438,19 @@ function HUD:showPopover(screenPos, title, body, buttons)
 		if c:IsA("TextButton") then c:Destroy() end
 	end
 	for index, b in ipairs(buttons or {}) do
-		local btn = button(self.popButtons, b[1], { LayoutOrder = index, TextSize = 12, ZIndex = 42, BackgroundColor3 = b[3] and Color3.fromRGB(120, 48, 44) or Color3.fromRGB(40, 58, 76) })
+		local attack = b[4] == "attack"
+		local btn = button(self.popButtons, b[1], { LayoutOrder = index, TextSize = 13, TextWrapped = true, ZIndex = 42, BackgroundColor3 = attack and Color3.fromRGB(246, 174, 60) or (b[3] and Color3.fromRGB(160, 67, 65) or Color3.fromRGB(87, 68, 136)) })
+		if attack then btn.TextColor3 = Color3.fromRGB(30, 26, 20) end
 		btn.Activated:Connect(function()
 			self:hidePopover()
 			b[2]()
 		end)
 	end
 	local size = self.gui.AbsoluteSize
-	local x = math.clamp(screenPos.X + 16, 8, math.max(8, size.X - 236))
-	local y = math.clamp(screenPos.Y - 20, 50, math.max(50, size.Y - 220))
+	local width = math.min(310, math.max(220, size.X - 16))
+	self.popover.Size = UDim2.fromOffset(width, 0)
+	local x = math.clamp(screenPos.X + 16, 8, math.max(8, size.X - width - 8))
+	local y = math.clamp(screenPos.Y - 20, 50, math.max(50, size.Y - 230))
 	self.popover.Position = UDim2.fromOffset(x, y)
 	self.popover.Visible = true
 end
