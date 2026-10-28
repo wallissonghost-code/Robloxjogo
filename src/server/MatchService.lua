@@ -134,10 +134,45 @@ function MatchService.toWaiting()
 	announce()
 end
 
+-- Place connected players who did not confirm a capital before the timer expires.
+local function autoPlace()
+	if not ctx.connectedPlayers then return end
+	local map = ctx.Map
+	for _, player in ipairs(ctx.connectedPlayers()) do
+		if not ctx.Nations.forUser(player.userId) and ctx.Nations.canRespawn(player.userId) then
+			local placed = false
+			local name = string.sub(player.name or "Jogador", 1, 24)
+			if ctx.mode == "extreme" then
+				local candidates = {}
+				for _, n in pairs(ctx.Nations.all()) do
+					if n.alive and n.kind == "bot" then candidates[#candidates + 1] = n.capital end
+				end
+				while #candidates > 0 and not placed do
+					local index = math.random(1, #candidates)
+					placed = ctx.Nations.takeover(player.userId, name, table.remove(candidates, index)) ~= nil
+				end
+			else
+				local start = math.random(1, map.N)
+				for offset = 0, map.N - 1 do
+					local cell = (start + offset - 1) % map.N + 1
+					if ctx.Nations.canSpawnAt(cell) then
+						placed = ctx.Nations.create("player", name, cell, { userId = player.userId }) ~= nil
+						if placed then break end
+					end
+				end
+			end
+			if not placed then
+				ctx.notify(nil, "Não há espaço livre para o nascimento automático de " .. name .. ".", "info")
+			end
+		end
+	end
+end
+
 -- Skips the rest of the vote/spawn phases (tests, and the preview's "start now" button).
 function MatchService.startPlaying()
 	if phase == "vote" then closeVote() end
 	if phase == "spawn" then
+		autoPlace()
 		phase = "playing"
 		phaseEnds = 0
 		announce()
