@@ -88,8 +88,8 @@ function HUD.new(state, gui, handlers)
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
 		-- Compact, native Roblox UI: no external asset IDs required.
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 172), Visible = false, ZIndex = 30 })
-		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 172) })
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 212), Visible = false, ZIndex = 30 })
+		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 212) })
 		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 1, -12), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 110 + 8, 0), ZIndex = 31 })
 		local buttons = {}
 		local tip = panel(gui, { Name = name .. "Details", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 45 })
