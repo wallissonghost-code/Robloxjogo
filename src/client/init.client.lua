@@ -113,7 +113,8 @@ local function setMode(newMode, kind)
 	if mode ~= "patrol" then patrolBoat = nil end
 	clearAim()
 	selectedCell = nil
-	hud:showTray(mode == "build", mode == "build" and buildKind or nil)
+	hud:showTray(mode == "build" and not buildKind, mode == "build" and buildKind or nil)
+	hud:showPlacement(mode == "build" and buildKind ~= nil, buildKind, false)
 	hud:showWeapons(mode == "weapon", mode == "weapon" and buildKind or nil)
 	hud.tools.build.BackgroundColor3 = mode == "build" and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
 	updateRanges(nil)
@@ -237,18 +238,10 @@ local function handleClick(p, button)
 			hud:toast("Escolha uma célula do seu território.", "bad")
 			return
 		end
-		-- First tap previews the actual configured reach; second tap confirms placement.
-		-- Keep the selected position stable even if the camera moves between taps.
-		if pending and pending.kind == "build" and pending.buildKind == buildKind and pending.cell == cell then
-			send(Actions.Build, cell, buildKind)
-			pending = nil
-			updateRanges(cell)
-			hud:toast("Construção solicitada.")
-		else
-			pending = { kind = "build", buildKind = buildKind, cell = cell }
-			updateRanges(cell)
-			hud:toast("Área destacada. Toque novamente na mesma célula para construir.")
-		end
+		-- Placement is only committed through the explicit confirm button.
+		pending = { kind = "build", buildKind = buildKind, cell = cell }
+		updateRanges(cell)
+		hud:showPlacement(true, buildKind, true)
 		return
 	elseif mode == "patrol" then
 		if Map.land[cell] then hud:toast("Escolha um ponto na água para o barco patrulhar.", "bad") return end
@@ -376,6 +369,22 @@ hud = HUD.new(state, gui, {
 	onBuild = function(kind)
 		if buildKind == kind then setMode("build", nil) else setMode("build", kind) end
 	end,
+	onPlacementCancel = function()
+		setMode(nil)
+	end,
+	onPlacementConfirm = function()
+		if mode ~= "build" or not buildKind or not pending or pending.kind ~= "build" or pending.buildKind ~= buildKind then
+			hud:toast("Selecione uma posição no seu território.", "bad")
+			return
+		end
+		local cell = pending.cell
+		if not Map.land[cell] or state.owner[cell] ~= state.you then
+			hud:toast("Essa célula não pertence mais à sua nação.", "bad")
+			return
+		end
+		send(Actions.Build, cell, buildKind)
+		setMode(nil)
+	end,
 	onVote = function(mode)
 		myVote = mode
 		send(Actions.Vote, mode)
@@ -401,7 +410,7 @@ task.spawn(function()
 		local phase = state.match.phase
 		local text
 		if mode == "build" then
-			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — toque na sua terra para visualizar; toque de novo para construir") or "🏗 Escolha uma construção"
+			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — escolha o local e confirme em ✓ ou cancele em ✕") or "🏗 Escolha uma construção"
 		elseif mode == "weapon" then
 			text = buildKind and (Config.Weapons[buildKind].icon .. " Escolha o alvo · Esc cancela") or "💣 Escolha uma arma"
 		elseif mode == "patrol" then
