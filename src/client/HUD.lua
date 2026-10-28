@@ -83,9 +83,9 @@ function HUD.new(state, gui, handlers)
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
 		-- Compact, native Roblox UI: no external asset IDs required.
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 148), Visible = false, ZIndex = 30 })
-		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 148) })
-		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 1, -12), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 94 + 8, 0), ZIndex = 31 })
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 172), Visible = false, ZIndex = 30 })
+		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 172) })
+		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 1, -12), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 110 + 8, 0), ZIndex = 31 })
 		local buttons = {}
 		local tip = panel(gui, { Name = name .. "Details", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 45 })
 		make("UIPadding", tip, { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
@@ -103,11 +103,18 @@ function HUD.new(state, gui, handlers)
 			tip.Visible = true
 		end
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 94, ((index - 1) % 2) * 66 + 2), Size = UDim2.fromOffset(88, 61), ZIndex = 31, TextSize = 11 })
+			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 110, ((index - 1) % 2) * 78 + 2), Size = UDim2.fromOffset(104, 73), ZIndex = 31, TextSize = 11 })
 			make("UICorner", b, { CornerRadius = UDim.new(0, 9) })
 			make("UIStroke", b, { Color = Color3.fromRGB(76, 101, 122), Transparency = 0.3, Thickness = 1 })
+			b.Text = ""
 			b.TextWrapped = true
 			b.RichText = false
+			if defs == self.Config.Buildings then
+				local def = defs[kind]
+				make("TextLabel", b, { Name = "Icon", Position = UDim2.new(0, 0, 0, 2), Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, Text = def.icon or "■", TextColor3 = TEXT, Font = BOLD, TextSize = 21, ZIndex = 32 })
+				make("TextLabel", b, { Name = "Title", Position = UDim2.new(0, 3, 0, 27), Size = UDim2.new(1, -6, 0, 24), BackgroundTransparency = 1, Text = def.name, TextColor3 = TEXT, Font = BOLD, TextSize = 10, TextWrapped = true, ZIndex = 32 })
+				make("TextLabel", b, { Name = "Cost", Position = UDim2.new(0, 2, 1, -22), Size = UDim2.new(1, -4, 0, 19), BackgroundTransparency = 1, Text = "", TextColor3 = GOOD, Font = BOLD, TextSize = 12, ZIndex = 32 })
+			end
 			b.TextXAlignment = Enum.TextXAlignment.Center
 			local pressing, longPressed = false, false
 			b.InputBegan:Connect(function(input)
@@ -316,11 +323,17 @@ function HUD:refreshTray()
 		local def = self.Config.Buildings[kind]
 		local cost = me and me.costs and me.costs[kind] or def.cost
 		local affordable = me and me.gold >= cost
-		-- Native icon tile: readable on mobile without platform-dependent emoji fonts.
-		local glyphs = { city = "CT", port = "PT", tower = "SN", artillery = "AR", airfield = "AV", silo = "MS", factory = "FB", bunker = "BK", machinegun = "MG", tankfactory = "TK", airdefense = "AA", wall = "MR", trench = "TR", antinaval = "NV", flak = "FL", oilwell = "OL" }
-		b.Text = (glyphs[kind] or string.upper(string.sub(kind, 1, 2))) .. "\n" .. def.name
+		-- The cost is supplied by the server and includes existing-building scaling.
+		local costLabel = b:FindFirstChild("Cost")
+		if costLabel then
+			costLabel.Text = "● " .. self.Protocol.formatK(cost)
+			costLabel.TextColor3 = affordable and GOOD or BAD
+		end
+		local iconLabel = b:FindFirstChild("Icon")
+		if iconLabel then iconLabel.TextTransparency = affordable and 0 or 0.45 end
+		local titleLabel = b:FindFirstChild("Title")
+		if titleLabel then titleLabel.TextTransparency = affordable and 0 or 0.35 end
 		b.BackgroundColor3 = (self.selectedBuild == kind) and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
-		b.TextTransparency = affordable and 0 or 0.35
 	end
 	local kind = self.selectedBuild
 	if kind then
