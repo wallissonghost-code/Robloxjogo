@@ -54,37 +54,35 @@ function HUD.new(state, gui, handlers)
 	local player = Players.LocalPlayer
 
 	-- Player identity is displayed on the map by OverlayRenderer, not in the HUD.
-	-- Troop percentage (bottom-centre) ------------------------------------------------
-	local bar = panel(gui, { Name = "Percent", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 20 })
+	-- Unified bottom HUD: economy, sending percentage, send amount and build action.
+	local bar = panel(gui, { Name = "BottomHUD", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(0, 46), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 20 })
 	self.percentBar = bar
+	make("UIScale", bar, { Name = "UIScale", Scale = 1 })
 	make("UIListLayout", bar, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder })
-	make("UIPadding", bar, { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
+	make("UIPadding", bar, { PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7) })
+	local function stat(name, order, width, color)
+		local label = make("TextLabel", bar, { Name = name, LayoutOrder = order, Size = UDim2.fromOffset(width, 34), BackgroundTransparency = 1, Font = BOLD, TextSize = 13, TextColor3 = color or TEXT, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 21, Text = "—" })
+		return label
+	end
+	self.troopsText = stat("Troops", 1, 75)
+	self.rateText = stat("TroopsPerSecond", 2, 72, Color3.fromRGB(238, 159, 108))
+	self.goldText = stat("Gold", 3, 76, ACCENT)
 	self.percentButtons = {}
 	for index, p in ipairs(self.Config.TroopPercents) do
-		local b = button(bar, math.floor(p * 100) .. "%", { Size = UDim2.fromOffset(48, 30), LayoutOrder = index, TextSize = 13, ZIndex = 21 })
+		local b = button(bar, math.floor(p * 100) .. "%", { Size = UDim2.fromOffset(44, 34), LayoutOrder = index + 3, TextSize = 13, ZIndex = 21 })
 		b.Activated:Connect(function() self.h.onPercent(p) end)
 		self.percentButtons[p] = b
 	end
-	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(40, 30), LayoutOrder = 10, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21, Visible = false })
+	self.sendText = stat("Sending", 8, 76)
+	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(35, 34), LayoutOrder = 9, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21, Visible = false })
 	self.cancelButton.Activated:Connect(function() self.h.onCancel() end)
-
-	-- Tools (bottom-right) ---------------------------------------------------------------
-	local tools = panel(gui, { Name = "Tools", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -12), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 20 })
-	make("UIListLayout", tools, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder })
-	make("UIPadding", tools, { PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) })
 	self.tools = {}
-	local toolList = { { "build", "🏗", "Construir" } }
-	for index, t in ipairs(toolList) do
-		local b = button(tools, t[2], { Size = UDim2.fromOffset(34, 30), LayoutOrder = index, TextSize = 16, ZIndex = 21 })
-		b.Activated:Connect(function() self.h.onTool(t[1]) end)
-		self.tools[t[1]] = b
-	end
-	-- weapons appear only after building an air base or a silo
-	-- Weapons remain in the game systems; only the build control is shown.
+	self.tools.build = button(bar, "🏗 Construir", { Size = UDim2.fromOffset(105, 34), LayoutOrder = 10, TextSize = 13, ZIndex = 21 })
+	self.tools.build.Activated:Connect(function() self.h.onTool("build") end)
 
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -60), Size = UDim2.fromOffset(300, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 30 })
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -66), Size = UDim2.fromOffset(300, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 30 })
 		make("UIPadding", t, { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
 		make("UIListLayout", t, { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
 		local grid = make("ScrollingFrame", t, { LayoutOrder = 1, BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 230), CanvasSize = UDim2.fromOffset(0, #order * 27 + 44), ScrollBarThickness = 3, ZIndex = 31 })
@@ -146,6 +144,7 @@ function HUD.new(state, gui, handlers)
 	local function layout()
 		local narrow = gui.AbsoluteSize.X < 1000
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
+		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 740)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
@@ -180,6 +179,7 @@ function HUD.new(state, gui, handlers)
 end
 
 function HUD:setPercent(p)
+	if self.state.me then self.sendText.Text = "Enviar " .. self.Protocol.formatK(math.floor(self.state.me.troops * p)) end
 	for value, b in pairs(self.percentButtons) do
 		local on = math.abs(value - p) < 1e-6
 		b.BackgroundColor3 = on and ACCENT or Color3.fromRGB(34, 44, 58)
@@ -221,9 +221,17 @@ function HUD:refreshMe()
 	local me = state.me
 	local F = self.Protocol.formatK
 	if not me or not state.you then
+		self.troopsText.Text = "👥 —"
+		self.rateText.Text = "+—/s"
+		self.goldText.Text = "💰 —"
+		self.sendText.Text = "Enviar —"
 		self.cancelButton.Visible = false
 		return
 	end
+	self.troopsText.Text = "👥 " .. F(me.troops)
+	self.rateText.Text = "+" .. F(me.rate) .. "/s"
+	self.goldText.Text = "💰 " .. F(me.gold)
+	self.sendText.Text = "Enviar " .. F(math.floor(me.troops * state.percent))
 	-- show only what exists in the current mode
 	for kind, b in pairs(self.trayButtons) do
 		local m = self.Config.Buildings[kind].mode
