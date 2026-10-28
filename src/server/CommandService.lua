@@ -56,9 +56,11 @@ function CommandService.handle(userId, displayName, action, a, b, clock, c)
 		if ctx.Match.phase() ~= "spawn" then return false, "A seleção terminou." end
 		if not isInt(a) or not Map:valid(a) then return false, "Célula inválida." end
 		if ctx.mode == "extreme" then
-			local nationAt = ctx.Nations.atCell and ctx.Nations.atCell(a)
-			-- Country ownership is validated again by takeover on confirmation.
-			if not Map.land[a] then return false, "Escolha um país em terra." end
+			local owner = ctx.Territory.ownerOf(a)
+			local target = ctx.Nations.get(owner)
+			if not target or not target.alive or target.kind == "player" then
+				return false, "Escolha um país disponível controlado pela IA."
+			end
 		else
 			local ok, why = ctx.Nations.canSpawnAt(a)
 			if not ok then return false, why end
