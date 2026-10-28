@@ -132,7 +132,8 @@ updateRanges = function(cell)
 			end
 		end
 		local r = buildKind and BuildingStats.reach(Config, buildKind, 1)
-		if r and hoverCell and Map.land[hoverCell] then list[#list + 1] = { hoverCell, r, gold } end
+		local previewCell = pending and pending.kind == "build" and pending.cell or hoverCell
+		if r and previewCell and Map.land[previewCell] then list[#list + 1] = { previewCell, r, gold } end
 	elseif mode == "weapon" and buildKind then
 		local w = Config.Weapons[buildKind]
 		if w.launcher == "airfield" then
@@ -231,7 +232,23 @@ local function handleClick(p, button)
 	end
 
 	if mode == "build" then
-		if buildKind then send(Actions.Build, cell, buildKind) else hud:toast("Escolha uma construção na lista.") end
+		if not buildKind then hud:toast("Escolha uma construção na lista.") return end
+		if not Map.land[cell] or owner ~= state.you then
+			hud:toast("Escolha uma célula do seu território.", "bad")
+			return
+		end
+		-- First tap previews the actual configured reach; second tap confirms placement.
+		-- Keep the selected position stable even if the camera moves between taps.
+		if pending and pending.kind == "build" and pending.buildKind == buildKind and pending.cell == cell then
+			send(Actions.Build, cell, buildKind)
+			pending = nil
+			updateRanges(cell)
+			hud:toast("Construção solicitada.")
+		else
+			pending = { kind = "build", buildKind = buildKind, cell = cell }
+			updateRanges(cell)
+			hud:toast("Área destacada. Toque novamente na mesma célula para construir.")
+		end
 		return
 	elseif mode == "patrol" then
 		if Map.land[cell] then hud:toast("Escolha um ponto na água para o barco patrulhar.", "bad") return end
@@ -384,7 +401,7 @@ task.spawn(function()
 		local phase = state.match.phase
 		local text
 		if mode == "build" then
-			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — clique numa célula sua · Esc sai") or "🏗 Escolha uma construção"
+			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — toque na sua terra para visualizar; toque de novo para construir") or "🏗 Escolha uma construção"
 		elseif mode == "weapon" then
 			text = buildKind and (Config.Weapons[buildKind].icon .. " Escolha o alvo · Esc cancela") or "💣 Escolha uma arma"
 		elseif mode == "patrol" then
