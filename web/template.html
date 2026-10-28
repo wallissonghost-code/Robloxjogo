@@ -1,0 +1,797 @@
+<title>Mundial War</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: the map is the whole screen; compact HUD panels sit on the edges like the Roblox client. */
+:root {
+  --ocean: #2e5c8a;
+  --panel: rgba(16, 22, 30, 0.88);
+  --panel-solid: #10161e;
+  --chip: #222c3a;
+  --chip-hover: #2e3b4e;
+  --ink: #eceef0;
+  --muted: #96a0ac;
+  --gold: #f0c45c;
+  --good: #6ec882;
+  --bad: #eb6e64;
+  --war: #ff8c6e;
+  --ui: "Montserrat", "Gotham", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--ocean); color: var(--ink); font-family: var(--ui); overflow: hidden; user-select: none; -webkit-user-select: none; }
+#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.panel { background: var(--panel); border-radius: 8px; backdrop-filter: blur(4px); }
+button { font: 700 13px var(--ui); color: var(--ink); background: var(--chip); border: 0; border-radius: 6px; cursor: pointer; }
+button:hover { background: var(--chip-hover); }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.num { font-variant-numeric: tabular-nums; }
+
+#card { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 300px; display: flex; gap: 10px; align-items: center; padding: 8px 10px 8px 8px; }
+#avatar { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 18px; border: 2px solid var(--ink); flex: none; background: #3c4654; }
+#card .lines { min-width: 0; display: grid; gap: 2px; font-size: 13px; }
+#card b { font-weight: 700; }
+#card .dim { color: var(--muted); font-weight: 500; }
+#pname { font-weight: 700; font-size: 14px; }
+
+#percent { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px; padding: 5px 6px; }
+#percent button { width: 48px; height: 30px; }
+#percent button.on { background: var(--gold); color: #1e180a; }
+#cancel { background: #6e2e2c !important; width: 40px !important; }
+
+#tools { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px; padding: 5px; }
+#tools button { width: 34px; height: 30px; font-size: 15px; }
+#tools button.active { background: #5c4a1e; }
+#tools button.danger.active { background: #78302c; }
+
+#tray, #wtray { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: 304px; padding: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#tray button, #wtray button { text-align: left; padding: 6px 8px; display: grid; gap: 2px; font-size: 12px; line-height: 1.2; }
+#tray button .cost, #wtray button .cost { font-size: 11px; color: var(--gold); font-weight: 600; }
+#tray button.poor, #wtray button.poor { opacity: 0.55; }
+#tray button.poor .cost, #wtray button.poor .cost { color: var(--muted); }
+#tray button.sel { background: #5c4a1e; }
+#wtray button.sel { background: #78302c; }
+.trayInfo { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-weight: 500; padding: 2px 2px 0; line-height: 1.4; }
+.trayInfo b { color: var(--ink); }
+
+#banner { position: fixed; left: 50%; transform: translateX(-50%); top: calc(10px + env(safe-area-inset-top, 0px)); padding: 7px 14px; font-weight: 700; font-size: 14px; color: var(--gold); white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+#toasts { position: fixed; left: 50%; transform: translateX(-50%); top: calc(48px + env(safe-area-inset-top, 0px)); display: grid; gap: 4px; justify-items: center; pointer-events: none; width: min(520px, calc(100vw - 32px)); }
+.toast { background: var(--panel-solid); border-radius: 6px; padding: 5px 10px; font-size: 13px; font-weight: 600; transition: opacity 0.4s; }
+.toast.good { color: var(--good); } .toast.bad { color: var(--bad); } .toast.war { color: var(--war); }
+
+#ranking { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); width: 220px; padding: 7px 9px; display: grid; gap: 2px; font-size: 12px; }
+#ranking .row { display: flex; gap: 6px; align-items: baseline; white-space: nowrap; overflow: hidden; }
+#ranking .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; align-self: center; }
+#ranking .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; font-weight: 600; }
+#ranking .nm.me { color: var(--gold); }
+#ranking .v { color: var(--muted); font-weight: 500; }
+
+#requests { position: fixed; right: calc(244px + env(safe-area-inset-right, 0px)); top: calc(10px + env(safe-area-inset-top, 0px)); width: 250px; display: grid; gap: 6px; }
+.req { padding: 8px 10px; display: grid; gap: 6px; font-size: 13px; font-weight: 700; }
+.req .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.req button { height: 26px; font-size: 12px; }
+.req .yes { background: #2e6e40; }
+
+#popover { position: fixed; width: 230px; padding: 9px 11px; display: grid; gap: 6px; z-index: 5; }
+#popTitle { font-weight: 700; font-size: 14px; }
+#popBody { font-size: 12px; color: var(--muted); font-weight: 500; line-height: 1.4; white-space: pre-line; }
+#popBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#popBtns button { height: 28px; font-size: 12px; }
+#popBtns button.danger { background: #78302c; }
+
+#center { position: fixed; left: 50%; top: 44%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); padding: 18px 20px; display: grid; gap: 10px; justify-items: center; text-align: center; z-index: 6; }
+#centerTitle { font-weight: 800; font-size: 26px; color: var(--gold); letter-spacing: 0.02em; }
+#centerBody { font-size: 14px; line-height: 1.5; font-weight: 500; text-align: left; }
+#centerBody p { margin: 0 0 6px; }
+#centerBody b { color: var(--gold); }
+#centerClose { height: 32px; padding: 0 22px; }
+
+#menu { position: fixed; left: 50%; top: 47%; transform: translate(-50%, -50%); width: min(620px, calc(100vw - 32px)); padding: 18px; display: grid; gap: 12px; z-index: 7; }
+#menu h1 { margin: 0; text-align: center; font-weight: 800; font-size: 28px; letter-spacing: 0.05em; color: var(--gold); }
+#menu .sub { text-align: center; color: var(--muted); font-size: 13px; font-weight: 500; }
+#modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.mode { background: #1c2634; border-radius: 8px; padding: 12px; display: grid; gap: 8px; align-content: start; border: 2px solid transparent; }
+.mode.voted { border-color: var(--gold); }
+.mode h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.mode p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); font-weight: 500; }
+.mode .votes { font-size: 12px; color: var(--gold); font-weight: 600; }
+.mode button { height: 32px; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--ocean); z-index: 10; }
+#loading .box { text-align: center; display: grid; gap: 8px; }
+#loading .t { font-weight: 800; font-size: 28px; letter-spacing: 0.04em; }
+#loading .s { color: #cfdae6; font-weight: 500; font-size: 14px; }
+
+@media (max-width: 1000px) {
+  #percent { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  #requests { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(220px + env(safe-area-inset-top, 0px)); }
+}
+@media (max-width: 640px) {
+  #card { width: 210px; }
+  #tools { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; width: 126px; }
+  #tray, #wtray { width: min(304px, calc(100vw - 24px)); bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
+  #ranking { width: 170px; }
+}
+@media (max-height: 460px) { #ranking { display: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<canvas id="map" aria-label="Mapa-múndi do Mundial War"></canvas>
+
+<div id="banner" class="panel" hidden></div>
+<div id="toasts"></div>
+<div id="ranking" class="panel"></div>
+<div id="requests"></div>
+
+<div id="card" class="panel">
+  <div id="avatar">V</div>
+  <div class="lines">
+    <div id="pname">Você</div>
+    <div id="troopsLine" class="num">👥 —</div>
+    <div id="goldLine" class="num">💰 —</div>
+  </div>
+</div>
+<div id="percent" class="panel"></div>
+<div id="tools" class="panel"></div>
+<div id="tray" class="panel" hidden></div>
+<div id="wtray" class="panel" hidden></div>
+<div id="popover" class="panel" hidden><div id="popTitle"></div><div id="popBody"></div><div id="popBtns"></div></div>
+<div id="menu" class="panel" hidden><h1>MUNDIAL WAR</h1><div class="sub" id="menuSub">Escolha o modo de jogo</div><div id="modes"></div></div>
+<div id="center" class="panel" hidden><div id="centerTitle"></div><div id="centerBody"></div><button id="centerClose">Jogar</button></div>
+<div id="loading"><div class="box"><div class="t">MUNDIAL WAR</div><div class="s" id="loadingText">Gerando o mundo e as nações…</div></div></div>
+
+<script>
+"use strict";
+const WORKER_SRC = /*__WORKER__*/"";
+const MAPDATA = /*__MAP__*/null;
+
+// ---------------------------------------------------------------- map geometry
+const W = MAPDATA.W, H = MAPDATA.H, N = W * H;
+const B62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const b62 = {}; for (let i = 0; i < 62; i++) b62[B62[i]] = i;
+const country = new Uint16Array(N + 1);
+for (let y = 0; y < H; y++) {
+  const row = MAPDATA.rows[y]; let x = 0;
+  for (let k = 0; k < row.length; k += 4) {
+    const id = b62[row[k]] * 62 + b62[row[k + 1]], len = b62[row[k + 2]] * 62 + b62[row[k + 3]];
+    for (let c = x; c < x + len; c++) country[y * W + c + 1] = id;
+    x += len;
+  }
+}
+const land = (i) => country[i] > 0;
+const landNear = new Uint8Array(N + 1);
+for (let i = 1; i <= N; i++) if (!land(i)) {
+  const x = (i - 1) % W;
+  if ((x > 0 && land(i - 1)) || (x < W - 1 && land(i + 1)) || (i > W && land(i - W)) || (i <= N - W && land(i + W))) landNear[i] = 1;
+}
+const latitude = [];
+{ const yTop = 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * 84 * Math.PI / 180)), span = 2 * Math.PI * H / W;
+  for (let y = 0; y < H; y++) { const my = yTop - (y + 0.5) / H * span; latitude[y] = (2.5 * Math.atan(Math.exp(0.8 * my)) - 0.625 * Math.PI) * 180 / Math.PI; } }
+const xy = (i) => [(i - 1) % W, Math.floor((i - 1) / W)];
+const dist = (a, b) => { const [ax, ay] = xy(a), [bx, by] = xy(b); return Math.hypot(ax - bx, ay - by); };
+
+// ---------------------------------------------------------------- client state (mirror of the server)
+const S = {
+  owner: new Int32Array(N + 1), nations: {}, buildings: new Map(), relations: {}, orders: [], fleets: {}, boats: {},
+  missiles: {}, match: { phase: "waiting", round: 0, left: 0 }, matchAt: 0, you: null, me: null, percent: 0.25,
+  config: null, palette: null, cpu: 0,
+};
+const relKey = (a, b) => a < b ? a + ":" + b : b + ":" + a;
+const relation = (a, b) => (a == null || b == null) ? "neutral" : a === b ? "self" : (S.relations[relKey(a, b)] || "neutral");
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const shade = (c, f) => c.map((v) => Math.max(0, Math.min(255, Math.floor(v * f))));
+const mix = (a, b, t) => a.map((v, k) => Math.floor(v + (b[k] - v) * t + 0.5));
+const nationColor = (id) => { const n = S.nations[id]; return n ? S.palette.Nations[n.color - 1] : S.palette.Neutral; };
+const fmtK = (n) => { n = Math.floor(n || 0); if (n >= 1e6) return (n / 1e6).toFixed(1) + "M"; if (n >= 1e4) return (n / 1e3).toFixed(1) + "K"; if (n >= 1e3) return (n / 1e3).toFixed(2) + "K"; return String(n); };
+const timeLeft = () => Math.max(0, (S.match.left || 0) - (performance.now() - S.matchAt) / 1000);
+
+// ---------------------------------------------------------------- territory image (one pixel per cell)
+const mapCanvas = document.createElement("canvas"); mapCanvas.width = W; mapCanvas.height = H;
+const mapCtx = mapCanvas.getContext("2d");
+const img = mapCtx.createImageData(W, H);
+let colors = {}, rowNeutral = [], dirty = new Set(), fullDirty = true;
+function recolor() {
+  colors = {};
+  for (const id in S.nations) { const base = nationColor(+id); colors[id] = { fill: base, border: shade(base, 0.58), line: shade(base, 0.9) }; }
+  for (let y = 0; y < H; y++) rowNeutral[y] = mix(S.palette.Neutral, S.palette.NeutralPolar, Math.max(0, Math.min(1, (Math.abs(latitude[y]) - 56) / 24)));
+}
+function cellColor(i) {
+  const o = S.owner[i], x = (i - 1) % W, P = S.palette;
+  if (o === -1) return landNear[i] ? P.WaterCoast : P.Water;
+  const c = country[i]; let otherOwner = false, otherCountry = false;
+  const check = (j) => { const oj = S.owner[j]; if (oj !== -1) { if (oj !== o) otherOwner = true; if (country[j] !== c) otherCountry = true; } };
+  if (x > 0) check(i - 1); if (x < W - 1) check(i + 1); if (i > W) check(i - W); if (i <= N - W) check(i + W);
+  if (o === 0) return otherCountry ? P.CountryLine : rowNeutral[Math.floor((i - 1) / W)];
+  const nc = colors[o]; if (!nc) return rowNeutral[Math.floor((i - 1) / W)];
+  return otherOwner ? nc.border : otherCountry ? nc.line : nc.fill;
+}
+function paintCell(i) { const c = cellColor(i), o = (i - 1) * 4; img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255; }
+function markAround(i) { dirty.add(i); const x = (i - 1) % W; if (x > 0) dirty.add(i - 1); if (x < W - 1) dirty.add(i + 1); if (i > W) dirty.add(i - W); if (i <= N - W) dirty.add(i + W); }
+function flushImage() {
+  if (fullDirty) { for (let i = 1; i <= N; i++) paintCell(i); fullDirty = false; dirty.clear(); mapCtx.putImageData(img, 0, 0); }
+  else if (dirty.size) { for (const i of dirty) paintCell(i); dirty.clear(); mapCtx.putImageData(img, 0, 0); }
+}
+
+// ---------------------------------------------------------------- camera
+const canvas = document.getElementById("map"), g = canvas.getContext("2d");
+const cam = { scale: 1, cx: W / 2, cy: H / 2 };
+let vw = innerWidth, vh = innerHeight, dpr = 1;
+const minScale = () => Math.min(vw / W, vh / H);
+const maxScale = () => Math.max(minScale() * 2, 28);
+function clampCam() {
+  cam.scale = Math.max(minScale(), Math.min(maxScale(), cam.scale));
+  const hw = vw / (2 * cam.scale), hh = vh / (2 * cam.scale);
+  cam.cx = hw * 2 >= W ? W / 2 : Math.max(hw, Math.min(W - hw, cam.cx));
+  cam.cy = hh * 2 >= H ? H / 2 : Math.max(hh, Math.min(H - hh, cam.cy));
+}
+function fit() { cam.scale = minScale(); cam.cx = W / 2; cam.cy = H / 2; clampCam(); }
+function resize() {
+  const wasFit = cam.scale <= minScale() + 1e-3;
+  vw = innerWidth; vh = innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
+  canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
+  if (wasFit) fit(); else clampCam();
+}
+const toScreen = (mx, my) => [vw / 2 + (mx - cam.cx) * cam.scale, vh / 2 + (my - cam.cy) * cam.scale];
+const toMap = (sx, sy) => [cam.cx + (sx - vw / 2) / cam.scale, cam.cy + (sy - vh / 2) / cam.scale];
+function screenToCell(sx, sy) { const [x, y] = toMap(sx, sy); const cx = Math.floor(x), cy = Math.floor(y); return (cx < 0 || cy < 0 || cx >= W || cy >= H) ? null : cy * W + cx + 1; }
+function zoomAt(sx, sy, f) {
+  const [mx, my] = toMap(sx, sy); const before = cam.scale;
+  cam.scale = Math.max(minScale(), Math.min(maxScale(), cam.scale * f));
+  if (cam.scale === before) return;
+  cam.cx = mx - (sx - vw / 2) / cam.scale; cam.cy = my - (sy - vh / 2) / cam.scale; clampCam();
+}
+function pan(dx, dy) { cam.cx -= dx / cam.scale; cam.cy -= dy / cam.scale; clampCam(); }
+const lod = () => { const z = cam.scale / minScale(); return z >= 4 ? 2 : z >= 1.6 ? 1 : 0; };
+const center = (i) => { const [x, y] = xy(i); return [x + 0.5, y + 0.5]; };
+
+// ---------------------------------------------------------------- drawing
+let aim = null; const flashes = [];
+function label(text, x, y, size, color, stroke, align) {
+  g.font = `700 ${size}px Montserrat, system-ui, sans-serif`; g.textAlign = align || "center"; g.textBaseline = "middle";
+  g.lineJoin = "round"; g.lineWidth = Math.max(2, size / 4); g.strokeStyle = stroke; g.strokeText(text, x, y); g.fillStyle = color; g.fillText(text, x, y);
+}
+function pill(text, x, y, size, bg, fg) {
+  g.font = `700 ${size}px Montserrat, system-ui, sans-serif`; const w = g.measureText(text).width + 12, h = size + 8;
+  g.fillStyle = bg; g.beginPath(); g.roundRect(x - w / 2, y - h, w, h, 4); g.fill();
+  g.fillStyle = fg; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, x, y - h / 2 + 0.5);
+}
+let t0frame = 0;
+function draw(now) {
+  if (!S.palette) return;
+  t0frame = performance.now();
+  flushImage();
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = rgb(S.palette ? S.palette.Water : [46, 92, 138]); g.fillRect(0, 0, vw, vh);
+  const [ox, oy] = toScreen(0, 0), s = cam.scale, level = lod();
+  g.imageSmoothingEnabled = false; g.drawImage(mapCanvas, ox, oy, W * s, H * s);
+  if (!S.config) return;
+  const onScreen = (sx, sy, m) => sx > -m && sy > -m && sx < vw + m && sy < vh + m;
+
+  // reach circles (build/bomb preview, selected building)
+  for (const r of ranges()) {
+    const [cx, cy] = toScreen(...center(r.cell));
+    g.fillStyle = r.color + "22"; g.strokeStyle = r.color; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(cx, cy, r.radius * s, 0, Math.PI * 2); g.fill(); g.stroke();
+  }
+  // structures
+  if (level >= 1) {
+    const size = Math.max(12, Math.min(26, s * 1.7));
+    for (const [cell, b] of S.buildings) {
+      const [mx, my] = center(cell), [sx, sy] = toScreen(mx, my); if (!onScreen(sx, sy, size)) continue;
+      g.fillStyle = b.off ? "#464646" : rgb(shade(nationColor(b.owner), 0.75)); g.beginPath(); g.roundRect(sx - size / 2, sy - size / 2, size, size, size * 0.3); g.fill();
+      g.strokeStyle = "rgba(255,255,255,0.8)"; g.lineWidth = 1; g.stroke();
+      g.font = `${Math.floor(size * 0.66)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillStyle = "#fff"; g.globalAlpha = b.off ? 0.5 : 1; g.fillText(S.config.Buildings[b.kind].icon, sx, sy + 1); g.globalAlpha = 1;
+      if (b.level > 1) {
+        const bs = Math.max(10, size * 0.55);
+        g.fillStyle = "#141a22"; g.beginPath(); g.roundRect(sx + size / 2 - bs * 0.7, sy + size / 2 - bs * 0.7, bs, bs, 3); g.fill();
+        g.fillStyle = "#f0c45c"; g.font = `800 ${Math.floor(bs * 0.75)}px Montserrat, sans-serif`; g.fillText(String(b.level), sx + size / 2 - bs * 0.2, sy + size / 2 - bs * 0.2 + 1);
+      }
+    }
+  }
+  // defence boats (always for our own; others once zoomed in)
+  for (const id in S.boats) {
+    const b = S.boats[id], mine = b.nation === S.you; if (!mine && level < 1) continue;
+    const [bx, by] = boatPos(b, t0frame), [sx, sy] = toScreen(bx, by), size = Math.max(14, Math.min(26, s * 1.8));
+    if (!onScreen(sx, sy, size)) continue;
+    if (mine && b.patrol) {
+      const [px, py] = toScreen(...center(b.patrol)); g.strokeStyle = rgb(nationColor(b.nation)); g.globalAlpha = 0.5; g.lineWidth = 1;
+      g.beginPath(); g.arc(px, py, (S.config.Naval.BoatOrbit + 1) * s, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+    }
+    if (selectedBoat === b.id) { g.strokeStyle = "#f0c45c"; g.lineWidth = 2; g.beginPath(); g.arc(sx, sy, size * 0.75, 0, Math.PI * 2); g.stroke(); }
+    g.font = `${size}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.fillText("🚢", sx, sy);
+    g.fillStyle = "#141a22"; g.fillRect(sx - size / 2, sy + size * 0.55, size, 4);
+    g.fillStyle = rgb(nationColor(b.nation)); g.fillRect(sx - size / 2, sy + size * 0.55, size * Math.max(0, Math.min(1, b.hp / S.config.Naval.BoatHealth)), 4);
+  }
+  // capitals
+  for (const id in S.nations) {
+    const n = S.nations[id]; if (!n.land) continue; const mine = +id === S.you; if (level < 1 && !mine) continue;
+    const [mx, my] = center(n.capital), [sx, sy] = toScreen(mx, my);
+    label("★", sx, sy, Math.max(10, Math.min(22, s * 1.6)), mine ? "#ffe278" : "#fff", "rgba(20,26,34,0.85)");
+  }
+  // fronts: arrow for our own orders, troops label at the active front
+  for (const o of S.orders) {
+    const [id, nation, target, troops, front, anchor, origin] = o; const mine = nation === S.you; const color = rgb(nationColor(nation));
+    if (mine && origin > 0) {
+      const [a1, a2] = toScreen(...center(origin)), [b1, b2] = toScreen(...center(anchor));
+      g.strokeStyle = color; g.globalAlpha = 0.8; g.lineWidth = 2; g.beginPath(); g.moveTo(a1, a2); g.lineTo(b1, b2); g.stroke(); g.globalAlpha = 1;
+      g.strokeStyle = color; g.lineWidth = 2; g.beginPath(); g.arc(b1, b2, 7, 0, Math.PI * 2); g.stroke();
+    }
+    if (front > 0 && (mine || level >= 1 || troops >= 5000)) {
+      const [fx, fy] = toScreen(center(front)[0], center(front)[1] - 0.6);
+      pill((target === 0 ? "➜ " : "⚔ ") + fmtK(troops), fx, fy, mine ? 13 : 11, mine ? "rgba(30,44,60,0.92)" : "rgba(20,26,34,0.8)", "#fff");
+    }
+  }
+  // fleets move between updates
+  const t = performance.now();
+  for (const id in S.fleets) {
+    const f = S.fleets[id], path = f.path; if (!path || !path.length) continue;
+    if (f.nation === S.you || level >= 1) {
+      g.strokeStyle = rgb(nationColor(f.nation)); g.globalAlpha = 0.65; g.lineWidth = 2; g.beginPath();
+      for (let k = 0; k < path.length; k += 6) { const [px, py] = toScreen(...center(path[k])); k ? g.lineTo(px, py) : g.moveTo(px, py); }
+      const [ex, ey] = toScreen(...center(path[path.length - 1])); g.lineTo(ex, ey); g.stroke(); g.globalAlpha = 1;
+    }
+    const progress = Math.min(path.length, f.progress + (t - f.t0) / 1000 * f.speed);
+    const k = Math.max(1, Math.floor(progress)), a = path[k - 1], b = path[Math.min(path.length - 1, k)];
+    const [ax, ay] = center(a), [bx, by] = center(b), fr = progress - k;
+    const [sx, sy] = toScreen(ax + (bx - ax) * fr, ay + (by - ay) * fr);
+    pill((f.air ? "🪂 " : "⛵ ") + fmtK(f.troops), sx, sy + 9, 12, "rgba(20,26,34,0.88)", "#fff");
+  }
+  // missiles
+  for (const id in S.missiles) {
+    const m = S.missiles[id]; const [ax, ay] = center(m.from), [bx, by] = center(m.to);
+    const d = Math.max(1, Math.hypot(bx - ax, by - ay)), k = Math.min(1, (m.progress + (t - m.t0) / 1000 * m.speed) / d);
+    const r = (S.config.Weapons[m.kind] || { radius: 3 }).radius * s;
+    const [tx, ty] = toScreen(bx, by); g.strokeStyle = "#e63c32"; g.lineWidth = 2; g.beginPath(); g.arc(tx, ty, r, 0, Math.PI * 2); g.stroke();
+    const [sx, sy] = toScreen(ax + (bx - ax) * k, ay + (by - ay) * k); label((S.config.Weapons[m.kind] || { icon: "✈" }).icon, sx, sy, 20, "#ffe678", "#000");
+  }
+  // fires spreading
+  for (const f of S.fires || []) {
+    const [fx, fy] = toScreen(...center(f[1])), r = f[2] * s, flick = 0.85 + 0.15 * Math.sin(t / 120 + f[0]);
+    const grad = g.createRadialGradient(fx, fy, 0, fx, fy, r);
+    grad.addColorStop(0, "rgba(255,210,80,0.75)"); grad.addColorStop(0.6, "rgba(255,110,30,0.55)"); grad.addColorStop(1, "rgba(200,40,20,0.15)");
+    g.globalAlpha = flick; g.fillStyle = grad; g.beginPath(); g.arc(fx, fy, r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+  }
+  // cargo ships carrying gold
+  for (const c of S.cargos || []) {
+    if (level < 1 && c[1] !== S.you) continue;
+    const [cx, cy] = toScreen(...center(c[2])), size = Math.max(10, Math.min(18, s * 1.3));
+    if (!onScreen(cx, cy, size)) continue;
+    g.font = `${size}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.fillText("🚤", cx, cy);
+  }
+  // impact flashes
+  for (let k = flashes.length - 1; k >= 0; k--) {
+    const f = flashes[k], age = (t - f.t0) / 900; if (age >= 1) { flashes.splice(k, 1); continue; }
+    const [fx, fy] = toScreen(...center(f.cell)); g.globalAlpha = 0.9 * (1 - age); g.fillStyle = f.stopped ? "#78c8ff" : "#ffd278";
+    g.beginPath(); g.arc(fx, fy, f.r * 1.2 * s * (0.3 + age), 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+  }
+  // nation names over the centre of their largest block
+  for (const id in S.nations) {
+    const n = S.nations[id]; if (!n.land) continue; const mine = +id === S.you;
+    const px = Math.sqrt(Math.max(1, n.labelSize || n.land)) * s, font = Math.max(9, Math.min(30, px * 0.16));
+    if (!(mine || (level === 0 && px > 30) || (level === 1 && px > 20) || level === 2)) continue;
+    const [mx, my] = center(n.labelCell || n.capital), [sx, sy] = toScreen(mx, my); if (!onScreen(sx, sy, 200)) continue;
+    const rel = relation(S.you, +id), prefix = rel === "ally" ? "🤝 " : rel === "war" ? "⚔ " : "";
+    g.font = `700 ${font}px Montserrat, system-ui, sans-serif`; const tw = g.measureText(prefix + n.name).width, av = font * 1.25;
+    const left = sx - (tw + av + 4) / 2;
+    g.fillStyle = rgb(nationColor(+id)); g.beginPath(); g.arc(left + av / 2, sy - font * 0.45, av / 2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = "#fff"; g.font = `800 ${font * 0.7}px Montserrat, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(Array.from(n.name)[0], left + av / 2, sy - font * 0.42);
+    label(prefix + n.name, left + av + 4, sy - font * 0.45, font, "#141a22", "rgba(245,242,232,0.85)", "left");
+    if (mine || level >= 1 || font >= 14) label(fmtK(n.troops), sx, sy + font * 0.75, Math.max(9, font * 0.85), "#141a22", "rgba(245,242,232,0.8)");
+  }
+  // aim preview for the two-click order
+  if (aim) {
+    const [bx, by] = toScreen(...center(aim.cell));
+    if (aim.from) { const [ax, ay] = toScreen(...center(aim.from)); g.strokeStyle = aim.color; g.lineWidth = 3; g.globalAlpha = 0.9; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.globalAlpha = 1; }
+    g.strokeStyle = aim.color; g.lineWidth = 2.5; g.beginPath(); g.arc(bx, by, 9, 0, Math.PI * 2); g.stroke();
+    pill(aim.text, bx, by - 14, 13, "rgba(20,26,34,0.92)", "#fff");
+  }
+}
+
+// ---------------------------------------------------------------- HUD
+const $ = (id) => document.getElementById(id);
+function toast(text, kind) {
+  if (!text) return; const box = $("toasts");
+  while (box.children.length >= 3) box.firstChild.remove();
+  const t = document.createElement("div"); t.className = "toast " + (kind || ""); t.textContent = text; box.appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 450); }, 4000);
+}
+function setPercent(p) { S.percent = p; for (const b of $("percent").querySelectorAll("button[data-p]")) b.classList.toggle("on", Math.abs(+b.dataset.p - p) < 1e-6); if (aim && aim.kind === "order") aimOrder(aim.cell); }
+let mode = null, buildKind = null, selectedCell = null, selectedBoat = null, hoverCell = null;
+// reach circles: building or bomb under the cursor, our defences while building, the selected building
+function ranges() {
+  const out = [], info = S.config.BuildingInfo;
+  if (mode === "build") {
+    for (const [cell, b] of S.buildings) if (b.owner === S.you && S.config.Buildings[b.kind].defensive) out.push({ cell, radius: info[b.kind].reach[b.level - 1], color: "#78c8ff" });
+    if (buildKind && hoverCell && land(hoverCell) && info[buildKind].reach[0] > 0) out.push({ cell: hoverCell, radius: info[buildKind].reach[0], color: "#f0c45c" });
+  } else if (mode === "weapon" && buildKind) {
+    const w = S.config.Weapons[buildKind];
+    if (w.launcher === "airfield") for (const [cell, b] of S.buildings) if (b.owner === S.you && b.kind === "airfield") out.push({ cell, radius: info.airfield.reach[b.level - 1], color: "#78c8ff" });
+    if (hoverCell) out.push({ cell: hoverCell, radius: w.radius, color: "#eb5a50" });
+  } else if (selectedCell && S.buildings.has(selectedCell)) {
+    const b = S.buildings.get(selectedCell), r = info[b.kind].reach[b.level - 1];
+    if (r > 0) out.push({ cell: selectedCell, radius: r, color: "#f0c45c" });
+  }
+  return out;
+}
+function setMode(m, kind) {
+  mode = m; buildKind = kind || null; aim = null; selectedCell = null; if (mode !== "patrol") selectedBoat = null;
+  $("tray").hidden = mode !== "build"; if (mode === "build") refreshTray();
+  $("wtray").hidden = mode !== "weapon"; if (mode === "weapon") refreshWeapons();
+  tools.build.classList.toggle("active", mode === "build"); tools.weapons.classList.toggle("active", mode === "weapon");
+}
+const tools = {};
+function buildHud() {
+  const pc = $("percent");
+  for (const p of S.config.TroopPercents) { const b = document.createElement("button"); b.dataset.p = p; b.textContent = Math.round(p * 100) + "%"; b.className = "num"; b.onclick = () => setPercent(p); pc.appendChild(b); }
+  const c = document.createElement("button"); c.id = "cancel"; c.textContent = "✖"; c.title = "Cancelar avanços"; c.hidden = true; c.onclick = () => send("cancel"); pc.appendChild(c);
+  for (const [k, icon, title, cls] of [["build", "🏗", "Construir (B)"], ["weapons", "💣", "Bombas e ataques", "danger"], ["ranking", "🏆", "Ranking"], ["fit", "🌍", "Ver o mundo (F)"], ["skip", "⏭", "Começar a guerra agora"], ["menu", "🎮", "Trocar de modo (nova partida)"], ["pause", "⏸", "Pausar"], ["help", "?", "Ajuda"]]) {
+    const b = document.createElement("button"); b.textContent = icon; b.title = title; b.setAttribute("aria-label", title); if (cls) b.classList.add(cls);
+    b.onclick = () => onTool(k); $("tools").appendChild(b); tools[k] = b;
+  }
+  tools.weapons.hidden = true;
+  const tray = $("tray");
+  for (const kind of S.config.BuildingOrder) {
+    const def = S.config.Buildings[kind]; const b = document.createElement("button"); b.dataset.kind = kind;
+    b.innerHTML = `<span>${def.icon} ${def.name}</span><span class="cost num"></span>`; b.onclick = () => setMode("build", buildKind === kind ? null : kind); tray.appendChild(b);
+  }
+  const info = document.createElement("div"); info.id = "trayInfo"; info.className = "trayInfo"; tray.appendChild(info);
+  const wtray = $("wtray");
+  for (const kind of S.config.WeaponOrder) {
+    const w = S.config.Weapons[kind]; const b = document.createElement("button"); b.dataset.kind = kind;
+    b.innerHTML = `<span>${w.icon} ${w.name}</span><span class="cost num"></span>`; b.onclick = () => setMode("weapon", buildKind === kind ? null : kind); wtray.appendChild(b);
+  }
+  const winfo = document.createElement("div"); winfo.id = "weaponInfo"; winfo.className = "trayInfo"; wtray.appendChild(winfo);
+  setPercent(S.config.DefaultTroopPercent);
+}
+function refreshTray() {
+  for (const b of $("tray").querySelectorAll("button[data-kind]")) {
+    const kind = b.dataset.kind, cost = S.me && S.me.costs ? S.me.costs[kind] : S.config.Buildings[kind].cost;
+    b.querySelector(".cost").textContent = "💰 " + fmtK(cost); b.classList.toggle("poor", !S.me || S.me.gold < cost); b.classList.toggle("sel", buildKind === kind);
+  }
+  if (buildKind) { const def = S.config.Buildings[buildKind]; $("trayInfo").innerHTML = `<b>${def.name}</b>: ${def.purpose}<br>${S.config.BuildingInfo[buildKind].lines[0]}`; }
+  else $("trayInfo").textContent = "Escolha uma construção para ver para que serve e o alcance no mapa; depois clique numa célula sua.";
+}
+function refreshWeapons() {
+  for (const b of $("wtray").querySelectorAll("button[data-kind]")) {
+    const kind = b.dataset.kind, w = S.config.Weapons[kind], cd = S.me && S.me.cooldowns ? S.me.cooldowns[w.launcher] : undefined;
+    const ready = cd != null, ok = ready && S.me.gold >= w.gold;
+    b.querySelector(".cost").textContent = !ready ? "requer " + S.config.Buildings[w.launcher].name : cd > 0 ? `recarga ${Math.ceil(cd)}s` : "💰 " + fmtK(w.gold);
+    b.classList.toggle("poor", !ok); b.classList.toggle("sel", buildKind === kind);
+  }
+  const w = buildKind && S.config.Weapons[buildKind];
+  $("weaponInfo").innerHTML = w ? `<b>${w.name}</b>: ${w.purpose} Raio ${w.radius}. Clique no alvo e confirme com um segundo clique.` : "Aviões saem da base aérea; bombas EMP, atômica e de hidrogênio, do silo.";
+}
+let paused = false;
+function onTool(k) {
+  if (k === "build") setMode(mode === "build" ? null : "build");
+  else if (k === "weapons") setMode(mode === "weapon" ? null : "weapon");
+  else if (k === "ranking") $("ranking").hidden = !$("ranking").hidden;
+  else if (k === "fit") fit();
+  else if (k === "skip") send("__skip");
+  else if (k === "menu") { setMode(null); send("__menu"); }
+  else if (k === "pause") { paused = !paused; worker.postMessage({ t: "pause", paused }); tools.pause.textContent = paused ? "▶" : "⏸"; tools.pause.title = paused ? "Continuar" : "Pausar"; toast(paused ? "Pausado" : "Continuando"); }
+  else if (k === "help") showHelp();
+}
+function refreshMe() {
+  const me = S.me;
+  if (!me || !S.you) { $("troopsLine").textContent = "👥 —"; $("goldLine").textContent = "💰 —"; $("cancel").hidden = true; return; }
+  $("troopsLine").innerHTML = `👥 <b>${fmtK(me.troops)}</b> <span class="dim">/ ${fmtK(me.max)}  +${fmtK(me.rate)}/s</span>`;
+  $("goldLine").innerHTML = me.mode === "extreme"
+    ? `💰 <b>${fmtK(me.gold)}</b> <span class="dim">+${fmtK(me.goldRate)}/s</span> 🛢 <b>${fmtK(me.oil)}</b> <span class="dim">+${fmtK(me.oilRate)}/s</span>`
+    : `💰 <b>${fmtK(me.gold)}</b> <span class="dim">+${fmtK(me.goldRate)}/s · ${(me.share * 100).toFixed(1)}%</span>`;
+  for (const b of $("tray").querySelectorAll("button[data-kind]")) { const m = S.config.Buildings[b.dataset.kind].mode; b.hidden = !!m && m !== me.mode; }
+  for (const b of $("wtray").querySelectorAll("button[data-kind]")) { const m = S.config.Weapons[b.dataset.kind].mode; b.hidden = !!m && m !== me.mode; }
+  $("avatar").style.background = rgb(nationColor(S.you));
+  const mine = S.orders.filter((o) => o[1] === S.you).length; $("cancel").hidden = mine === 0; $("cancel").textContent = mine > 1 ? "✖" + mine : "✖";
+  tools.weapons.hidden = !(me.cooldowns && (me.cooldowns.airfield != null || me.cooldowns.silo != null));
+  if (!$("tray").hidden) refreshTray();
+  if (!$("wtray").hidden) refreshWeapons();
+}
+function refreshRanking() {
+  const list = Object.values(S.nations).sort((a, b) => b.land - a.land).slice(0, 8);
+  $("ranking").innerHTML = list.map((n) => `<div class="row"><span class="sw" style="background:${rgb(nationColor(n.id))}"></span><span class="nm${n.id === S.you ? " me" : ""}">${n.name.replace(/</g, "&lt;")}</span><span class="v num">${(n.land / LANDCOUNT * 100).toFixed(1)}% · ${fmtK(n.troops)}</span></div>`).join("");
+}
+let LANDCOUNT = 1; for (let i = 1; i <= N; i++) if (land(i)) LANDCOUNT++;
+LANDCOUNT--;
+function showPopover(sx, sy, title, body, buttons) {
+  const p = $("popover"); $("popTitle").textContent = title; $("popBody").textContent = body || "";
+  const bb = $("popBtns"); bb.innerHTML = "";
+  for (const [text, fn, danger] of buttons || []) { const b = document.createElement("button"); b.textContent = text; if (danger) b.className = "danger"; b.onclick = () => { p.hidden = true; fn(); }; bb.appendChild(b); }
+  p.hidden = false; p.style.left = Math.max(8, Math.min(vw - 246, sx + 16)) + "px"; p.style.top = Math.max(50, Math.min(vh - 200, sy - 20)) + "px";
+}
+const hidePopover = () => { $("popover").hidden = true; };
+function showCenter(title, html, button) { $("centerTitle").textContent = title; $("centerBody").innerHTML = html; $("centerClose").textContent = button || "Fechar"; $("centerClose").hidden = button === false; $("center").hidden = false; }
+$("centerClose").onclick = () => { $("center").hidden = true; };
+function showHelp() {
+  showCenter("Mundial War", [
+    `<p><b>Objetivo:</b> dominar ${Math.round(S.config.VictoryPercent * 100)}% das terras do mundo.</p>`,
+    "<p><b>Começar:</b> clique numa terra livre, longe das capitais (★), para fundar sua nação.</p>",
+    "<p><b>Expandir e atacar:</b> escolha o % de tropas e clique no destino. A fronteira avança sozinha.</p>",
+    "<p><b>Construções:</b> 🏗 explica cada uma e mostra o alcance no mapa. Clique numa construção sua para melhorar até o nível 5.</p>",
+    "<p><b>Mar:</b> com um porto, clique numa costa do outro lado para invadir. No porto você compra barcos de defesa: clique no barco e depois na água para escolher a patrulha. Eles afundam barcos inimigos, atacam frotas e roubam ouro de portos em guerra.</p>",
+    "<p><b>Bombas:</b> 💣 aparece com base aérea ou silo: ataque aéreo, fragmentação, EMP, atômica, hidrogênio e Fim de Era (silo nível 5, várias ogivas que nenhuma antiaérea para). Confirme o alvo com um segundo clique.</p>",
+    "<p><b>Navios de carga:</b> seus portos mandam barcos 🚤 que voltam com ouro. Barcos de defesa capturam a carga de inimigos em guerra.</p>",
+    "<p><b>Conquista Extrema:</b> você governa um país inteiro. Libera muros, trincheiras, anti-naval, antiaérea de aviões, poços de petróleo, ponte aérea 🪂 (tropas de avião) e bomba de fogo 🔥.</p>",
+    "<p><b>Diplomacia:</b> clique numa nação (ou botão direito) para aliança ou guerra.</p>",
+    "<p><b>Câmera:</b> arraste, roda do mouse ou pinça, WASD. F mostra o mundo, Espaço vai para a capital, 1–5 muda o %, B constrói, Esc cancela.</p>",
+    `<p style="color:var(--muted)">Prévia no navegador: as regras são o mesmo código Lua do servidor Roblox; a tela imita o cliente do jogo.</p>`,
+  ].join(""), "Jogar");
+}
+
+// ---------------------------------------------------------------- mode menu (vote at the start of each round)
+let myVote = null;
+function buildMenu() {
+  const box = $("modes"); box.innerHTML = "";
+  for (const mode of S.config.ModeOrder) {
+    const def = S.config.Modes[mode];
+    const card = document.createElement("div"); card.className = "mode"; card.dataset.mode = mode;
+    card.innerHTML = `<h2>${def.icon} ${def.name}</h2><p>${def.description}</p><div class="votes num"></div><button>Jogar este modo</button>`;
+    card.querySelector("button").onclick = () => { myVote = mode; send("vote", mode); refreshMenu(); };
+    box.appendChild(card);
+  }
+  refreshMenu();
+}
+function refreshMenu() {
+  const show = S.match.phase === "vote" && !!S.config;
+  $("menu").hidden = !show; if (!show) return;
+  const left = timeLeft();
+  $("menuSub").textContent = left < 3600 ? `Escolha o modo de jogo · ${Math.ceil(left)}s` : "Escolha o modo de jogo";
+  for (const card of $("modes").children) {
+    const n = (S.match.votes && S.match.votes[card.dataset.mode]) || 0;
+    card.querySelector(".votes").textContent = n + (n === 1 ? " voto" : " votos");
+    card.classList.toggle("voted", myVote === card.dataset.mode);
+  }
+}
+
+// ---------------------------------------------------------------- talking to the simulation
+const worker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" })));
+function send(action, a, b, c) { worker.postMessage({ t: "cmd", action, a: a ?? null, b: b ?? null, c: c ?? null }); }
+
+function applyInit(d) {
+  S.owner.fill(0); for (let i = 1; i <= N; i++) S.owner[i] = land(i) ? 0 : -1;
+  let i = 1; for (let k = 0; k < d.owners.length; k += 2) { const v = d.owners[k], len = d.owners[k + 1]; for (let c = 0; c < len; c++) S.owner[i++] = v; }
+  S.nations = {}; for (const n of d.nations) { n.troops = 0; n.land = 0; n.labelCell = n.capital; n.labelSize = 1; S.nations[n.id] = n; }
+  S.buildings = new Map(); for (const b of d.buildings) S.buildings.set(b[0], { kind: b[1], owner: b[2], level: b[3] || 1, off: !!b[4] });
+  S.relations = {}; for (const r of d.relations) S.relations[relKey(r[0], r[1])] = r[2];
+  S.orders = []; S.fleets = {}; const now = performance.now();
+  for (const f of d.fleets || []) S.fleets[f[0]] = { nation: f[1], troops: f[2], path: f[3], speed: f[4], progress: f[6], air: !!f[7], t0: now };
+  S.boats = {}; setBoats(d.boats || []); S.missiles = {}; S.fires = d.fires || []; S.cargos = d.cargos || [];
+  for (const m of d.missiles || []) S.missiles[m[0]] = { kind: m[1], nation: m[2], from: m[3], to: m[4], speed: m[5], progress: m[6], t0: now };
+  onMatch(d.match); S.you = d.you ?? null; S.me = null; aim = null;
+  recolor(); fullDirty = true; refreshRanking(); refreshMe();
+}
+let lastPhase = null;
+function onMatch(m) {
+  if (!m) return;
+  if (m.phase === "vote" && S.match.phase !== "vote") myVote = null;
+  S.match = m; S.matchAt = performance.now();
+  if (m.phase === "ended" && m.winner && lastPhase !== "ended") {
+    const mine = m.winner.id === S.you;
+    showCenter(mine ? "VITÓRIA!" : "FIM DA PARTIDA", `<p style="text-align:center"><b>${m.winner.name}</b> conquistou ${(m.winner.share * 100).toFixed(1)}% do mundo.<br>Nova rodada em instantes.</p>`, false);
+  } else if (m.phase !== "ended" && lastPhase === "ended") $("center").hidden = true;
+  lastPhase = m.phase;
+}
+function applyEvent(e) {
+  const now = performance.now();
+  switch (e.k) {
+    case "notice": toast(e.text, e.kind); break;
+    case "nations":
+      if (e.add) { const n = e.add; n.troops = 0; n.land = 0; n.labelCell = n.capital; n.labelSize = 1; S.nations[n.id] = n; recolor(); }
+      if (e.remove != null) { if (S.you === e.remove) { S.you = null; S.me = null; toast("Sua nação caiu. Clique numa terra livre para recomeçar.", "bad"); } delete S.nations[e.remove]; recolor(); }
+      refreshRanking(); break;
+    case "diplomacy":
+      if (e.rel) { if (e.rel === "neutral") delete S.relations[relKey(e.a, e.b)]; else S.relations[relKey(e.a, e.b)] = e.rel; }
+      if (e.request != null) allianceRequest(e.request, e.expires); break;
+    case "match": onMatch({ phase: e.phase, round: e.round, left: e.left, winner: e.winner, mode: e.mode, votes: e.votes }); break;
+    case "impact":
+      if (e.launch) { const m = e.launch; S.missiles[m[0]] = { kind: m[1], nation: m[2], from: m[3], to: m[4], speed: m[5], progress: 0, t0: now }; }
+      if (e.hit) { delete S.missiles[e.hit[0]]; flashes.push({ cell: e.hit[2], stopped: e.hit[3], t0: now, r: (S.config.Weapons[e.hit[1]] || { radius: 3 }).radius }); }
+      break;
+    case "orders":
+      if (e.fleet) { const f = e.fleet; S.fleets[f[0]] = { nation: f[1], troops: f[2], path: f[3], speed: f[4], progress: 1, air: !!f[6], t0: now }; }
+      if (e.fleetEnd != null) delete S.fleets[e.fleetEnd];
+      break;
+  }
+}
+// boats glide between the 0.4 s updates: keep previous and next positions
+function setBoats(rows) {
+  const now = performance.now(), next = {};
+  for (const r of rows) {
+    const old = S.boats[r[0]];
+    const [px, py] = old ? boatPos(old, now) : [r[2], r[3]];
+    next[r[0]] = { id: r[0], nation: r[1], fx: px, fy: py, x: r[2], y: r[3], hp: r[4], patrol: r[5], level: r[6], t0: now };
+  }
+  S.boats = next;
+}
+function boatPos(b, now) { const t = Math.min(1, (now - b.t0) / 400); return [b.fx + (b.x - b.fx) * t, b.fy + (b.y - b.fy) * t]; }
+function allianceRequest(from, seconds) {
+  const n = S.nations[from]; if (!n) return;
+  const card = document.createElement("div"); card.className = "req panel";
+  card.innerHTML = `<div>🤝 ${n.name.replace(/</g, "&lt;")} propõe aliança</div><div class="btns"><button class="yes">Aceitar</button><button>Recusar</button></div>`;
+  card.querySelector(".yes").onclick = () => { card.remove(); send("ally", from); };
+  card.querySelectorAll("button")[1].onclick = () => { card.remove(); send("decline", from); };
+  $("requests").appendChild(card); setTimeout(() => card.remove(), (seconds || 30) * 1000);
+}
+function applyFrame(d) {
+  for (const e of d.events || []) applyEvent(e);
+  if (d.init) applyInit(d.init);
+  if (d.delta) {
+    const cells = d.delta.d; if (cells) for (let k = 0; k < cells.length; k += 2) { S.owner[cells[k]] = cells[k + 1]; markAround(cells[k]); }
+    if (d.delta.b) for (const b of d.delta.b) { if (b[1]) S.buildings.set(b[0], { kind: b[1], owner: b[2], level: b[3] || 1, off: !!b[4] }); else S.buildings.delete(b[0]); }
+  }
+  if (d.nations) {
+    for (const r of d.nations.list) { const n = S.nations[r[0]]; if (n) { n.troops = r[1]; n.land = r[2]; n.labelCell = r[3]; n.labelSize = r[4]; n.capital = r[5]; } }
+    onMatch(d.nations.match); refreshRanking();
+  }
+  if (d.orders) {
+    S.orders = d.orders.orders || []; setBoats(d.orders.boats || []); S.fires = d.orders.fires || []; S.cargos = d.orders.cargos || [];
+    const now = performance.now(); for (const r of d.orders.fleets || []) { const f = S.fleets[r[0]]; if (f) { f.troops = r[2]; f.progress = r[3]; f.t0 = now; } }
+  }
+  if (d.me) { S.me = d.me; if (S.you !== d.me.id) { S.you = d.me.id; } refreshMe(); }
+  S.cpu = d.cpu || 0;
+}
+let booted = false;
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.t === "error") { console.error(m.error); toast("Erro na simulação: " + m.error.slice(0, 120), "bad"); return; }
+  const d = JSON.parse(m.data);
+  if (m.t === "boot") {
+    S.palette = d.palette; S.config = d.config; buildHud(); applyInit(d.init); booted = true;
+    if (m.engine === "js") setTimeout(() => toast("Este navegador bloqueou o motor rápido (WebAssembly); a simulação pode ficar lenta.", "bad"), 500);
+    $("loading").hidden = true; resize(); fit(); buildMenu();
+  } else if (m.t === "frame") applyFrame(d);
+  else if (m.t === "reply") { if (d.msg) toast(d.msg, d.ok ? "good" : "bad"); }
+};
+worker.onerror = (e) => { $("loadingText").textContent = "Não foi possível iniciar a simulação: " + (e.message || "erro"); };
+worker.postMessage({ t: "start" });
+
+// ---------------------------------------------------------------- clicks: spawn, two-click orders, modes
+function nearestBorder(nid, cell) {
+  const [cx, cy] = xy(cell); let best = null, bd = Infinity;
+  for (let i = 1; i <= N; i++) if (S.owner[i] === nid) { const x = (i - 1) % W, y = (i - 1 - x) / W, d = (x - cx) ** 2 + (y - cy) ** 2; if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+const troopsToSend = () => S.me ? Math.floor(S.me.troops * S.percent) : 0;
+function aimOrder(cell) {
+  const o = S.owner[cell], rel = o > 0 ? relation(S.you, o) : "neutral";
+  let text, color = "#ffffff";
+  if (rel === "ally") { text = "Aliado: cancele a aliança para atacar"; color = "#78c8ff"; }
+  else if (o === 0) text = "Clique de novo: expandir com " + fmtK(troopsToSend());
+  else { text = "Clique de novo: atacar " + S.nations[o].name + " com " + fmtK(troopsToSend()); color = "#ff8c6e"; }
+  aim = { kind: "order", cell, at: performance.now(), from: nearestBorder(S.you, cell), text, color };
+}
+function nationPopover(sx, sy, id) {
+  const n = S.nations[id]; if (!n || id === S.you) return;
+  const rel = relation(S.you, id), relText = { ally: "🤝 Aliado", war: "⚔ Em guerra", neutral: "Neutro" }[rel] || rel;
+  const buttons = [];
+  if (S.you) {
+    if (rel === "ally") buttons.push(["Cancelar aliança", () => send("breakAlliance", id), true]);
+    else { buttons.push(["🤝 Aliança", () => send("ally", id)]); if (rel !== "war") buttons.push(["⚔ Guerra", () => send("war", id), true]); }
+  }
+  showPopover(sx, sy, n.name, `👥 ${fmtK(n.troops)} · ${(n.land / LANDCOUNT * 100).toFixed(1)}% do mundo\n${relText}`, buttons);
+}
+function handleClick(sx, sy, button) {
+  hidePopover(); if (!booted) return;
+  if (!mode) selectedCell = null;
+  const cell = screenToCell(sx, sy); if (!cell) return;
+  const owner = S.owner[cell], phase = S.match.phase, V = S.config.View;
+  if (button === 2) { if (owner > 0) nationPopover(sx, sy, owner); return; }
+  if (!S.you) {
+    if (phase === "spawn" || phase === "playing") { if (owner === -1) toast("Escolha uma célula de terra.", "bad"); else send("spawn", cell); }
+    else toast("Aguardando a próxima rodada.");
+    return;
+  }
+  if (mode === "build") { if (buildKind) send("build", cell, buildKind); else toast("Escolha uma construção na lista."); return; }
+  if (mode === "patrol") {
+    if (land(cell)) { toast("Escolha um ponto na água para o barco patrulhar.", "bad"); return; }
+    send("patrol", selectedBoat, cell); setMode(null); return;
+  }
+  if (mode === "weapon") {
+    if (!buildKind) { toast("Escolha uma arma na lista."); return; }
+    const w = S.config.Weapons[buildKind], now = performance.now();
+    if (aim && aim.kind === "weapon" && dist(aim.cell, cell) <= V.ConfirmRadius && now - aim.at <= V.ConfirmTimeout * 1000) { send("weapon", aim.cell, buildKind, S.percent); setMode(null); return; }
+    aim = { kind: "weapon", cell, at: now, text: `Clique de novo para lançar ${w.icon} ${w.name} · 💰 ${fmtK(w.gold)}`, color: "#ff5a50" };
+    return;
+  }
+  // clicking one of our boats selects it; the next click on the water sets its patrol
+  { const [mx, my] = toMap(sx, sy); let best = null, bd = Math.max(1.5, 12 / cam.scale) ** 2;
+    for (const id in S.boats) { const b = S.boats[id]; if (b.nation !== S.you) continue; const [bx, by] = boatPos(b, performance.now()); const d = (bx - mx) ** 2 + (by - my) ** 2; if (d <= bd) { bd = d; best = b; } }
+    if (best) { setMode("patrol"); selectedBoat = best.id; toast("Barco selecionado: clique na água onde ele deve patrulhar."); return; } }
+  if (owner === S.you) {
+    aim = null; const b = S.buildings.get(cell);
+    if (b) {
+      const def = S.config.Buildings[b.kind], info = S.config.BuildingInfo[b.kind];
+      let body = (b.off ? "⚡ Desligada por EMP.\n" : "") + def.purpose + "\n" + info.lines[b.level - 1];
+      const buttons = [], cost = info.upgrade[b.level - 1];
+      if (cost > 0) { body += `\nNível ${b.level + 1}: ${info.lines[b.level]}`; buttons.push([`⬆ Melhorar · 💰 ${fmtK(cost)}`, () => send("upgrade", cell)]); }
+      if (b.kind === "port") buttons.push([`🚢 Barco · 💰 ${fmtK(S.config.Naval.BoatGold)}`, () => send("warship", cell)]);
+      showPopover(sx, sy, `${def.icon} ${def.name} · Nível ${b.level}`, body, buttons);
+      selectedCell = cell;
+    }
+    return;
+  }
+  if (owner === -1) { aim = null; toast("Água não pode ser conquistada. Clique numa costa para invadir com um porto."); return; }
+  const now = performance.now();
+  if (!V.TwoClickConfirm || (aim && aim.kind === "order" && dist(aim.cell, cell) <= V.ConfirmRadius && now - aim.at <= V.ConfirmTimeout * 1000)) {
+    const target = aim ? aim.cell : cell; aim = null; send("target", target, S.percent); return;
+  }
+  aimOrder(cell);
+  if (owner > 0) nationPopover(sx, sy, owner);
+}
+
+// ---------------------------------------------------------------- input: drag, wheel, pinch, keys
+const pointers = new Map(); let press = null, pinch = null;
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("pointerdown", (e) => {
+  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) press = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, button: e.button === 2 ? 2 : 1 };
+  else if (pointers.size === 2) { press = null; const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "mouse") hoverCell = screenToCell(e.clientX, e.clientY);
+  if (!pointers.has(e.pointerId)) return; pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (pinch.d > 0) zoomAt(mx, my, d / pinch.d); pan(mx - pinch.mx, my - pinch.my); pinch = { d, mx, my };
+  } else if (press) {
+    const thr = (e.pointerType === "touch" ? 2 : 1) * (S.config ? S.config.View.DragThreshold : 6);
+    if (!press.moved && Math.hypot(e.clientX - press.x, e.clientY - press.y) > thr) press.moved = true;
+    if (press.moved) { pan(e.clientX - press.lx, e.clientY - press.ly); }
+    press.lx = e.clientX; press.ly = e.clientY;
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+  if (press && !press.moved && e.type === "pointerup") handleClick(e.clientX, e.clientY, press.button);
+  if (pointers.size === 0) press = null;
+}
+canvas.addEventListener("pointerup", endPointer); canvas.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+const keys = new Set();
+addEventListener("keydown", (e) => {
+  if (!booted) return; keys.add(e.code);
+  if (e.code === "Escape") { setMode(null); hidePopover(); if (S.match.phase !== "ended") $("center").hidden = true; }
+  else if (e.code === "KeyF" || e.code === "Home") fit();
+  else if (e.code === "KeyB") setMode(mode === "build" ? null : "build");
+  else if (e.code === "Space" && S.you && S.nations[S.you]) { e.preventDefault(); const [x, y] = center(S.nations[S.you].capital); cam.cx = x; cam.cy = y; cam.scale = Math.max(cam.scale, minScale() * 3); clampCam(); }
+  else if (/^Digit[1-5]$/.test(e.code)) setPercent(S.config.TroopPercents[+e.code.slice(5) - 1]);
+});
+addEventListener("keyup", (e) => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+addEventListener("resize", resize);
+
+// ---------------------------------------------------------------- loop
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  try { step(now); } catch (err) { console.error(err); }
+}
+function step(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  let dx = 0, dy = 0;
+  if (keys.has("KeyA") || keys.has("ArrowLeft")) dx += 1; if (keys.has("KeyD") || keys.has("ArrowRight")) dx -= 1;
+  if (keys.has("KeyW") || keys.has("ArrowUp")) dy += 1; if (keys.has("KeyS") || keys.has("ArrowDown")) dy -= 1;
+  if (dx || dy) pan(dx * 900 * dt, dy * 900 * dt);
+  if (keys.has("Equal") || keys.has("NumpadAdd")) zoomAt(vw / 2, vh / 2, 1 + 2 * dt);
+  if (keys.has("Minus") || keys.has("NumpadSubtract")) zoomAt(vw / 2, vh / 2, 1 - 1.5 * dt);
+  if (booted) {
+    if (aim && performance.now() - aim.at > S.config.View.ConfirmTimeout * 1000) aim = null;
+    let text = "";
+    if (mode === "build") text = buildKind ? `🏗 ${S.config.Buildings[buildKind].name}: clique numa célula sua · Esc sai` : "🏗 Escolha uma construção";
+    else if (mode === "weapon") text = buildKind ? `${S.config.Weapons[buildKind].icon} Escolha o alvo · Esc cancela` : "💣 Escolha uma arma";
+    else if (mode === "patrol") text = "🚢 Clique na água onde o barco deve patrulhar · Esc cancela";
+    else if (S.match.phase === "spawn") text = S.you ? `A guerra começa em ${Math.ceil(timeLeft())}s · ⏭ começa já`
+      : S.match.mode === "extreme" ? `🔥 Clique num país para governá-lo · ${Math.ceil(timeLeft())}s` : `Clique numa terra livre para fundar sua nação · ${Math.ceil(timeLeft())}s`;
+    else if (S.match.phase === "playing" && !S.you) text = S.match.mode === "extreme" ? "🔥 Clique num país controlado pela IA para governá-lo" : "Clique numa terra livre para fundar uma nova nação";
+    else if (S.match.phase === "vote") text = "";
+    $("banner").hidden = !text; $("banner").textContent = text;
+    tools.skip.hidden = S.match.phase !== "spawn";
+    refreshMenu();
+  }
+  draw(now);
+}
+resize();
+requestAnimationFrame(loop);
+</script>

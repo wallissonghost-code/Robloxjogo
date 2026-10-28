@@ -1,0 +1,9 @@
+{
+  "name": "mundial-war-preview",
+  "private": true,
+  "description": "Builds index.html: the browser preview running the real server Lua rules.",
+  "dependencies": {
+    "fengari-web": "0.1.4",
+    "wasmoon": "1.16.0"
+  }
+}

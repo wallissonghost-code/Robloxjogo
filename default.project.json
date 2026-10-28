@@ -1,17 +1,38 @@
 {
-  "name": "Robloxjogo",
+  "name": "MundialWar",
   "tree": {
     "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "MundialWarShared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "MundialWar": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "MundialWar": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Players": {
+      "$className": "Players",
+      "$properties": {
+        "CharacterAutoLoads": false
+      }
+    },
     "Workspace": {
       "$className": "Workspace",
-      "Baseplate": {
-        "$className": "Part",
-        "$properties": {
-          "Anchored": true,
-          "Size": [256, 1, 256],
-          "Position": [0, 0, 0],
-          "Material": "Grass"
-        }
+      "$properties": {
+        "StreamingEnabled": false
       }
     }
   }
