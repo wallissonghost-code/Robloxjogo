@@ -50,7 +50,7 @@ GameConfig.Spawn = {
 	BotStartTroops = 1500,
 	TribeStartTroops = 600,
 	StartRadius = 2,                   -- disc of cells owned at spawn
-	MinCapitalDistance = 5,           -- cells between capitals
+	MinCapitalDistance = 10,           -- cells between capitals
 }
 
 -- Troops and gold ----------------------------------------------------------
