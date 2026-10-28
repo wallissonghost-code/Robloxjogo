@@ -148,6 +148,16 @@ function HUD.new(state, gui, handlers)
 	self.tray, self.trayButtons, self.trayInfo = tray("BuildTray", self.Config.BuildingOrder, self.Config.Buildings, function(kind) self.h.onBuild(kind) end)
 	self.weaponTray, self.weaponButtons, self.weaponInfo = tray("WeaponTray", self.Config.WeaponOrder, self.Config.Weapons, function(kind) self.h.onWeapon(kind) end)
 
+	-- Placement controls remain visible after the construction tray closes.
+	self.placement = panel(gui, { Name = "BuildPlacement", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -72), Size = UDim2.fromOffset(280, 54), Visible = false, ZIndex = 50 })
+	make("UIStroke", self.placement, { Color = Color3.fromRGB(91, 114, 137), Transparency = 0.2, Thickness = 1 })
+	self.placementText = make("TextLabel", self.placement, { Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(160, 42), BackgroundTransparency = 1, Text = "Toque na sua terra", Font = BOLD, TextSize = 12, TextWrapped = true, TextColor3 = TEXT, ZIndex = 51 })
+	local cancelPlacement = button(self.placement, "✕", { Position = UDim2.fromOffset(177, 7), Size = UDim2.fromOffset(43, 40), TextSize = 21, ZIndex = 51, BackgroundColor3 = Color3.fromRGB(99, 48, 50) })
+	local confirmPlacement = button(self.placement, "✓", { Position = UDim2.fromOffset(226, 7), Size = UDim2.fromOffset(43, 40), TextSize = 21, ZIndex = 51, BackgroundColor3 = Color3.fromRGB(188, 138, 46) })
+	cancelPlacement.Activated:Connect(function() self.h.onPlacementCancel() end)
+	confirmPlacement.Activated:Connect(function() self.h.onPlacementConfirm() end)
+	self.placementConfirm = confirmPlacement
+
 	-- Top banner (phase / mode) and notices -------------------------------------------------
 	self.banner = panel(gui, { Name = "Banner", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 20, Visible = false })
 	make("UIPadding", self.banner, { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
@@ -337,6 +347,14 @@ function HUD:refreshWeapons()
 	local w = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
 	self.weaponInfo.Text = w and ("<b>" .. w.name .. "</b>: " .. w.purpose .. " Raio " .. w.radius .. ". Clique no alvo e confirme com um segundo clique.")
 		or "Escolha uma arma. Aviões saem da base aérea; bombas EMP, atômica e de hidrogênio, do silo."
+end
+
+function HUD:showPlacement(visible, kind, ready)
+	self.placement.Visible = visible
+	if not visible then return end
+	local def = kind and self.Config.Buildings[kind]
+	self.placementText.Text = (def and def.name or "Construção") .. (ready and "\nPosição selecionada" or "\nToque na sua terra")
+	self.placementConfirm.BackgroundColor3 = ready and Color3.fromRGB(188, 138, 46) or Color3.fromRGB(72, 77, 85)
 end
 
 function HUD:showWeapons(visible, selected)
