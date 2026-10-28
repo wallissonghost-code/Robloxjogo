@@ -6,6 +6,7 @@ on:
     paths:
       - "default.project.json"
       - "src/**"
+      - "Mundial_War (1).rbxlx"
       - ".github/workflows/publish-roblox.yml"
   workflow_dispatch:
 
@@ -35,6 +36,7 @@ jobs:
           grep -q '"DataModel"' default.project.json
 
       - name: Install Rojo 7.6.1
+        if: ${{ !hashFiles('Mundial_War (1).rbxlx') }}
         run: |
           set -euo pipefail
           ZIP=/tmp/rojo.zip
@@ -46,7 +48,20 @@ jobs:
           sudo install -m 0755 "$DIR/rojo" /usr/local/bin/rojo
           rojo --version
 
+      - name: Validate uploaded Roblox place
+        if: ${{ hashFiles('Mundial_War (1).rbxlx') != '' }}
+        run: |
+          set -euo pipefail
+          test -s "Mundial_War (1).rbxlx"
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("Mundial_War (1).rbxlx").getroot()
+          assert root.tag == "roblox", "Invalid Roblox XML place"
+          print("Roblox XML place validated")
+          PY
+
       - name: Build Roblox place
+        if: ${{ hashFiles('Mundial_War (1).rbxlx') == '' }}
         run: |
           set -euo pipefail
           mkdir -p build
@@ -60,11 +75,19 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$ROBLOX_API_KEY"
+          if [ -s "Mundial_War (1).rbxlx" ]; then
+            PLACE_FILE="Mundial_War (1).rbxlx"
+            CONTENT_TYPE="application/xml"
+          else
+            PLACE_FILE="build/game.rbxl"
+            CONTENT_TYPE="application/octet-stream"
+          fi
+          echo "Publishing place file: ${PLACE_FILE}"
           URL="https://apis.roblox.com/universes/v1/${ROBLOX_UNIVERSE_ID}/places/${ROBLOX_PLACE_ID}/versions?versionType=Published"
           RESPONSE=$(mktemp)
           trap 'rm -f "$RESPONSE"' EXIT
           for ATTEMPT in 1 2 3 4; do
-            HTTP_CODE=$(curl --silent --show-error --location --output "$RESPONSE" --write-out "%{http_code}" --request POST "$URL" --header "x-api-key: ${ROBLOX_API_KEY}" --header "Content-Type: application/octet-stream" --data-binary @build/game.rbxl)
+            HTTP_CODE=$(curl --silent --show-error --location --output "$RESPONSE" --write-out "%{http_code}" --request POST "$URL" --header "x-api-key: ${ROBLOX_API_KEY}" --header "Content-Type: ${CONTENT_TYPE}" --data-binary @"${PLACE_FILE}")
             BODY=$(cat "$RESPONSE")
             echo "Roblox publish attempt ${ATTEMPT}: HTTP ${HTTP_CODE}"
             echo "Roblox response: ${BODY}"
@@ -77,6 +100,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: roblox-game-place
-          path: build/game.rbxl
+          path: |
+            build/game.rbxl
+            Mundial_War (1).rbxlx
           if-no-files-found: error
           retention-days: 7
