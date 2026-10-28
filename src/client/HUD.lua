@@ -82,22 +82,19 @@ function HUD.new(state, gui, handlers)
 
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -66), Size = UDim2.fromOffset(300, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 30 })
-		make("UIPadding", t, { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
-		make("UIListLayout", t, { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
-		local grid = make("ScrollingFrame", t, { LayoutOrder = 1, BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 230), CanvasSize = UDim2.fromOffset(0, #order * 27 + 44), ScrollBarThickness = 3, ZIndex = 31 })
+		-- Single horizontal strip above the bottom HUD, with sideways scrolling.
+		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.fromOffset(760, 108), Visible = false, ZIndex = 30 })
+		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 7), Size = UDim2.new(1, -16, 0, 54), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 4, CanvasSize = UDim2.fromOffset(#order * 148 + 8, 0), ZIndex = 31 })
 		local buttons = {}
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { Position = UDim2.fromOffset((index % 2 == 0) and 134 or 0, (index - 1) * 27), Size = UDim2.fromOffset(136, 44), ZIndex = 31, TextSize = 12 })
+			local b = button(grid, "", { Position = UDim2.fromOffset((index - 1) * 148, 0), Size = UDim2.fromOffset(140, 46), ZIndex = 31, TextSize = 12 })
 			b.RichText = true
 			b.TextXAlignment = Enum.TextXAlignment.Left
 			make("UIPadding", b, { PaddingLeft = UDim.new(0, 8) })
-			-- Alternating indentation produces a staggered/diagonal menu, not a vertical list.
 			b.Activated:Connect(function() onPick(kind) end)
 			buttons[kind] = b
 		end
-		local info = make("TextLabel", t, { LayoutOrder = 2, BackgroundTransparency = 1, TextColor3 = MUTED, Font = FONT, TextSize = 12, TextWrapped = true, RichText = true,
-			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Text = "", ZIndex = 31 })
+		local info = make("TextLabel", t, { Position = UDim2.fromOffset(10, 66), Size = UDim2.new(1, -20, 0, 34), BackgroundTransparency = 1, TextColor3 = MUTED, Font = FONT, TextSize = 11, TextWrapped = true, RichText = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 31, Text = "" })
 		return t, buttons, info
 	end
 	self.tray, self.trayButtons, self.trayInfo = tray("BuildTray", self.Config.BuildingOrder, self.Config.Buildings, function(kind) self.h.onBuild(kind) end)
@@ -145,6 +142,9 @@ function HUD.new(state, gui, handlers)
 		local narrow = gui.AbsoluteSize.X < 1000
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 740)
+		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
+		self.tray.Size = UDim2.fromOffset(trayWidth, 108)
+		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 108)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
