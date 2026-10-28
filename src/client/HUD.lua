@@ -16,32 +16,9 @@ local ACCENT = Color3.fromRGB(240, 196, 92)
 local GOOD = Color3.fromRGB(110, 200, 130)
 local BAD = Color3.fromRGB(235, 110, 100)
 
+local CityModel = require(script.Parent.CityModel)
 local function cityArt(parent, z)
-	local art = Instance.new("Frame")
-	art.Name = "CityArt"
-	art.BackgroundTransparency = 1
-	art.Size = UDim2.fromScale(1, 1)
-	art.ZIndex = z
-	art.Parent = parent
-	local function block(x, y, w, h, color)
-		local part = Instance.new("Frame")
-		part.BorderSizePixel = 0
-		part.BackgroundColor3 = color
-		part.Position = UDim2.fromScale(x, y)
-		part.Size = UDim2.fromScale(w, h)
-		part.ZIndex = z + 1
-		part.Parent = art
-		return part
-	end
-	block(0.08, 0.81, 0.84, 0.11, Color3.fromRGB(87, 106, 113))
-	block(0.14, 0.38, 0.23, 0.44, Color3.fromRGB(100, 140, 162))
-	block(0.38, 0.12, 0.26, 0.70, Color3.fromRGB(66, 98, 129))
-	block(0.66, 0.48, 0.20, 0.34, Color3.fromRGB(126, 153, 169))
-	block(0.48, 0.04, 0.055, 0.09, Color3.fromRGB(175, 194, 203))
-	for _, spec in ipairs({ {0.19,0.46},{0.28,0.46},{0.19,0.60},{0.28,0.60},{0.43,0.24},{0.54,0.24},{0.43,0.40},{0.54,0.40},{0.43,0.56},{0.54,0.56},{0.71,0.57},{0.79,0.57} }) do
-		block(spec[1], spec[2], 0.045, 0.065, Color3.fromRGB(255, 208, 115))
-	end
-	return art
+	return CityModel.attach(parent, z)
 end
 
 local function make(class, parent, props)
