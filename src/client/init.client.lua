@@ -102,6 +102,25 @@ local selectedCell = nil  -- own building whose reach is being shown
 local pending = nil       -- { cell, at, kind }
 local hud
 local myVote = nil
+local spawnSelection = nil
+local spawnButton = Instance.new("TextButton")
+spawnButton.Name = "ConfirmSpawn"
+spawnButton.AnchorPoint = Vector2.new(0.5, 1)
+spawnButton.Position = UDim2.fromScale(0.5, 0.91)
+spawnButton.Size = UDim2.fromOffset(210, 46)
+spawnButton.BackgroundColor3 = Color3.fromRGB(45, 116, 77)
+spawnButton.TextColor3 = Color3.new(1, 1, 1)
+spawnButton.Font = Enum.Font.GothamBold
+spawnButton.TextSize = 16
+spawnButton.Text = "CONFIRMAR CAPITAL"
+spawnButton.Visible = false
+spawnButton.Parent = gui
+Instance.new("UICorner", spawnButton).CornerRadius = UDim.new(0, 10)
+spawnButton.Activated:Connect(function()
+	if spawnSelection and state.match.phase == "spawn" and not state.you then
+		send(Actions.Spawn, spawnSelection)
+	end
+end)
 
 local function clearAim()
 	pending = nil
@@ -219,7 +238,14 @@ local function handleClick(p, button)
 	if not state.you then
 		if phase == "spawn" or phase == "playing" then
 			if owner == -1 then hud:toast("Escolha uma célula de terra.", "bad") return end
-			send(Actions.Spawn, cell)
+			if phase == "spawn" then
+				spawnSelection = cell
+				spawnButton.Visible = true
+				overlay:setAim(nil, cell, "Capital selecionada · confirme ou escolha outro local", Color3.fromRGB(90, 240, 150))
+				send(Actions.SelectSpawn, cell)
+			else
+				send(Actions.Spawn, cell)
+			end
 		else
 			hud:toast("Aguardando a próxima rodada.")
 		end
@@ -378,6 +404,11 @@ InputController.new(camera, Config, {
 task.spawn(function()
 	while gui.Parent do
 		local phase = state.match.phase
+		spawnButton.Visible = phase == "spawn" and not state.you and spawnSelection ~= nil
+		if not spawnButton.Visible and spawnSelection then
+			spawnSelection = nil
+			overlay:setAim(nil, nil)
+		end
 		local text
 		if mode == "build" then
 			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — clique numa célula sua · Esc sai") or "🏗 Escolha uma construção"
@@ -390,7 +421,7 @@ task.spawn(function()
 			if state.match.mode == "extreme" then
 				text = state.you and ("A guerra começa em " .. left .. "s") or ("🔥 Clique num país para governá-lo · " .. left .. "s")
 			else
-				text = state.you and ("A guerra começa em " .. left .. "s") or ("Clique numa terra livre para fundar sua nação · " .. left .. "s")
+				text = state.you and ("A guerra começa em " .. left .. "s") or ("Escolha a capital e confirme · " .. left .. "s · sem confirmar: local aleatório")
 			end
 		elseif phase == "playing" and not state.you then
 			text = state.match.mode == "extreme" and "🔥 Clique num país controlado pela IA para governá-lo"
@@ -420,6 +451,8 @@ local function onMatch(match)
 		hud:hideCenter()
 	end
 	if lastRound and match.round ~= lastRound then
+		spawnSelection = nil
+		spawnButton.Visible = false
 		clearAim()
 		setMode(nil)
 		myVote = nil
