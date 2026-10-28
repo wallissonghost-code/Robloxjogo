@@ -373,6 +373,13 @@ hud = HUD.new(state, gui, {
 		elseif name == "help" then hud:showCenter("Mundial War", helpText, true) end
 	end,
 	onBuild = function(kind)
+		local me = state.me
+		local def = Config.Buildings[kind]
+		local cost = def and (me and me.costs and me.costs[kind] or def.cost or def.gold or 0) or math.huge
+		if not me or (me.gold or 0) < cost then
+			hud:toast("Ouro insuficiente para construir! Precisa de " .. Protocol.formatK(cost) .. " ouro.", "bad")
+			return
+		end
 		if buildKind == kind then setMode("build", nil) else setMode("build", kind) end
 	end,
 	onPlacementCancel = function()
