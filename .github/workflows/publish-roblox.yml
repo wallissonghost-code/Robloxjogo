@@ -87,7 +87,12 @@ jobs:
           set -euo pipefail
           go install github.com/anaminus/rbxmk/rbxmk@v0.9.1
           mkdir -p build
-          printf '%s\n' 'local place = fs.read("Mundial_War (1).rbxlx", "rbxlx")' 'assert(place, "Could not decode Roblox XML place")' 'fs.write("build/game.rbxl", place, "rbxl")' | "$(go env GOPATH)/bin/rbxmk" run -
+          cat > convert-place.lua <<'LUA'
+          local place = fs.read("Mundial_War (1).rbxlx", "rbxlx")
+          assert(place, "Could not decode Roblox XML place")
+          fs.write("build/game.rbxl", place, "rbxl")
+          LUA
+          "$(go env GOPATH)/bin/rbxmk" run --include-root . convert-place.lua
           test -s build/game.rbxl
           file build/game.rbxl
           ls -lh build/game.rbxl
