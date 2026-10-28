@@ -36,7 +36,7 @@ jobs:
           grep -q '"DataModel"' default.project.json
 
       - name: Install Rojo 7.6.1
-        if: ${{ !hashFiles('Mundial_War (1).rbxlx') }}
+        if: ${{ hashFiles('Mundial_War (1).rbxlx') == '' }}
         run: |
           set -euo pipefail
           ZIP=/tmp/rojo.zip
