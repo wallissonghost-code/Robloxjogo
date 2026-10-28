@@ -53,21 +53,7 @@ function HUD.new(state, gui, handlers)
 	self.Config, self.Protocol = state.Config, state.Protocol
 	local player = Players.LocalPlayer
 
-	-- Player card (bottom-left) ----------------------------------------------------
-	local card = panel(gui, { Name = "PlayerCard", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.fromOffset(238, 64), ZIndex = 20 })
-	local avatar = make("ImageLabel", card, { Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(48, 48), BackgroundColor3 = Color3.fromRGB(60, 70, 84), BorderSizePixel = 0, ZIndex = 21 })
-	make("UICorner", avatar, { CornerRadius = UDim.new(1, 0) })
-	self.avatarStroke = make("UIStroke", avatar, { Thickness = 2, Color = TEXT })
-	task.spawn(function()
-		local ok, url = pcall(function()
-			return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-		end)
-		if ok then avatar.Image = url end
-	end)
-	make("TextLabel", card, { Position = UDim2.fromOffset(64, 6), Size = UDim2.new(1, -70, 0, 18), BackgroundTransparency = 1, Font = BOLD, TextSize = 14, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = player.DisplayName, ZIndex = 21 })
-	self.troopsText = make("TextLabel", card, { Position = UDim2.fromOffset(64, 25), Size = UDim2.new(1, -70, 0, 17), BackgroundTransparency = 1, Font = FONT, TextSize = 13, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Text = "👥 —", ZIndex = 21 })
-	self.goldText = make("TextLabel", card, { Position = UDim2.fromOffset(64, 43), Size = UDim2.new(1, -70, 0, 16), BackgroundTransparency = 1, Font = FONT, TextSize = 13, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Text = "💰 —", ZIndex = 21 })
-
+	-- Player identity is displayed on the map by OverlayRenderer, not in the HUD.
 	-- Troop percentage (bottom-centre) ------------------------------------------------
 	local bar = panel(gui, { Name = "Percent", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X, ZIndex = 20 })
 	self.percentBar = bar
@@ -79,7 +65,7 @@ function HUD.new(state, gui, handlers)
 		b.Activated:Connect(function() self.h.onPercent(p) end)
 		self.percentButtons[p] = b
 	end
-	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(40, 30), LayoutOrder = 10, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21 })
+	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(40, 30), LayoutOrder = 10, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21, Visible = false })
 	self.cancelButton.Activated:Connect(function() self.h.onCancel() end)
 
 	-- Tools (bottom-right) ---------------------------------------------------------------
@@ -87,17 +73,14 @@ function HUD.new(state, gui, handlers)
 	make("UIListLayout", tools, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder })
 	make("UIPadding", tools, { PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) })
 	self.tools = {}
-	local toolList = {
-		{ "build", "🏗", "Construir" }, { "weapons", "💣", "Bombas e ataques" },
-		{ "ranking", "🏆", "Ranking" }, { "fit", "🌍", "Ver o mundo" }, { "mapmode", "🗺", "Trocar modo do mapa" }, { "help", "?", "Ajuda" },
-	}
+	local toolList = { { "build", "🏗", "Construir" } }
 	for index, t in ipairs(toolList) do
 		local b = button(tools, t[2], { Size = UDim2.fromOffset(34, 30), LayoutOrder = index, TextSize = 16, ZIndex = 21 })
 		b.Activated:Connect(function() self.h.onTool(t[1]) end)
 		self.tools[t[1]] = b
 	end
 	-- weapons appear only after building an air base or a silo
-	self.tools.weapons.Visible = false
+	-- Weapons remain in the game systems; only the build control is shown.
 
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
@@ -112,6 +95,7 @@ function HUD.new(state, gui, handlers)
 			b.RichText = true
 			b.TextXAlignment = Enum.TextXAlignment.Left
 			make("UIPadding", b, { PaddingLeft = UDim.new(0, 8) })
+			-- Alternating indentation produces a staggered/diagonal menu, not a vertical list.
 			b.Activated:Connect(function() onPick(kind) end)
 			buttons[kind] = b
 		end
@@ -130,7 +114,7 @@ function HUD.new(state, gui, handlers)
 	make("UIListLayout", self.toasts, { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder })
 
 	-- Ranking (top-right) and alliance requests ---------------------------------------------------
-	self.ranking = panel(gui, { Name = "Ranking", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(210, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 20 })
+	self.ranking = panel(gui, { Visible = false, Name = "Ranking", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(210, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 20 })
 	make("UIPadding", self.ranking, { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
 	make("UIListLayout", self.ranking, { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder })
 	self.rankRows = {}
@@ -162,8 +146,8 @@ function HUD.new(state, gui, handlers)
 	-- narrow screens (phones/tablets): lift the percentage bar above the player card
 	local function layout()
 		local narrow = gui.AbsoluteSize.X < 1000
-		bar.Position = narrow and UDim2.new(0.5, 0, 1, -84) or UDim2.new(0.5, 0, 1, -12)
-		if gui.AbsoluteSize.Y <= 420 then self.ranking.Visible = false end
+		bar.Position = UDim2.new(0.5, 0, 1, -12)
+		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
 	layout()
@@ -238,15 +222,8 @@ function HUD:refreshMe()
 	local me = state.me
 	local F = self.Protocol.formatK
 	if not me or not state.you then
-		self.troopsText.Text = "👥 —"
-		self.goldText.Text = "💰 —"
 		self.cancelButton.Visible = false
 		return
-	end
-	self.troopsText.Text = string.format("👥 <b>%s</b> <font color=\"#96a0ac\">/ %s  +%s/s</font>", F(me.troops), F(me.max), F(me.rate))
-	self.goldText.Text = string.format("💰 <b>%s</b> <font color=\"#96a0ac\">+%s/s · %.1f%% do mundo</font>", F(me.gold), F(me.goldRate), me.share * 100)
-	if me.mode == "extreme" then
-		self.goldText.Text = string.format("💰 <b>%s</b> <font color=\"#96a0ac\">+%s/s</font>  🛢 <b>%s</b> <font color=\"#96a0ac\">+%s/s</font>", F(me.gold), F(me.goldRate), F(me.oil), F(me.oilRate))
 	end
 	-- show only what exists in the current mode
 	for kind, b in pairs(self.trayButtons) do
@@ -257,7 +234,6 @@ function HUD:refreshMe()
 		local m = self.Config.Weapons[kind].mode
 		b.Visible = m == nil or m == me.mode
 	end
-	self.avatarStroke.Color = rgb(state:nationColor(state.you))
 	local mine = 0
 	for _, o in ipairs(state.orders) do
 		if o[2] == state.you then mine = mine + 1 end
@@ -265,7 +241,6 @@ function HUD:refreshMe()
 	self.cancelButton.Visible = mine > 0
 	self.cancelButton.Text = mine > 1 and ("✖" .. mine) or "✖"
 	-- weapons only once something can launch them
-	self.tools.weapons.Visible = me.cooldowns ~= nil and (me.cooldowns.airfield ~= nil or me.cooldowns.silo ~= nil)
 	if self.tray.Visible then self:refreshTray() end
 	if self.weaponTray.Visible then self:refreshWeapons() end
 end
