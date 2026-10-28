@@ -149,6 +149,12 @@ updateRanges = function(cell)
 		if r then list[#list + 1] = { selectedCell, r, gold } end
 	end
 	overlay:setRanges(list)
+	local previewCell = pending and pending.kind == "build" and pending.cell
+	if mode == "build" and buildKind and previewCell and Map.land[previewCell] and state.owner[previewCell] == state.you then
+		overlay:setBuildingPreview(previewCell, buildKind)
+	else
+		overlay:setBuildingPreview(nil, nil)
+	end
 end
 
 local function nationName(id)
