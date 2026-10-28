@@ -35,6 +35,14 @@ local world = World.new({
 	},
 })
 
+world.ctx.connectedPlayers = function()
+	local result = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		result[#result + 1] = { userId = player.UserId, name = player.DisplayName }
+	end
+	return result
+end
+
 NetworkService.start(world)
 
 -- Tell clients whether image APIs are allowed here (the image map mode needs them).
