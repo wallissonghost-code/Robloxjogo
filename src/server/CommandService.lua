@@ -51,6 +51,21 @@ function CommandService.handle(userId, displayName, action, a, b, clock, c)
 		return ctx.Match.vote(userId, a)
 	end
 
+	if action == A.SelectSpawn then
+		if nid then return false, "Você já tem uma nação." end
+		if ctx.Match.phase() ~= "spawn" then return false, "A seleção terminou." end
+		if not isInt(a) or not Map:valid(a) then return false, "Célula inválida." end
+		if ctx.mode == "extreme" then
+			local nationAt = ctx.Nations.atCell and ctx.Nations.atCell(a)
+			-- Country ownership is validated again by takeover on confirmation.
+			if not Map.land[a] then return false, "Escolha um país em terra." end
+		else
+			local ok, why = ctx.Nations.canSpawnAt(a)
+			if not ok then return false, why end
+		end
+		return true, "Local selecionado. Confirme antes do tempo acabar."
+	end
+
 	if action == A.Spawn then
 		if nid then return false, "Você já tem uma nação." end
 		if not ctx.Match.canSpawn() then return false, "Não é possível fundar uma nação agora." end
