@@ -74,6 +74,18 @@ function NationService.canSpawnAt(cell)
 			return false, "Muito perto da capital de " .. n.name .. "."
 		end
 	end
+	local clearance = ctx.Config.Spawn.MinTerritoryDistance or 3
+	local radius = ctx.Config.Spawn.StartRadius + clearance
+	local occupied = false
+	Map:disc(cell, radius, function(i)
+		if Territory.ownerOf(i) > 0 then
+			occupied = true
+			return true
+		end
+	end)
+	if occupied then
+		return false, "Muito perto de um territorio ocupado."
+	end
 	return true
 end
 
