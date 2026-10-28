@@ -427,6 +427,27 @@ function OverlayRenderer:flash(kind, cell, stopped)
 	tween.Completed:Connect(function() ring:Destroy() end)
 end
 
+-- A temporary structure marker is separate from replicated, completed buildings.
+-- Show it even for structures without a defensive radius (city, factory, etc.).
+function OverlayRenderer:setBuildingPreview(cell, kind)
+	if not cell or not kind or not self.Config.Buildings[kind] then
+		if self.buildingPreview then self.buildingPreview.Visible = false end
+		return
+	end
+	if not self.buildingPreview then
+		local icon = make("TextLabel", self.layer, { Name = "BuildingPlacementPreview", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(23, 32, 42), BackgroundTransparency = 0.18, TextColor3 = Color3.fromRGB(255, 226, 142), Font = FONT, TextScaled = true, ZIndex = 12 })
+		make("UICorner", icon, { CornerRadius = UDim.new(0.25, 0) })
+		make("UIStroke", icon, { Color = Color3.fromRGB(255, 209, 97), Thickness = 2, Transparency = 0.1 })
+		self.buildingPreview = icon
+	end
+	local icon = self.buildingPreview
+	icon.Text = self.Config.Buildings[kind].icon
+	icon.Position = self:pos(cell)
+	local size = math.clamp(self.camera.scale * 0.65, 24, 46)
+	icon.Size = UDim2.fromOffset(size, size)
+	icon.Visible = true
+end
+
 -- Reach circles: { { cell, radius, color } } (build preview, selected building, own defences).
 function OverlayRenderer:setRanges(list)
 	self.rangeItems = self.rangeItems or {}
