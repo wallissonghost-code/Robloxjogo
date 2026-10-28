@@ -48,6 +48,18 @@ jobs:
           sudo install -m 0755 "$DIR/rojo" /usr/local/bin/rojo
           rojo --version
 
+      - name: Inspect uploaded place contents
+        if: ${{ hashFiles('Mundial_War (1).rbxlx') != '' }}
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("Mundial_War (1).rbxlx").getroot()
+          names = {i.findtext("./Properties/string[@name='Name']") for i in root.iter("Item")}
+          for required in ("MundialWarShared", "MundialWar", "StarterPlayerScripts", "ServerScriptService"):
+              assert required in names, f"Missing required instance: {required}"
+          print("Game systems found in uploaded place")
+          PY
+
       - name: Validate uploaded Roblox place
         if: ${{ hashFiles('Mundial_War (1).rbxlx') != '' }}
         run: |
