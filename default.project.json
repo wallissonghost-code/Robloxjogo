@@ -2,17 +2,6 @@
   "name": "Robloxjogo",
   "tree": {
     "$className": "DataModel",
-    "ReplicatedStorage": {
-      "Shared": { "$path": "src/shared" }
-    },
-    "ServerScriptService": {
-      "GameServer": { "$path": "src/server" }
-    },
-    "StarterPlayer": {
-      "StarterPlayerScripts": {
-        "WorldMap": { "$path": "src/client" }
-      }
-    },
     "Workspace": {
       "$className": "Workspace",
       "Baseplate": {
