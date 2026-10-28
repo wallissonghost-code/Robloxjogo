@@ -179,12 +179,16 @@ local function nationPopover(screenPos, id)
 	local buttons = {}
 	if state.you then
 		if rel == "ally" then
-			buttons[#buttons + 1] = { "Cancelar aliança", function() send(Actions.BreakAlliance, id) end, true }
+			buttons[#buttons + 1] = { "🤝 Desfazer aliança", function() send(Actions.BreakAlliance, id) end, true }
 		else
-			buttons[#buttons + 1] = { "🤝 Aliança", function() send(Actions.Ally, id) end }
-			if rel ~= "war" then
-				buttons[#buttons + 1] = { "⚔ Guerra", function() send(Actions.War, id) end, true }
-			end
+			buttons[#buttons + 1] = { "⚔ Atacar · " .. Protocol.formatK(troopsToSend()), function()
+				local order = pending
+				if order and order.kind == "order" and state.owner[order.cell] == id then
+					clearAim()
+					send(Actions.Target, order.cell, state.percent)
+				end
+			end }
+			buttons[#buttons + 1] = { "🤝 Formar aliança", function() send(Actions.Ally, id) end }
 		end
 	end
 	hud:showPopover(screenPos, n.name, body, buttons)
@@ -308,6 +312,22 @@ local function handleClick(p, button)
 	end
 
 	local now = os.clock()
+	-- Enemy nations: first tap opens diplomacy/attack options; second tap on
+	-- the same cell within the confirmation window attacks immediately.
+	-- Neutral expansion keeps the existing two-click confirmation behavior.
+	local sameTarget = pending and pending.kind == "order"
+		and pending.cell == cell and now - pending.at <= Config.View.ConfirmTimeout
+	if owner > 0 and owner ~= state.you then
+		if sameTarget then
+			clearAim()
+			send(Actions.Target, cell, state.percent)
+			return
+		end
+		pending = { cell = cell, at = now, kind = "order" }
+		aimOrder(cell)
+		nationPopover(p, owner)
+		return
+	end
 	if not Config.View.TwoClickConfirm or (pending and pending.kind == "order"
 		and Map:distance(pending.cell, cell) <= Config.View.ConfirmRadius and now - pending.at <= Config.View.ConfirmTimeout) then
 		local target = pending and pending.cell or cell
@@ -317,7 +337,6 @@ local function handleClick(p, button)
 	end
 	pending = { cell = cell, at = now, kind = "order" }
 	aimOrder(cell)
-	if owner > 0 then nationPopover(p, owner) end
 end
 
 local function handleKey(key)
