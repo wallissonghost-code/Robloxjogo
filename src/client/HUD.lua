@@ -87,11 +87,10 @@ function HUD.new(state, gui, handlers)
 		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -60), Size = UDim2.fromOffset(300, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 30 })
 		make("UIPadding", t, { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
 		make("UIListLayout", t, { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
-		local grid = make("Frame", t, { LayoutOrder = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 31 })
-		make("UIGridLayout", grid, { CellSize = UDim2.fromOffset(141, 44), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+		local grid = make("ScrollingFrame", t, { LayoutOrder = 1, BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 230), CanvasSize = UDim2.fromOffset(0, #order * 27 + 44), ScrollBarThickness = 3, ZIndex = 31 })
 		local buttons = {}
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { LayoutOrder = index, ZIndex = 31, TextSize = 12 })
+			local b = button(grid, "", { Position = UDim2.fromOffset((index % 2 == 0) and 134 or 0, (index - 1) * 27), Size = UDim2.fromOffset(136, 44), ZIndex = 31, TextSize = 12 })
 			b.RichText = true
 			b.TextXAlignment = Enum.TextXAlignment.Left
 			make("UIPadding", b, { PaddingLeft = UDim.new(0, 8) })
