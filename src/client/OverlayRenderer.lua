@@ -16,6 +16,34 @@ local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 
+local function cityArt(parent, z)
+	local art = Instance.new("Frame")
+	art.Name = "CityArt"
+	art.BackgroundTransparency = 1
+	art.Size = UDim2.fromScale(1, 1)
+	art.ZIndex = z
+	art.Parent = parent
+	local function block(x, y, w, h, color)
+		local part = Instance.new("Frame")
+		part.BorderSizePixel = 0
+		part.BackgroundColor3 = color
+		part.Position = UDim2.fromScale(x, y)
+		part.Size = UDim2.fromScale(w, h)
+		part.ZIndex = z + 1
+		part.Parent = art
+		return part
+	end
+	block(0.08, 0.81, 0.84, 0.11, Color3.fromRGB(87, 106, 113))
+	block(0.14, 0.38, 0.23, 0.44, Color3.fromRGB(100, 140, 162))
+	block(0.38, 0.12, 0.26, 0.70, Color3.fromRGB(66, 98, 129))
+	block(0.66, 0.48, 0.20, 0.34, Color3.fromRGB(126, 153, 169))
+	block(0.48, 0.04, 0.055, 0.09, Color3.fromRGB(175, 194, 203))
+	for _, spec in ipairs({ {0.19,0.46},{0.28,0.46},{0.19,0.60},{0.28,0.60},{0.43,0.24},{0.54,0.24},{0.43,0.40},{0.54,0.40},{0.43,0.56},{0.54,0.56},{0.71,0.57},{0.79,0.57} }) do
+		block(spec[1], spec[2], 0.045, 0.065, Color3.fromRGB(255, 208, 115))
+	end
+	return art
+end
+
 local function make(class, parent, props)
 	local o = Instance.new(class)
 	for k, v in pairs(props) do o[k] = v end
@@ -185,7 +213,8 @@ function OverlayRenderer:updateBuildings()
 			make("UICorner", icon, { CornerRadius = UDim.new(0.3, 0) })
 			make("UIStroke", icon, { Color = WHITE, Thickness = 1, Transparency = 0.2 })
 			icon:SetAttribute("Kind", b.kind)
-			icon.Text = defs[b.kind] and defs[b.kind].icon or "?"
+			icon.Text = b.kind == "city" and "" or (defs[b.kind] and defs[b.kind].icon or "?")
+			if b.kind == "city" then cityArt(icon, 5) end
 			icon.Position = self:pos(cell)
 			self.icons[cell] = icon
 			fresh = true
@@ -441,7 +470,9 @@ function OverlayRenderer:setBuildingPreview(cell, kind)
 		self.buildingPreview = icon
 	end
 	local icon = self.buildingPreview
-	icon.Text = self.Config.Buildings[kind].icon
+	icon.Text = kind == "city" and "" or self.Config.Buildings[kind].icon
+	if self.previewCityArt then self.previewCityArt.Visible = kind == "city" end
+	if kind == "city" and not self.previewCityArt then self.previewCityArt = cityArt(icon, 13) end
 	icon.Position = self:pos(cell)
 	local size = math.clamp(self.camera.scale * 0.65, 24, 46)
 	icon.Size = UDim2.fromOffset(size, size)
