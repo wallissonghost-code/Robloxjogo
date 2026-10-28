@@ -60,17 +60,17 @@ local function pickColor(capital)
 end
 
 -- Checks a spawn cell: land, neutral and far enough from every other capital.
-function NationService.canSpawnAt(cell)
+function NationService.canSpawnAt(cell, ignoreId)
 	local Map, Territory = ctx.Map, ctx.Territory
 	if not Map:valid(cell) or not Map.land[cell] then
 		return false, "Escolha uma célula de terra."
 	end
-	if Territory.ownerOf(cell) ~= 0 then
+	if Territory.ownerOf(cell) ~= 0 and Territory.ownerOf(cell) ~= ignoreId then
 		return false, "Essa terra já tem dono."
 	end
 	local minD = ctx.Config.Spawn.MinCapitalDistance
 	for _, n in pairs(nations) do
-		if n.alive and Map:distance(n.capital, cell) < minD then
+		if n.alive and n.id ~= ignoreId and Map:distance(n.capital, cell) < minD then
 			return false, "Muito perto da capital de " .. n.name .. "."
 		end
 	end
@@ -78,7 +78,7 @@ function NationService.canSpawnAt(cell)
 	local radius = ctx.Config.Spawn.StartRadius + clearance
 	local occupied = false
 	Map:disc(cell, radius, function(i)
-		if Territory.ownerOf(i) > 0 then
+		if Territory.ownerOf(i) > 0 and Territory.ownerOf(i) ~= ignoreId then
 			occupied = true
 			return true
 		end
@@ -87,6 +87,47 @@ function NationService.canSpawnAt(cell)
 		return false, "Muito perto de um territorio ocupado."
 	end
 	return true
+end
+
+-- Reposition the existing starting nation only while the spawn phase is open.
+function NationService.reposition(userId, cell)
+	local n = NationService.forUser(userId)
+	if not n or not n.alive or n.kind ~= "player" then return nil, "Nação indisponível." end
+	if ctx.Match.phase() ~= "spawn" then return nil, "O tempo de posicionamento terminou." end
+	if ctx.mode == "extreme" then
+		local target = nations[ctx.Territory.ownerOf(cell)]
+		if not target or not target.alive or target.kind ~= "bot" then
+			return nil, "Escolha um país controlado pela IA."
+		end
+		NationService.returnToAI(n.id)
+		local nextNation, why = NationService.takeover(userId, n.name:match("%((.-)%)$") or "Jogador", cell)
+		if not nextNation then
+			NationService.takeover(userId, "Jogador", n.capital)
+			return nil, why
+		end
+		return nextNation
+	end
+	local ok, why = NationService.canSpawnAt(cell, n.id)
+	if not ok then return nil, why end
+	-- Avoid leaving stray starting cells: require the destination disc to be free.
+	local valid = true
+	ctx.Map:disc(cell, ctx.Config.Spawn.StartRadius, function(i)
+		local owner = ctx.Territory.ownerOf(i)
+		if owner ~= 0 and owner ~= n.id and ctx.Map.land[i] then valid = false return true end
+	end)
+	if not valid then return nil, "O novo território inicial está ocupado." end
+	local oldCells = {}
+	for i in pairs(ctx.Territory.owned(n.id)) do oldCells[#oldCells + 1] = i end
+	n.capital = cell
+	n.country = ctx.Map.country[cell]
+	n.labelCell = cell
+	n.capitalLost = false
+	for _, i in ipairs(oldCells) do ctx.Territory.setOwner(i, 0) end
+	ctx.Map:disc(cell, ctx.Config.Spawn.StartRadius, function(i)
+		if ctx.Territory.ownerOf(i) == 0 then ctx.Territory.setOwner(i, n.id) end
+	end)
+	ctx.emit(nil, { k = ctx.Protocol.Events.Nations, add = NationService.publicInfo(n) })
+	return n
 end
 
 function NationService.canRespawn(userId)
