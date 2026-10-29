@@ -6,6 +6,9 @@ local ctx, Config
 local phase, phaseEnds, round, winner = "waiting", 0, 0, nil
 local votes = {}          -- userId -> mode
 local lastPartySync = -1
+local roundStarted = nil
+local finalResults = nil
+local endReason = nil
 
 function MatchService.init(context)
 	ctx = context
@@ -48,8 +51,15 @@ local function tally()
 	return counts
 end
 
-function MatchService.publicView()
-	return { phase = phase, round = round, left = MatchService.timeLeft(), winner = winner, mode = ctx.mode, votes = tally() }
+function MatchService.publicView(includeResults)
+	return {
+		phase = phase, round = round, left = MatchService.timeLeft(),
+		winner = winner, mode = ctx.mode, votes = tally(),
+		endedBy = endReason,
+		elapsed = roundStarted and math.max(0, ctx.now() - roundStarted) or 0,
+		duration = Config.Match.MaxDurationSeconds or 0,
+		results = includeResults ~= false and finalResults or nil,
+	}
 end
 
 local function announce()
@@ -87,6 +97,8 @@ function MatchService.beginRound()
 	resetWorld()
 	round = round + 1
 	winner = nil
+	finalResults, endReason, roundStarted = nil, nil, nil
+	lastPartySync = -1
 	votes = {}
 	if (Config.Match.VoteSeconds or 0) <= 0 then
 		startSpawn()
@@ -130,6 +142,8 @@ function MatchService.toWaiting()
 	resetWorld()
 	phase = "waiting"
 	winner = nil
+	finalResults, endReason, roundStarted = nil, nil, nil
+	lastPartySync = -1
 	votes = {}
 	ctx.fullResync = true
 	announce()
@@ -175,9 +189,85 @@ function MatchService.startPlaying()
 	if phase == "spawn" then
 		autoPlace()
 		phase = "playing"
-		phaseEnds = 0
+		roundStarted = ctx.now()
+		local limit = Config.Match.MaxDurationSeconds or 0
+		phaseEnds = limit > 0 and roundStarted + limit or 0
 		announce()
 	end
+end
+
+-- Each living nation scores on its own unless it has a valid two-player Party
+-- identifier supplied by the server's lobby teleport. Independent alliances
+-- do not combine score and cannot bypass the victory requirement.
+local function buildStandings()
+	local groups = {}
+	local totalLand = math.max(1, ctx.Map.landCount)
+	for _, nation in pairs(ctx.Nations.all()) do
+		if nation.alive and nation.land > 0 then
+			local partyId = nation.userId and ctx.partyOfUser and ctx.partyOfUser[nation.userId]
+			local key = partyId and ("party:" .. partyId) or ("nation:" .. nation.id)
+			local group = groups[key]
+			if not group then
+				group = { id = nation.id, name = nation.name, land = 0, troops = 0, captured = 0,
+					claimed = 0, members = {}, isParty = false, key = key }
+				groups[key] = group
+			end
+			group.land = group.land + math.max(0, nation.land)
+			group.troops = group.troops + math.max(0, math.floor(nation.troops or 0))
+			group.captured = group.captured + (nation.captured or 0)
+			group.claimed = group.claimed + (nation.claimed or 0)
+			group.members[#group.members + 1] = {
+				id = nation.id, userId = nation.userId, name = nation.name,
+				kind = nation.kind, land = nation.land,
+				troops = math.floor(nation.troops or 0),
+				captured = nation.captured or 0, claimed = nation.claimed or 0,
+				peakLand = nation.peakLand or nation.land,
+			}
+		end
+	end
+	local list = {}
+	for _, group in pairs(groups) do
+		table.sort(group.members, function(a, b) return a.id < b.id end)
+		group.id = group.members[1].id
+		if #group.members > 1 then
+			group.isParty = true
+			local names = {}
+			for _, member in ipairs(group.members) do names[#names + 1] = member.name end
+			group.name = table.concat(names, " + ")
+		end
+		group.share = group.land / totalLand
+		list[#list + 1] = group
+	end
+	table.sort(list, function(a, b)
+		if a.land ~= b.land then return a.land > b.land end
+		if a.troops ~= b.troops then return a.troops > b.troops end
+		return a.id < b.id
+	end)
+	for index, group in ipairs(list) do group.rank = index end
+	return list
+end
+
+local function finishMatch(reason, ranked)
+	if phase ~= "playing" then return end
+	ranked = ranked or buildStandings()
+	local best = ranked[1]
+	winner = best and {
+		id = best.id, name = best.name, share = best.share, land = best.land,
+		isParty = best.isParty, ids = {},
+	} or nil
+	if winner then
+		for _, member in ipairs(best.members) do winner.ids[#winner.ids + 1] = member.id end
+	end
+	endReason = reason
+	finalResults = {
+		reason = reason, standings = ranked,
+		duration = roundStarted and math.max(0, ctx.now() - roundStarted) or 0,
+		landCount = ctx.Map.landCount,
+	}
+	phase = "ended"
+	phaseEnds = ctx.now() + Config.Match.EndScreenSeconds
+	ctx.Expansion.reset()
+	announce()
 end
 
 function MatchService.tick(humanCount)
@@ -214,19 +304,18 @@ function MatchService.tick(humanCount)
 		if now >= phaseEnds then MatchService.startPlaying() end
 	elseif phase == "playing" then
 		ctx.Nations.checkEliminations()
-		local landCount = ctx.Map.landCount
-		for _, n in pairs(ctx.Nations.all()) do
-			if n.alive and n.land / landCount >= Config.Match.VictoryPercent then
-				winner = { id = n.id, name = n.name, share = n.land / landCount }
-				phase = "ended"
-				phaseEnds = now + Config.Match.EndScreenSeconds
-				ctx.Expansion.reset()
-				announce()
-				return
-			end
+		-- Sort by combined territory so teammates may reach the 80% threshold
+		-- together. At the time limit, the largest team/nation wins.
+		local ranked = buildStandings()
+		if ranked[1] and ranked[1].share >= Config.Match.VictoryPercent then
+			finishMatch("territory", ranked)
+		elseif (Config.Match.MaxDurationSeconds or 0) > 0 and now >= phaseEnds then
+			finishMatch("timeout", ranked)
 		end
 	elseif phase == "ended" then
-		if now >= phaseEnds then MatchService.beginRound() end
+		-- Dedicated matchmaking sessions stay on the results screen until
+		-- players choose to return to the lobby. No forced next round.
+		if not ctx.lobbyMatch and now >= phaseEnds then MatchService.beginRound() end
 	end
 end
 
