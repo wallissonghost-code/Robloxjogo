@@ -72,6 +72,7 @@ function CommandService.handle(userId, displayName, action, a, b, clock, c)
 		return true, "Nação fundada! Capital em " .. ((Map.countries[Map.country[a]] or {}).name or "terra livre") .. "."
 	end
 
+	if ctx.Match.phase() == "ended" then return false, "A partida terminou. Volte ao lobby." end
 	if not nid then return false, "Escolha um ponto no mapa para fundar sua nação." end
 	if ctx.Match.phase() == "spawn" then return false, "Aguarde o fim do posicionamento para começar a guerra." end
 
