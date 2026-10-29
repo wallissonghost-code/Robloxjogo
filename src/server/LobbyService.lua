@@ -8,7 +8,7 @@ local HttpService = game:GetService("HttpService")
 
 local LobbyService = {}
 local REMOTE_FOLDER = "MW_LobbyRemotes"
-local ROOM_MAP = "MW_PublicMatchRooms_v1"
+local ROOM_MAP = "MW_PublicMatchRooms_v2"
 local ROOM_LIFETIME = 180
 local INVITE_LIFETIME = 30
 
@@ -108,7 +108,7 @@ function LobbyService.start(config)
         task.spawn(function()
             local mode = party.mode
             local private = party.private
-            local roomId, accessCode, created = nil, nil, false
+            local roomId, reservedId, created = nil, nil, false
             local nonce = HttpService:GenerateGUID(false)
             if not private then
                 -- Reserve slots atomically so two lobby servers do not overfill a room.
@@ -119,7 +119,7 @@ function LobbyService.start(config)
                     for _, entry in ipairs(list) do
                         local value = entry.value
                         if type(value) == "table" and value.mode == mode
-                            and type(value.accessCode) == "string" and value.accessCode ~= ""
+                            and type(value.reservedId) == "string" and value.reservedId ~= ""
                             and (value.slots or 0) + #team <= config.Match.MaxPlayers
                             and os.time() - (value.createdAt or 0) < ROOM_LIFETIME - 25 then
                             local updatedOk, updated = pcall(function()
@@ -135,7 +135,7 @@ function LobbyService.start(config)
                                 end, ROOM_LIFETIME)
                             end)
                             if updatedOk and updated and updated.nonce == nonce then
-                                roomId, accessCode = entry.key, updated.accessCode
+                                roomId, reservedId = entry.key, updated.reservedId
                                 break
                             end
                         end
@@ -143,16 +143,15 @@ function LobbyService.start(config)
                 end
             end
 
-            local reserveOk, reserveError = true, nil
-            if not accessCode then
-                reserveOk, reserveError = pcall(function()
-                    accessCode = TeleportService:ReserveServer(game.PlaceId)
-                end)
-                if reserveOk and accessCode and not private then
+            -- Current Roblox API: GUID-based reserved server IDs; no deprecated
+            -- ReserveServer() call or extra place is required.
+            if not reservedId then
+                reservedId = HttpService:GenerateGUID(false)
+                if not private then
                     roomId = HttpService:GenerateGUID(false)
                     local stored = pcall(function()
                         rooms:SetAsync(roomId, {
-                            accessCode = accessCode, mode = mode, slots = #team,
+                            reservedId = reservedId, mode = mode, slots = #team,
                             createdAt = os.time(), nonce = nonce,
                         }, ROOM_LIFETIME, os.time())
                     end)
@@ -160,10 +159,10 @@ function LobbyService.start(config)
                 end
             end
 
-            local teleported, teleportError = false, reserveError
-            if reserveOk and accessCode then
+            local teleported, teleportError = false, nil
+            if reservedId then
                 local options = Instance.new("TeleportOptions")
-                options.ReservedServerAccessCode = accessCode
+                options.ReservedServerId = reservedId
                 local partyIds = {}
                 for _, player in ipairs(team) do partyIds[#partyIds + 1] = player.UserId end
                 options:SetTeleportData({
