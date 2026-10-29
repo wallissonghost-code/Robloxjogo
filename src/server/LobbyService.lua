@@ -164,7 +164,13 @@ function LobbyService.start(config)
             if reserveOk and accessCode then
                 local options = Instance.new("TeleportOptions")
                 options.ReservedServerAccessCode = accessCode
-                options:SetTeleportData({mwSession = "match", mode = mode, roomId = roomId})
+                local partyIds = {}
+                for _, player in ipairs(team) do partyIds[#partyIds + 1] = player.UserId end
+                options:SetTeleportData({
+                    mwSession = "match", mode = mode, roomId = roomId,
+                    partyId = #partyIds > 1 and ("party_" .. leader.UserId .. "_" .. nonce) or nil,
+                    partyUserIds = #partyIds > 1 and partyIds or nil,
+                })
                 teleported, teleportError = pcall(function()
                     TeleportService:TeleportAsync(game.PlaceId, team, options)
                 end)
@@ -217,7 +223,7 @@ function LobbyService.start(config)
             for _ in pairs(group.members) do count = count + 1 end
             if not target or not targetGroup or count >= 2
                 or targetGroup.leader ~= target.UserId
-                or next(targetGroup.members, target.UserId) ~= nil then
+                or (function() local n = 0; for _ in pairs(targetGroup.members) do n = n + 1 end; return n ~= 1 end)() then
                 message(player, "Convite indisponível. O Party permite até 2 jogadores.", false)
                 return
             end
