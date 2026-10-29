@@ -6,6 +6,18 @@ local StarterGui = game:GetService("StarterGui")
 local Shared = ReplicatedStorage:WaitForChild("MundialWarShared")
 local Config = require(Shared.GameConfig)
 local Protocol = require(Shared.Protocol)
+
+-- A public server is the menu; a reserved server is the actual match.
+-- Wait for the bootstrap route before attempting to load match-only remotes.
+local sessionRole = ReplicatedStorage:GetAttribute("MW_SessionType")
+while sessionRole == nil do
+    ReplicatedStorage:GetAttributeChangedSignal("MW_SessionType"):Wait()
+    sessionRole = ReplicatedStorage:GetAttribute("MW_SessionType")
+end
+if sessionRole == "lobby" then
+    require(script.LobbyClient).start(Config, Protocol)
+    return
+end
 local Palette = require(Shared.Palette)
 local MapGrid = require(Shared.MapGrid)
 local BuildingStats = require(Shared.BuildingStats)
