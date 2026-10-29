@@ -2,6 +2,7 @@
 -- All decisions are made by World/CommandService; this module only moves data.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
 
 local NetworkService = {}
 
@@ -52,6 +53,19 @@ function NetworkService.start(theWorld)
 	eventRemote = remote(Protocol.EventRemote)
 
 	commandRemote.OnServerEvent:Connect(function(player, action, a, b, c)
+		if action == Protocol.Actions.ReturnLobby then
+			if not (Config.Lobby and Config.Lobby.Enabled) then return end
+			task.spawn(function()
+				local ok, err = pcall(function()
+					TeleportService:TeleportAsync(game.PlaceId, {player})
+				end)
+				if not ok and player.Parent == Players then
+					warn("[MundialWar] Return to lobby failed: " .. tostring(err))
+					eventRemote:FireClient(player, { k = Protocol.Events.Notice, text = "Falha ao voltar ao lobby. Tente novamente.", kind = "bad" })
+				end
+			end)
+			return
+		end
 		if action == Protocol.Actions.Sync then
 			if ready[player] and ready[player] > os.clock() - 2 then return end -- sync spam guard
 			ready[player] = os.clock()
