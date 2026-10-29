@@ -68,7 +68,11 @@ function LobbyService.start(config)
                 members[#members + 1] = {userId = id, name = member.DisplayName}
             end
         end
-        table.sort(members, function(a, b) return a.userId == party.leader end)
+        table.sort(members, function(a, b)
+            if a.userId == party.leader then return true end
+            if b.userId == party.leader then return false end
+            return a.userId < b.userId
+        end)
         send(player, {
             kind = "State",
             players = list,
@@ -218,11 +222,13 @@ function LobbyService.start(config)
             lastInvite[player.UserId] = os.clock()
             local target = Players:GetPlayerByUserId(data)
             local targetGroup = target and groupFor(target)
-            local count = 0
+            local count, targetCount = 0, 0
             for _ in pairs(group.members) do count = count + 1 end
+            if targetGroup then
+                for _ in pairs(targetGroup.members) do targetCount = targetCount + 1 end
+            end
             if not target or not targetGroup or count >= 2
-                or targetGroup.leader ~= target.UserId
-                or (function() local n = 0; for _ in pairs(targetGroup.members) do n = n + 1 end; return n ~= 1 end)() then
+                or targetGroup.leader ~= target.UserId or targetCount ~= 1 then
                 message(player, "Convite indisponível. O Party permite até 2 jogadores.", false)
                 return
             end
