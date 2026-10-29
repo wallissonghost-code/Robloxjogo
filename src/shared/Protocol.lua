@@ -6,6 +6,7 @@ Protocol.EventRemote = "MW_Event"       -- server -> client: { k = kind, ... }
 
 Protocol.Actions = {
 	Sync = "sync",
+	ReturnLobby = "returnLobby", -- teleport from reserved match to a public lobby
 	Spawn = "spawn",           -- (cell)
 	Target = "target",         -- (cell, percent) land expansion/attack, or naval when no land route
 	Cancel = "cancel",         -- (orderId or nil = all)
