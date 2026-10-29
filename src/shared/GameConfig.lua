@@ -14,6 +14,15 @@ GameConfig.Modes = {
 		description = "Escolha um país inteiro e domine os outros. Todos os países já começam ocupados. Libera muros, trincheiras, anti-naval, antiaérea contra aviões, petróleo, ponte aérea e bomba de fogo." },
 }
 GameConfig.ModeOrder = { "classic", "extreme" }
+
+-- Public instances are menus. A reserved instance of the SAME place runs a match.
+-- Teleporting into reserved matches requires a published Roblox experience.
+GameConfig.Lobby = {
+    Enabled = true,
+    PartyMaxMembers = 2,
+    PublicMatchWindowSeconds = 180,
+}
+
 GameConfig.Extreme = {
 	MinCountryCells = 6,               -- smaller countries stay as free land
 	BaseTroops = 1500,
