@@ -203,7 +203,7 @@ local function buildStandings()
 	local groups = {}
 	local totalLand = math.max(1, ctx.Map.landCount)
 	for _, nation in pairs(ctx.Nations.all()) do
-		if nation.alive and nation.land > 0 then
+		if nation.alive or nation.kind == "player" then
 			local partyId = nation.userId and ctx.partyOfUser and ctx.partyOfUser[nation.userId]
 			local key = partyId and ("party:" .. partyId) or ("nation:" .. nation.id)
 			local group = groups[key]
@@ -251,7 +251,7 @@ local function finishMatch(reason, ranked)
 	if phase ~= "playing" then return end
 	ranked = ranked or buildStandings()
 	local best = ranked[1]
-	winner = best and {
+	winner = best and best.land > 0 and {
 		id = best.id, name = best.name, share = best.share, land = best.land,
 		isParty = best.isParty, ids = {},
 	} or nil
