@@ -55,6 +55,7 @@ local world = World.new({
 -- the match mode before the simulation is allowed to start.
 local modeReady = not (hasLobby and reservedMatch)
 world.ctx.partyOfUser = {}
+world.ctx.lobbyMatch = hasLobby and reservedMatch
 local function acceptMatchArrival(player)
     if not (hasLobby and reservedMatch) then return end
     local ok, join = pcall(function() return player:GetJoinData() end)
