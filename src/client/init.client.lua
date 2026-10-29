@@ -232,6 +232,8 @@ local function aimOrder(cell)
 end
 
 local function handleClick(p, button)
+	-- Results are final. Never allow attacks or builds after the round ends.
+	if state.match.phase == "ended" then return end
 	hud:hidePopover()
 	if not mode and selectedCell then
 		selectedCell = nil
@@ -485,6 +487,7 @@ task.spawn(function()
 			text = "Preparando o mundo…"
 		end
 		hud:setBanner(text)
+		hud:updateMatchClock(phase, state:timeLeft())
 		hud:refreshMenu(myVote)
 		task.wait(0.25)
 	end
@@ -495,13 +498,17 @@ local firstInit = true
 local lastPhase, lastRound = nil, nil
 
 local function onMatch(match)
-	if match.phase == "ended" and match.winner and lastPhase ~= "ended" then
+	if match.phase == "ended" and match.results then
+		-- Render the authoritative server ranking once; later lightweight
+		-- match updates must not replace the results with an empty payload.
+		if not hud.resultsOverlay.Visible then hud:showResults(match) end
+	elseif match.phase == "ended" and match.winner and lastPhase ~= "ended" then
 		local w = match.winner
-		local mine = w.id == state.you
-		hud:showCenter(mine and "VITÓRIA!" or "FIM DA PARTIDA",
-			string.format("<b>%s</b> conquistou %.1f%% do mundo.\nNova rodada em instantes.", w.name, w.share * 100), false)
+		hud:showCenter("FIM DA PARTIDA",
+			string.format("<b>%s</b> conquistou %.1f%% do mundo.", w.name, w.share * 100), false)
 	elseif match.phase ~= "ended" and lastPhase == "ended" then
 		hud:hideCenter()
+		hud:hideResults()
 	end
 	if lastRound and match.round ~= lastRound then
 		clearAim()
@@ -543,7 +550,12 @@ eventRemote.OnClientEvent:Connect(function(data)
 				function() send(Actions.Decline, from) end)
 		end
 	elseif k == Events.Match then
-		state.match = { phase = data.phase, round = data.round, left = data.left, winner = data.winner, mode = data.mode, votes = data.votes }
+		state.match = {
+			phase = data.phase, round = data.round, left = data.left,
+			winner = data.winner, mode = data.mode, votes = data.votes,
+			endedBy = data.endedBy, elapsed = data.elapsed, duration = data.duration,
+			results = data.results,
+		}
 		state.matchAt = os.clock()
 		onMatch(state.match)
 	elseif k == Events.Impact then
