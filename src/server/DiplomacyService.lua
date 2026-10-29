@@ -31,6 +31,15 @@ local function setRelation(a, b, value)
 	matrix[b][a] = kind
 end
 
+-- Matchmaking parties are permanent teammates for this match.
+local function sameParty(a, b)
+    if not ctx or not ctx.partyOfUser then return false end
+    local na, nb = ctx.Nations.get(a), ctx.Nations.get(b)
+    if not na or not nb or not na.userId or not nb.userId then return false end
+    local group = ctx.partyOfUser[na.userId]
+    return group ~= nil and group == ctx.partyOfUser[nb.userId]
+end
+
 function DiplomacyService.relation(a, b)
 	if a == b then return "self" end
 	local row = matrix[a]
@@ -43,7 +52,7 @@ end
 
 function DiplomacyService.canAttack(a, b)
 	if b == 0 then return true end
-	if a == b then return false end
+	if a == b or sameParty(a, b) then return false end
 	return DiplomacyService.relation(a, b) ~= "ally"
 end
 
@@ -53,6 +62,7 @@ local function notifyPair(a, b)
 end
 
 function DiplomacyService.declareWar(a, b)
+	if sameParty(a, b) then return false, "Jogadores do mesmo Party não podem declarar guerra entre si." end
 	local na, nb = ctx.Nations.get(a), ctx.Nations.get(b)
 	if not na or not nb or not na.alive or not nb.alive or a == b then
 		return false, "Nação inválida."
@@ -83,6 +93,13 @@ local function makeAlliance(a, b)
 	ctx.Expansion.cancelAgainst(a, b)
 	ctx.Expansion.cancelAgainst(b, a)
 	notifyPair(a, b)
+end
+
+-- Server-only sync: form an alliance automatically for matched party members.
+function DiplomacyService.syncParty(a, b)
+    if not sameParty(a, b) then return false end
+    if DiplomacyService.relation(a, b) ~= "ally" then makeAlliance(a, b) end
+    return true
 end
 
 -- Request an alliance, or accept one if the other side already asked.
@@ -126,6 +143,7 @@ function DiplomacyService.decline(a, b)
 end
 
 function DiplomacyService.breakAlliance(a, b)
+	if sameParty(a, b) then return false, "Integrantes do Party permanecem aliados até o fim da partida." end
 	if not DiplomacyService.allied(a, b) then return false, "Vocês não são aliados." end
 	setRelation(a, b, nil)
 	brokeAt[key(a, b)] = ctx.now()
