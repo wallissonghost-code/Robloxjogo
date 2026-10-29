@@ -31,6 +31,7 @@ function LobbyService.start(config)
     local invites = {} -- target userId -> {from, expires}
     local busy = {}
     local lastInvite = {}
+    local lastPlay = {}
 
     local function send(player, payload)
         if player and player.Parent == Players then
@@ -196,9 +197,30 @@ function LobbyService.start(config)
                     send(player, {kind = "Starting", text = ""})
                 end
             end
-            for _, player in ipairs(team) do busy[player.UserId] = nil end
+            if teleported then
+                -- A successful TeleportAsync can still fail during initialization.
+                -- Keep duplicate Play requests blocked until players leave or a retry window elapses.
+                task.delay(18, function()
+                    for _, member in ipairs(team) do
+                        if member.Parent == Players and busy[member.UserId] then
+                            busy[member.UserId] = nil
+                            send(member, {kind = "Starting", text = ""})
+                        end
+                    end
+                end)
+            else
+                for _, member in ipairs(team) do busy[member.UserId] = nil end
+            end
         end)
     end
+
+    TeleportService.TeleportInitFailed:Connect(function(player, _, errorMessage)
+        if player.Parent == Players then
+            busy[player.UserId] = nil
+            send(player, {kind = "Starting", text = ""})
+            message(player, "Falha ao entrar na partida: " .. tostring(errorMessage), false)
+        end
+    end)
 
     command.OnServerEvent:Connect(function(player, action, data)
         if type(action) ~= "string" or busy[player.UserId] then return end
@@ -266,7 +288,10 @@ function LobbyService.start(config)
             end
             syncAll()
         elseif action == "Play" then
-            if group.leader == player.UserId then playGroup(player) end
+            if group.leader ~= player.UserId then return end
+            if lastPlay[player.UserId] and os.clock() - lastPlay[player.UserId] < 3 then return end
+            lastPlay[player.UserId] = os.clock()
+            playGroup(player)
         end
     end)
 
@@ -277,6 +302,7 @@ function LobbyService.start(config)
     Players.PlayerRemoving:Connect(function(player)
         invites[player.UserId] = nil
         lastInvite[player.UserId] = nil
+        lastPlay[player.UserId] = nil
         local group = groupFor(player)
         if group then
             if group.leader == player.UserId then
