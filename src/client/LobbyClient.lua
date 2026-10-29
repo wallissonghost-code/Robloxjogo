@@ -118,8 +118,8 @@ function LobbyClient.start(config, protocol)
         select.Activated:Connect(function() command:FireServer("Mode", def.key) end)
     end
 
-    local public = button(base, "🌐 PARTIDA PÚBLICA", 0, 337, 463, 42, NAVY)
-    local private = button(base, "🔒 SALA PRIVADA", 477, 337, 463, 42, NAVY)
+    local public = button(base, "🌐 PARTIDA PÚBLICA", 0, 337, 463, 42, GOLD, Color3.fromRGB(32, 26, 18))
+    local inviteGroup = button(base, "👥 CONVIDAR AMIGOS", 477, 337, 463, 42, NAVY)
     local partySummary = label(base, "Party: você", 0, 389, 940, 28, 16, MUTED, false)
     local matchStatus = label(base, "", 0, 418, 940, 25, 14, MUTED, false)
     local play = button(base, "▶  JOGAR AGORA", 0, 452, 940, 75, GOLD, Color3.fromRGB(31, 26, 17))
@@ -173,8 +173,8 @@ function LobbyClient.start(config, protocol)
     shopButton.Activated:Connect(function()
         notice.Text = "Loja e inventário: próxima etapa. Nenhuma compra ativa ainda."
     end)
-    public.Activated:Connect(function() command:FireServer("Privacy", false) end)
-    private.Activated:Connect(function() command:FireServer("Privacy", true) end)
+    public.Activated:Connect(function() notice.Text = "Todas as partidas são públicas: jogue com amigos e outros jogadores." end)
+    inviteGroup.Activated:Connect(function() dim.Visible = true end)
     play.Activated:Connect(function() command:FireServer("Play") end)
 
     local activeParty = nil
@@ -188,10 +188,8 @@ function LobbyClient.start(config, protocol)
             card.button.BackgroundColor3 = selected and GOLD or CARD
             card.button.TextColor3 = selected and Color3.fromRGB(32, 26, 18) or WHITE
         end
-        public.BackgroundColor3 = not activeParty.private and GOLD or CARD
-        private.BackgroundColor3 = activeParty.private and GOLD or CARD
-        public.TextColor3 = not activeParty.private and Color3.fromRGB(32, 26, 18) or WHITE
-        private.TextColor3 = activeParty.private and Color3.fromRGB(32, 26, 18) or WHITE
+        public.BackgroundColor3 = GOLD
+        public.TextColor3 = Color3.fromRGB(32, 26, 18)
         local names = {}
         for _, member in ipairs(activeParty.members or {}) do names[#names + 1] = member.name end
         local summary = table.concat(names, " + ")
@@ -202,8 +200,7 @@ function LobbyClient.start(config, protocol)
         play.Active = isLeader and not starting
         play.AutoButtonColor = play.Active
         play.BackgroundColor3 = play.Active and GOLD or Color3.fromRGB(106, 110, 116)
-        matchStatus.Text = activeParty.private and "Sala reservada para seu Party · outros jogadores não entram"
-            or "Busca pública · encontre jogadores do mesmo modo em outras salas"
+        matchStatus.Text = "Partida pública · seu Party entra junto com jogadores reais e bots"
         for _, child in ipairs(scrolling:GetChildren()) do
             if child:IsA("Frame") then child:Destroy() end
         end
