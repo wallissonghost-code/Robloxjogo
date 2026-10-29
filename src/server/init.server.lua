@@ -56,6 +56,19 @@ local world = World.new({
 local modeReady = not (hasLobby and reservedMatch)
 world.ctx.partyOfUser = {}
 world.ctx.lobbyMatch = hasLobby and reservedMatch
+-- Stop new public matchmaking joins once the reserved room has a winner.
+local advertisedRoomId = nil
+world.ctx.onMatchEnded = function()
+    if not advertisedRoomId then return end
+    local id = advertisedRoomId
+    advertisedRoomId = nil
+    task.spawn(function()
+        local ok, err = pcall(function()
+            game:GetService("MemoryStoreService"):GetSortedMap("MW_PublicMatchRooms_v2"):RemoveAsync(id)
+        end)
+        if not ok then warn("[MundialWar] Could not close completed matchmaking room: " .. tostring(err)) end
+    end)
+end
 local function acceptMatchArrival(player)
     if not (hasLobby and reservedMatch) then return end
     local ok, join = pcall(function() return player:GetJoinData() end)
@@ -64,6 +77,9 @@ local function acceptMatchArrival(player)
         and ok and join.SourcePlaceId == game.PlaceId then
         if not modeReady and Config.Modes[data.mode] then
             world.ctx.Match.setMode(data.mode)
+        end
+        if type(data.roomId) == "string" and #data.roomId <= 100 then
+            advertisedRoomId = data.roomId
         end
         local party = data.partyUserIds
         local id = data.partyId
