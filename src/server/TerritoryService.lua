@@ -121,6 +121,13 @@ function TerritoryService.setOwner(i, nid)
 		dirty[nid] = true
 		local n = nations.get(nid)
 		n.land = n.land + 1
+		n.peakLand = math.max(n.peakLand or 0, n.land)
+		-- Only actual play counts toward round statistics; initial spawning
+		-- and free capital repositioning never inflate the conquest totals.
+		if ctx.Match and ctx.Match.isPlaying() then
+			n.claimed = (n.claimed or 0) + 1
+			if old > 0 then n.captured = (n.captured or 0) + 1 end
+		end
 		local recent = recentClaims[nid]
 		if #recent < 512 then recent[#recent + 1] = i end
 	end
