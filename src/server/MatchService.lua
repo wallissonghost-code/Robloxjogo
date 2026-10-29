@@ -271,6 +271,7 @@ local function finishMatch(reason, ranked)
 	phaseEnds = ctx.now() + Config.Match.EndScreenSeconds
 	ctx.Expansion.reset()
 	announce()
+	if ctx.onMatchEnded then ctx.onMatchEnded() end
 end
 
 function MatchService.tick(humanCount)
