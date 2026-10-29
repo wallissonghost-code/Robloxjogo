@@ -228,6 +228,95 @@ function HUD.new(state, gui, handlers)
 	self.centerLobby.TextColor3 = Color3.fromRGB(30, 24, 10)
 	self.centerLobby.Activated:Connect(function() self.h.onReturnLobby() end)
 
+	-- Dedicated end-of-match screen. Scales to landscape phones without
+	-- covering/cutting the actions; these are UI frames, never 3D Parts.
+	self.matchClock = panel(gui, {
+		Name = "MatchClock", Visible = false, AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -14, 0, 54), Size = UDim2.fromOffset(174, 29), ZIndex = 23,
+	})
+	self.matchClockText = make("TextLabel", self.matchClock, {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+		Font = BOLD, TextSize = 14, TextColor3 = ACCENT,
+		Text = "TEMPO 20:00", ZIndex = 24,
+	})
+
+	self.resultsOverlay = make("Frame", gui, {
+		Name = "MatchResults", BackgroundColor3 = Color3.fromRGB(4, 9, 18),
+		BackgroundTransparency = 0.15, BorderSizePixel = 0,
+		Size = UDim2.fromScale(1, 1), Active = true, Visible = false, ZIndex = 70,
+	})
+	self.resultsCard = panel(self.resultsOverlay, {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(640, 464), ZIndex = 71,
+		BackgroundColor3 = Color3.fromRGB(17, 25, 39),
+	})
+	self.resultsCard.BackgroundColor3 = Color3.fromRGB(17, 25, 39)
+	make("UICorner", self.resultsCard, { CornerRadius = UDim.new(0, 16) })
+	make("UIStroke", self.resultsCard, { Color = ACCENT, Transparency = 0.3, Thickness = 1.5 })
+	local resultScale = make("UIScale", self.resultsCard, { Scale = 1 })
+	local function resizeResults()
+		local size = gui.AbsoluteSize
+		if size.X > 0 and size.Y > 0 then
+			resultScale.Scale = math.min(1, (size.X - 24) / 640, (size.Y - 20) / 464)
+		end
+	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(resizeResults)
+	resizeResults()
+
+	self.resultsTitle = make("TextLabel", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 17), Size = UDim2.fromOffset(604, 38),
+		BackgroundTransparency = 1, Font = BOLD, TextSize = 31, TextColor3 = ACCENT,
+		Text = "RESULTADO DA PARTIDA", ZIndex = 73,
+	})
+	self.resultsReason = make("TextLabel", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 58), Size = UDim2.fromOffset(604, 23),
+		BackgroundTransparency = 1, Font = FONT, TextSize = 14,
+		TextColor3 = MUTED, Text = "", ZIndex = 73,
+	})
+	self.resultsWinner = make("TextLabel", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 88), Size = UDim2.fromOffset(604, 40),
+		BackgroundColor3 = Color3.fromRGB(47, 42, 28),
+		Font = BOLD, TextSize = 18, TextColor3 = ACCENT, Text = "",
+		TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 73,
+	})
+	make("UICorner", self.resultsWinner, { CornerRadius = UDim.new(0, 8) })
+	local columns = make("Frame", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 138), Size = UDim2.fromOffset(604, 27),
+		BackgroundColor3 = Color3.fromRGB(42, 55, 74), BorderSizePixel = 0, ZIndex = 73,
+	})
+	make("UICorner", columns, { CornerRadius = UDim.new(0, 6) })
+	for _, col in ipairs({
+		{ 8, 37, "POS." }, { 49, 255, "NAÇÃO / EQUIPE" },
+		{ 310, 88, "TERRITÓRIO" }, { 404, 89, "TROPAS" }, { 503, 95, "CAPTURAS" },
+	}) do
+		make("TextLabel", columns, {
+			Position = UDim2.fromOffset(col[1], 0), Size = UDim2.fromOffset(col[2], 27),
+			BackgroundTransparency = 1, Font = BOLD, TextSize = 12, Text = col[3],
+			TextColor3 = TEXT,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 74,
+		})
+	end
+	self.resultsRows = make("ScrollingFrame", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 167), Size = UDim2.fromOffset(604, 177),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 73,
+		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4,
+		CanvasSize = UDim2.fromOffset(0, 0),
+	})
+	self.resultsPersonal = make("TextLabel", self.resultsCard, {
+		Position = UDim2.fromOffset(18, 351), Size = UDim2.fromOffset(604, 39),
+		BackgroundColor3 = Color3.fromRGB(31, 43, 59), Font = BOLD,
+		TextSize = 13, TextColor3 = Color3.fromRGB(191, 218, 241),
+		Text = "", TextWrapped = true, ZIndex = 73,
+	})
+	make("UICorner", self.resultsPersonal, { CornerRadius = UDim.new(0, 7) })
+	self.resultsLobby = button(self.resultsCard, "VOLTAR AO LOBBY", {
+		Position = UDim2.fromOffset(95, 400), Size = UDim2.fromOffset(450, 48),
+		Font = BOLD, TextSize = 19, BackgroundColor3 = ACCENT,
+		ZIndex = 75,
+	})
+	self.resultsLobby.TextColor3 = Color3.fromRGB(30, 24, 10)
+	self.resultsLobby.Activated:Connect(function() self.h.onReturnLobby() end)
+
 	-- narrow screens (phones/tablets): lift the percentage bar above the player card
 	local function layout()
 		local narrow = gui.AbsoluteSize.X < 1000
@@ -463,6 +552,89 @@ end
 
 function HUD:hidePopover()
 	self.popover.Visible = false
+end
+
+-- Summarize server-authoritative, frozen standings. Entries may include
+-- teams of two, independent players, and bots. Never predict a winner locally.
+function HUD:showResults(match)
+	local results = match and match.results
+	if not results then return end
+	self.resultsOverlay.Visible = true
+	self.center.Visible = false
+	self.tray.Visible = false
+	self.weaponTray.Visible = false
+	self.placement.Visible = false
+	self.popover.Visible = false
+
+	local winner = match.winner
+	local ownUserId = Players.LocalPlayer.UserId
+	local amWinner, ownEntry = false, nil
+	local ranked = results.standings or {}
+	for _, entry in ipairs(ranked) do
+		for _, member in ipairs(entry.members or {}) do
+			if member.userId == ownUserId then
+				ownEntry = entry
+				if winner and winner.id == entry.id then amWinner = true end
+			end
+		end
+	end
+	self.resultsTitle.Text = amWinner and "VITÓRIA!" or "FIM DA PARTIDA"
+	self.resultsTitle.TextColor3 = amWinner and GOOD or ACCENT
+	local seconds = math.floor((results.duration or match.elapsed or 0) + 0.5)
+	local elapsed = string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+	self.resultsReason.Text = (results.reason == "timeout" and "Tempo esgotado - maior território vence"
+		or "Domínio mundial - meta de " .. math.floor(self.Config.Match.VictoryPercent * 100) .. "% atingida") .. "  |  Duração: " .. elapsed
+	self.resultsWinner.Text = winner and ("CAMPEÃO: " .. winner.name .. string.format("  (%.1f%%)", (winner.share or 0) * 100))
+		or "Sem vencedor nesta rodada"
+
+	for _, child in ipairs(self.resultsRows:GetChildren()) do
+		if child:IsA("Frame") then child:Destroy() end
+	end
+	for index, entry in ipairs(ranked) do
+		local row = make("Frame", self.resultsRows, {
+			Position = UDim2.fromOffset(0, (index - 1) * 30),
+			Size = UDim2.fromOffset(594, 28), BorderSizePixel = 0,
+			BackgroundColor3 = entry == ownEntry and Color3.fromRGB(61, 77, 75)
+				or (index % 2 == 1 and Color3.fromRGB(35, 48, 66) or Color3.fromRGB(23, 34, 51)),
+			ZIndex = 74,
+		})
+		make("UICorner", row, { CornerRadius = UDim.new(0, 5) })
+		for _, col in ipairs({
+			{ 8, 38, "#" .. index },
+			{ 49, 258, (entry.isParty and "[DUPLA] " or "") .. (entry.name or "Nação") },
+			{ 310, 87, string.format("%.1f%%", (entry.share or 0) * 100) },
+			{ 404, 91, self.Protocol.formatK(entry.troops or 0) },
+			{ 503, 88, tostring(entry.captured or 0) },
+		}) do
+			make("TextLabel", row, {
+				Position = UDim2.fromOffset(col[1], 0), Size = UDim2.fromOffset(col[2], 28),
+				BackgroundTransparency = 1, Font = index == 1 and BOLD or FONT,
+				TextSize = 13, TextColor3 = index == 1 and ACCENT or TEXT,
+				Text = col[3], TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 75,
+			})
+		end
+	end
+	self.resultsRows.CanvasSize = UDim2.fromOffset(0, #ranked * 30 + 4)
+	self.resultsRows.CanvasPosition = Vector2.new(0, 0)
+	self.resultsPersonal.Text = ownEntry and string.format(
+		"Você: %dº | %.1f%% do mapa | %s tropas | %d células conquistadas | %d tomadas de inimigos",
+		ownEntry.rank or 0, (ownEntry.share or 0) * 100,
+		self.Protocol.formatK(ownEntry.troops or 0),
+		ownEntry.claimed or 0, ownEntry.captured or 0
+	) or "Você não controlava uma nação ao final desta partida."
+end
+
+function HUD:hideResults()
+	self.resultsOverlay.Visible = false
+end
+
+function HUD:updateMatchClock(phase, seconds)
+	self.matchClock.Visible = phase == "playing" and (self.Config.Match.MaxDurationSeconds or 0) > 0
+	if not self.matchClock.Visible then return end
+	local left = math.max(0, math.ceil(seconds or 0))
+	self.matchClockText.Text = string.format("TEMPO  %02d:%02d", math.floor(left / 60), left % 60)
+	self.matchClockText.TextColor3 = left <= 60 and BAD or ACCENT
 end
 
 function HUD:showCenter(title, body, closable)
