@@ -6,6 +6,7 @@ local ctx, Config
 local phase, phaseEnds, round, winner = "waiting", 0, 0, nil
 local votes = {}          -- userId -> mode
 local lastPartySync = -1
+local lastVictoryCheck = -1
 local roundStarted = nil
 local finalResults = nil
 local endReason = nil
@@ -99,6 +100,7 @@ function MatchService.beginRound()
 	winner = nil
 	finalResults, endReason, roundStarted = nil, nil, nil
 	lastPartySync = -1
+	lastVictoryCheck = -1
 	votes = {}
 	if (Config.Match.VoteSeconds or 0) <= 0 then
 		startSpawn()
@@ -306,10 +308,15 @@ function MatchService.tick(humanCount)
 		ctx.Nations.checkEliminations()
 		-- Sort by combined territory so teammates may reach the 80% threshold
 		-- together. At the time limit, the largest team/nation wins.
+		-- Grouping and sorting every frame is costly with hundreds of bots.
+		-- Check twice a second, or immediately when the match timer expires.
+		local timedOut = (Config.Match.MaxDurationSeconds or 0) > 0 and now >= phaseEnds
+		if not timedOut and now - lastVictoryCheck < 0.5 then return end
+		lastVictoryCheck = now
 		local ranked = buildStandings()
 		if ranked[1] and ranked[1].share >= Config.Match.VictoryPercent then
 			finishMatch("territory", ranked)
-		elseif (Config.Match.MaxDurationSeconds or 0) > 0 and now >= phaseEnds then
+		elseif timedOut then
 			finishMatch("timeout", ranked)
 		end
 	elseif phase == "ended" then
