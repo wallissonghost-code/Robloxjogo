@@ -30,7 +30,7 @@ local function label(parent, text, x, y, w, h, size, color, bold)
         BackgroundTransparency = 1, Position = UDim2.fromOffset(x, y),
         Size = UDim2.fromOffset(w, h), Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
         Text = text, TextSize = size, TextColor3 = color or WHITE, TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23,
+        TextXAlignment = Enum.TextXAlignment.Center, ZIndex = math.max(23, parent.ZIndex + 1),
     })
 end
 
@@ -39,7 +39,7 @@ local function button(parent, text, x, y, w, h, fill, textColor)
         Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h),
         BackgroundColor3 = fill or CARD, BorderSizePixel = 0, AutoButtonColor = true,
         Font = Enum.Font.GothamBold, TextSize = 17, TextColor3 = textColor or WHITE,
-        Text = text, TextWrapped = true, ZIndex = 27,
+        Text = text, TextWrapped = true, ZIndex = math.max(27, parent.ZIndex + 2),
     })
     rounded(b, 10)
     return b
