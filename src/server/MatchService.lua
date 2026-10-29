@@ -146,6 +146,7 @@ function MatchService.toWaiting()
 	winner = nil
 	finalResults, endReason, roundStarted = nil, nil, nil
 	lastPartySync = -1
+	lastVictoryCheck = -1
 	votes = {}
 	ctx.fullResync = true
 	announce()
