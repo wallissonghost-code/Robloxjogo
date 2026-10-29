@@ -36,8 +36,9 @@ GameConfig.Match = {
 	VoteSeconds = 15,                  -- mode vote at the start of every round (ends early once every player voted)
 	MaxPlayers = 55,                   -- set the same value in Game Settings > Places > Max Players
 	SpawnPhaseSeconds = 25,            -- players pick a start; no expansion yet
-	VictoryPercent = 0.80,             -- share of all land cells
-	EndScreenSeconds = 15,             -- victory screen before the next round
+	VictoryPercent = 0.80,             -- solo nation or combined Party land share wins
+	MaxDurationSeconds = 20 * 60,      -- time limit: largest active nation/Party wins at timeout
+	EndScreenSeconds = 15,             -- legacy non-lobby end screen before the next round
 	AllowRespawn = true,               -- eliminated or late players may found a new nation
 	RespawnCooldown = 10,
 }
