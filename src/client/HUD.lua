@@ -286,7 +286,7 @@ function HUD.new(state, gui, handlers)
 	})
 	make("UICorner", columns, { CornerRadius = UDim.new(0, 6) })
 	for _, col in ipairs({
-		{ 8, 37, "POS." }, { 49, 255, "NAÇÃO / EQUIPE" },
+		{ 8, 37, "POS." }, { 49, 255, "NAÇÃO / EQUIPE (TOP 30)" },
 		{ 310, 88, "TERRITÓRIO" }, { 404, 89, "TROPAS" }, { 503, 95, "CAPTURAS" },
 	}) do
 		make("TextLabel", columns, {
@@ -590,7 +590,8 @@ function HUD:showResults(match)
 	for _, child in ipairs(self.resultsRows:GetChildren()) do
 		if child:IsA("Frame") then child:Destroy() end
 	end
-	for index, entry in ipairs(ranked) do
+	for index = 1, math.min(#ranked, 30) do
+		local entry = ranked[index]
 		local row = make("Frame", self.resultsRows, {
 			Position = UDim2.fromOffset(0, (index - 1) * 30),
 			Size = UDim2.fromOffset(594, 28), BorderSizePixel = 0,
@@ -615,7 +616,7 @@ function HUD:showResults(match)
 			})
 		end
 	end
-	self.resultsRows.CanvasSize = UDim2.fromOffset(0, #ranked * 30 + 4)
+	self.resultsRows.CanvasSize = UDim2.fromOffset(0, math.min(#ranked, 30) * 30 + 4)
 	self.resultsRows.CanvasPosition = Vector2.new(0, 0)
 	self.resultsPersonal.Text = ownEntry and string.format(
 		"Você: %dº | %.1f%% do mapa | %s tropas | %d células conquistadas | %d tomadas de inimigos",
