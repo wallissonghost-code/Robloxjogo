@@ -60,6 +60,8 @@ function World:step(dt, humanCount, clock)
 	local ctx, T = self.ctx, self.ctx.Config.Tick
 	self.time = self.time + dt
 	ctx.Match.tick(humanCount or 0)
+	-- Keep the final map frozen while players review results or return to lobby.
+	if ctx.lobbyMatch and ctx.Match.phase() == "ended" then return end
 	local t = self.timers
 	t.sim = t.sim + dt
 	t.econ = t.econ + dt
