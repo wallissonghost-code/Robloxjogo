@@ -441,6 +441,9 @@ hud = HUD.new(state, gui, {
 		send(Actions.Vote, mode)
 		hud:refreshMenu(myVote)
 	end,
+	onReturnLobby = function()
+		send(Actions.ReturnLobby)
+	end,
 	onWeapon = function(kind)
 		if buildKind == kind then setMode("weapon", nil) else setMode("weapon", kind) end
 	end,
