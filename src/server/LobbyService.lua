@@ -234,10 +234,8 @@ function LobbyService.start(config)
                 syncAll()
             end
         elseif action == "Privacy" then
-            if group.leader == player.UserId and type(data) == "boolean" then
-                group.private = data
-                syncAll()
-            end
+            -- Private matchmaking was removed: parties always join public wars.
+            if group.private then group.private = false; syncAll() end
         elseif action == "Invite" then
             if group.leader ~= player.UserId or type(data) ~= "number" or data == player.UserId then return end
             if (lastInvite[player.UserId] or 0) + 2 > os.clock() then return end
