@@ -225,7 +225,7 @@ function HUD.new(state, gui, handlers)
 		LayoutOrder = 4, Size = UDim2.fromOffset(240, 36), TextSize = 15,
 		BackgroundColor3 = ACCENT, ZIndex = 51, Visible = false,
 	})
-	self.centerLobby.TextColor3 = INK or Color3.fromRGB(30, 24, 10)
+	self.centerLobby.TextColor3 = Color3.fromRGB(30, 24, 10)
 	self.centerLobby.Activated:Connect(function() self.h.onReturnLobby() end)
 
 	-- narrow screens (phones/tablets): lift the percentage bar above the player card
@@ -469,7 +469,7 @@ function HUD:showCenter(title, body, closable)
 	self.centerTitle.Text = title
 	self.centerBody.Text = body
 	self.centerClose.Visible = closable ~= false
-	self.centerLobby.Visible = closable == false and self.Config.Lobby and self.Config.Lobby.Enabled or false
+	self.centerLobby.Visible = self.Config.Lobby and self.Config.Lobby.Enabled or false
 	self.center.Visible = true
 end
 
