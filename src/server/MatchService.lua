@@ -5,6 +5,7 @@ local MatchService = {}
 local ctx, Config
 local phase, phaseEnds, round, winner = "waiting", 0, 0, nil
 local votes = {}          -- userId -> mode
+local lastPartySync = -1
 
 function MatchService.init(context)
 	ctx = context
@@ -181,6 +182,22 @@ end
 
 function MatchService.tick(humanCount)
 	local now = ctx.now()
+	-- Party members can choose their capitals independently, but remain allies
+	-- as soon as both nations exist. Check occasionally, never on every frame.
+	if ctx.partyOfUser and (phase == "spawn" or phase == "playing") and now - lastPartySync >= 1 then
+		lastPartySync = now
+		local first = {}
+		for userId, partyId in pairs(ctx.partyOfUser) do
+			local nation = ctx.Nations.forUser(userId)
+			if nation and nation.alive then
+				if first[partyId] then
+					ctx.Diplomacy.syncParty(first[partyId], nation.id)
+				else
+					first[partyId] = nation.id
+				end
+			end
+		end
+	end
 	if phase == "waiting" then
 		if humanCount > 0 then MatchService.beginRound() end
 		return
