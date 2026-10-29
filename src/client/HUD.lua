@@ -221,6 +221,12 @@ function HUD.new(state, gui, handlers)
 	self.centerBody = make("TextLabel", self.center, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Font = FONT, TextSize = 14, TextColor3 = TEXT, TextWrapped = true, RichText = true, ZIndex = 51 })
 	self.centerClose = button(self.center, "Fechar", { LayoutOrder = 3, Size = UDim2.fromOffset(120, 30), ZIndex = 51 })
 	self.centerClose.Activated:Connect(function() self.center.Visible = false end)
+	self.centerLobby = button(self.center, "VOLTAR AO LOBBY", {
+		LayoutOrder = 4, Size = UDim2.fromOffset(240, 36), TextSize = 15,
+		BackgroundColor3 = ACCENT, ZIndex = 51, Visible = false,
+	})
+	self.centerLobby.TextColor3 = INK or Color3.fromRGB(30, 24, 10)
+	self.centerLobby.Activated:Connect(function() self.h.onReturnLobby() end)
 
 	-- narrow screens (phones/tablets): lift the percentage bar above the player card
 	local function layout()
@@ -463,6 +469,7 @@ function HUD:showCenter(title, body, closable)
 	self.centerTitle.Text = title
 	self.centerBody.Text = body
 	self.centerClose.Visible = closable ~= false
+	self.centerLobby.Visible = closable == false and self.Config.Lobby and self.Config.Lobby.Enabled or false
 	self.center.Visible = true
 end
 
