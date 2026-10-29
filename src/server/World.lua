@@ -165,7 +165,7 @@ function World:nationsPayload()
 			list[#list + 1] = { n.id, math.floor(n.troops), n.land, n.labelCell or n.capital, n.labelSize or 1, n.capital }
 		end
 	end
-	return { k = ctx.Protocol.Events.Nations, list = list, match = ctx.Match.publicView() }
+	return { k = ctx.Protocol.Events.Nations, list = list, match = ctx.Match.publicView(false) }
 end
 
 function World:ordersPayload()
