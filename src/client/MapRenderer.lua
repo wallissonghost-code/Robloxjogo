@@ -12,6 +12,11 @@ MapRenderer.__index = MapRenderer
 
 local BORDER_SHADE = 0.58
 local COUNTRY_SHADE = 0.9
+-- Each 64x64 region is an independent repaint unit. The logical map remains
+-- 640x320; chunks affect rendering only, not simulation or territory rules.
+local DEFAULT_CHUNK_SIZE = 64
+local FRAME_CHUNKS_PER_FRAME = 1
+local IMAGE_CHUNKS_PER_FRAME = 8
 
 function MapRenderer.new(state, parent, opts)
 	opts = opts or {}
@@ -19,10 +24,14 @@ function MapRenderer.new(state, parent, opts)
 	self.state = state
 	self.Map = state.Map
 	self.Palette = state.Palette
-	self.dirty = {}
-	self.dirtyCount = 0
 	self.fullDirty = true
 	local W, H = self.Map.W, self.Map.H
+	self.chunkSize = math.clamp(math.floor(tonumber(state.Config.View.ChunkSize) or DEFAULT_CHUNK_SIZE), 16, 128)
+	self.chunksX = math.ceil(W / self.chunkSize)
+	self.chunksY = math.ceil(H / self.chunkSize)
+	self.dirtyChunks = {} -- key -> bounds + dirty rows; coalesced until painted
+	self.chunkQueue = {}
+	self.queueHead = 1
 
 	local image = Instance.new("ImageLabel")
 	image.Name = "Territory"
@@ -59,8 +68,7 @@ function MapRenderer.new(state, parent, opts)
 		self.rowsFrame.Size = UDim2.fromScale(1, 1)
 		self.rowsFrame.ZIndex = 1
 		self.rowsFrame.Parent = parent
-		self.rowPools = {}
-		self.dirtyRows = {}
+		self.rowPools = {} -- row -> chunk-column -> reusable UI runs
 	end
 	self:recolor()
 
@@ -95,7 +103,8 @@ function MapRenderer:dispose()
 	if self.image then self.image:Destroy() end
 	if self.rowsFrame then self.rowsFrame:Destroy() end
 	if self.editable then pcall(function() self.editable:Destroy() end) end
-	self.editable, self.rowPools, self.dirtyRows = nil, nil, nil
+	self.editable, self.rowPools, self.dirtyChunks = nil, nil, nil
+	self.chunkQueue = nil
 end
 
 -- Pre-computes fill/border/country-line colours for every nation id.
@@ -122,16 +131,52 @@ function MapRenderer:recolor()
 	end
 end
 
+-- Mark a changed cell's chunk. Merge multiple edits into a single dirty
+-- rectangle and collect affected rows for the low-graphics Frames fallback.
+function MapRenderer:markCell(i)
+	local W = self.Map.W
+	local x, y = (i - 1) % W, math.floor((i - 1) / W)
+	local cx, cy = math.floor(x / self.chunkSize), math.floor(y / self.chunkSize)
+	local key = cy * self.chunksX + cx + 1
+	local entry = self.dirtyChunks[key]
+	if not entry then
+		entry = { cx = cx, cy = cy, minX = x, maxX = x, minY = y, maxY = y, rows = {} }
+		self.dirtyChunks[key] = entry
+		self.chunkQueue[#self.chunkQueue + 1] = key
+	else
+		entry.minX = math.min(entry.minX, x)
+		entry.maxX = math.max(entry.maxX, x)
+		entry.minY = math.min(entry.minY, y)
+		entry.maxY = math.max(entry.maxY, y)
+	end
+	entry.rows[y] = true
+end
+
 function MapRenderer:markAround(i)
 	local W, N = self.Map.W, self.Map.N
-	local list = { i, i - W, i + W }
+	if i < 1 or i > N then return end
+	-- Border pixels depend on their four neighbours: mark adjacent chunks when
+	-- a capture touches a chunk boundary, without wrapping at the map edge.
+	self:markCell(i)
+	if i > W then self:markCell(i - W) end
+	if i <= N - W then self:markCell(i + W) end
 	local x = (i - 1) % W
-	if x > 0 then list[#list + 1] = i - 1 end
-	if x < W - 1 then list[#list + 1] = i + 1 end
-	for _, j in ipairs(list) do
-		if j >= 1 and j <= N and not self.dirty[j] then
-			self.dirty[j] = true
-			self.dirtyCount = self.dirtyCount + 1
+	if x > 0 then self:markCell(i - 1) end
+	if x < W - 1 then self:markCell(i + 1) end
+end
+
+function MapRenderer:markAllChunks()
+	for cy = 0, self.chunksY - 1 do
+		for cx = 0, self.chunksX - 1 do
+			local x0, y0 = cx * self.chunkSize, cy * self.chunkSize
+			local key = cy * self.chunksX + cx + 1
+			self.dirtyChunks[key] = {
+				cx = cx, cy = cy, full = true,
+				minX = x0, minY = y0,
+				maxX = math.min(self.Map.W - 1, x0 + self.chunkSize - 1),
+				maxY = math.min(self.Map.H - 1, y0 + self.chunkSize - 1),
+			}
+			self.chunkQueue[#self.chunkQueue + 1] = key
 		end
 	end
 end
@@ -201,69 +246,56 @@ function MapRenderer:paintFull()
 		end
 		self.editable:WritePixelsBuffer(Vector2.zero, Vector2.new(Map.W, Map.H), buf)
 	else
-		for y = 0, Map.H - 1 do self.dirtyRows[y] = true end
+		-- Progressive first draw: 50 independently rendered chunks for 640x320,
+		-- never thousands of 3D Parts. Unchanged chunks are left untouched.
+		self:markAllChunks()
 	end
-	self.dirty, self.dirtyCount = {}, 0
 end
 
-function MapRenderer:paintDirty()
-	local Map = self.Map
-	local W = Map.W
-	if self.editable then
-		local buf = self.buffer
-		local minX, minY, maxX, maxY = W, Map.H, -1, -1
-		for i in pairs(self.dirty) do
-			local c = self:cellColor(i)
-			local o = (i - 1) * 4
-			buffer.writeu8(buf, o, c[1])
-			buffer.writeu8(buf, o + 1, c[2])
-			buffer.writeu8(buf, o + 2, c[3])
-			local x = (i - 1) % W
-			local y = (i - 1 - x) / W
-			if x < minX then minX = x end
-			if x > maxX then maxX = x end
-			if y < minY then minY = y end
-			if y > maxY then maxY = y end
-		end
-		if maxX >= minX then
-			local w, h = maxX - minX + 1, maxY - minY + 1
-			if w * h > Map.N / 3 then
-				self.editable:WritePixelsBuffer(Vector2.zero, Vector2.new(W, Map.H), buf)
-			else
-				local rect = buffer.create(w * h * 4)
-				for row = 0, h - 1 do
-					buffer.copy(rect, row * w * 4, buf, ((minY + row) * W + minX) * 4, w * 4)
-				end
-				self.editable:WritePixelsBuffer(Vector2.new(minX, minY), Vector2.new(w, h), rect)
-			end
-		end
-	else
-		for i in pairs(self.dirty) do
-			local x = (i - 1) % W
-			self.dirtyRows[(i - 1 - x) / W] = true
+-- EditableImage receives only the dirty rectangle INSIDE a chunk. Distant
+-- simultaneous captures no longer force one huge bounding-box texture upload.
+function MapRenderer:paintImageChunk(entry)
+	local x0, x1 = entry.minX, entry.maxX
+	local y0, y1 = entry.minY, entry.maxY
+	local w, h = x1 - x0 + 1, y1 - y0 + 1
+	local rect = buffer.create(w * h * 4)
+	local W = self.Map.W
+	for y = y0, y1 do
+		for x = x0, x1 do
+			local c = self:cellColor(y * W + x + 1)
+			local off = ((y - y0) * w + (x - x0)) * 4
+			buffer.writeu8(rect, off, c[1])
+			buffer.writeu8(rect, off + 1, c[2])
+			buffer.writeu8(rect, off + 2, c[3])
+			buffer.writeu8(rect, off + 3, 255)
 		end
 	end
-	self.dirty, self.dirtyCount = {}, 0
+	self.editable:WritePixelsBuffer(Vector2.new(x0, y0), Vector2.new(w, h), rect)
 end
 
--- Fallback: one Frame per run of equal colour in a row, pooled and reused.
-function MapRenderer:paintRow(y)
+-- Compatible fallback: each chunk owns reusable run-length Frames for its
+-- rows. Capturing one cell redraws only its own (and adjacent border) rows,
+-- rather than rebuilding an entire 640-cell strip across the world.
+function MapRenderer:paintRowChunk(y, cx)
 	local Map = self.Map
 	local W, H = Map.W, Map.H
 	local pool = self.rowPools[y]
 	if not pool then pool = {} self.rowPools[y] = pool end
+	local segments = pool[cx]
+	if not segments then segments = {} pool[cx] = segments end
 	local owner = self.state.owner
-	local used, x = 0, 0
-	self.plain = true -- no faint country lines here: fewer frames
-	while x < W do
+	local x = cx * self.chunkSize
+	local xEnd = math.min(W, x + self.chunkSize)
+	local used = 0
+	self.plain = true -- avoid extra country-line frames at low settings
+	while x < xEnd do
 		local i = y * W + x + 1
 		local stop = x + 1
 		if owner[i] == -1 then
-			-- water: the ocean-coloured background already shows it
-			while stop < W and owner[y * W + stop + 1] == -1 do stop = stop + 1 end
+			while stop < xEnd and owner[y * W + stop + 1] == -1 do stop = stop + 1 end
 		else
 			local c = self:cellColor(i)
-			while stop < W do
+			while stop < xEnd do
 				local j = y * W + stop + 1
 				if owner[j] == -1 then break end
 				local d = self:cellColor(j)
@@ -271,40 +303,59 @@ function MapRenderer:paintRow(y)
 				stop = stop + 1
 			end
 			used = used + 1
-			local f = pool[used]
-			if not f then
-				f = Instance.new("Frame")
-				f.BorderSizePixel = 0
-				f.Parent = self.rowsFrame
-				pool[used] = f
+			local frame = segments[used]
+			if not frame then
+				frame = Instance.new("Frame")
+				frame.BorderSizePixel = 0
+				frame.ZIndex = 1
+				frame.Parent = self.rowsFrame
+				segments[used] = frame
 			end
-			f.Position = UDim2.fromScale(x / W, y / H)
-			f.Size = UDim2.new((stop - x) / W, 1, 1 / H, 1)
-			f.BackgroundColor3 = Color3.fromRGB(c[1], c[2], c[3])
-			f.Visible = true
+			frame.Position = UDim2.fromScale(x / W, y / H)
+			frame.Size = UDim2.new((stop - x) / W, 1, 1 / H, 1)
+			frame.BackgroundColor3 = Color3.fromRGB(c[1], c[2], c[3])
+			frame.Visible = true
 		end
 		x = stop
 	end
 	self.plain = false
-	for k = used + 1, #pool do pool[k].Visible = false end
+	for k = used + 1, #segments do segments[k].Visible = false end
+end
+
+function MapRenderer:paintFrameChunk(entry)
+	local y0 = entry.cy * self.chunkSize
+	local y1 = math.min(self.Map.H - 1, y0 + self.chunkSize - 1)
+	for y = y0, y1 do
+		if entry.full or entry.rows[y] then
+			self:paintRowChunk(y, entry.cx)
+		end
+	end
 end
 
 function MapRenderer:flush()
+	if self.disposed then return end
 	if self.fullDirty then
 		self.fullDirty = false
+		self.dirtyChunks, self.chunkQueue, self.queueHead = {}, {}, 1
 		self:paintFull()
-	elseif self.dirtyCount > 0 then
-		self:paintDirty()
 	end
-	if self.dirtyRows then
-		-- a full repaint is spread over frames; more rows per frame while it is large
-		local count, budget = 0, next(self.dirtyRows) and 24 or 0
-		for y in pairs(self.dirtyRows) do
-			self.dirtyRows[y] = nil
-			self:paintRow(y)
-			count = count + 1
-			if count >= budget then break end
+	local budget = self.editable and IMAGE_CHUNKS_PER_FRAME or FRAME_CHUNKS_PER_FRAME
+	for _ = 1, budget do
+		local key = self.chunkQueue[self.queueHead]
+		if not key then break end
+		self.queueHead = self.queueHead + 1
+		local entry = self.dirtyChunks[key]
+		self.dirtyChunks[key] = nil
+		if entry then
+			if self.editable then
+				self:paintImageChunk(entry)
+			else
+				self:paintFrameChunk(entry)
+			end
 		end
+	end
+	if self.queueHead > #self.chunkQueue then
+		self.chunkQueue, self.queueHead = {}, 1
 	end
 end
 
