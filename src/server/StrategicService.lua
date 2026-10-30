@@ -94,7 +94,9 @@ function StrategicService.launch(nid, cell, kind, percent)
 	end
 	local launcher, distance, why = pickLauncher(nid, weapon, cell)
 	if not launcher then return false, why end
-	local oil = ctx.mode == "extreme" and weapon.oil or 0
+	-- Oil-consuming weapons spend oil in either mode; this makes the
+	-- newly shared oil well meaningful in classic matches as well.
+	local oil = weapon.oil or 0
 	if n.gold < weapon.gold then return false, weapon.name .. " custa " .. weapon.gold .. " de ouro." end
 	if oil > 0 and (n.oil or 0) < oil then return false, weapon.name .. " precisa de " .. oil .. " de petróleo." end
 	local troops = 0
