@@ -387,9 +387,9 @@ local helpText = table.concat({
 	"<b>Objetivo:</b> dominar " .. math.floor(Config.Match.VictoryPercent * 100) .. "% das terras do mundo.",
 	"<b>Começar:</b> clique numa terra livre para fundar sua capital.",
 	"<b>Expandir/atacar:</b> escolha o % de tropas e clique no destino. A fronteira avança sozinha.",
-	"<b>Construções:</b> 🏗 mostra para que serve cada uma e o alcance no mapa. Clique numa construção sua para melhorar o nível.",
+	"<b>Construções:</b> o Centro Militar mostra funções e alcances. Clique numa construção sua para melhorar seu nível.",
 	"<b>Mar:</b> construa um porto e clique numa costa do outro lado. No porto, compre barcos de defesa; clique num barco e depois na água para escolher a patrulha.",
-	"<b>Centro Militar:</b> 🏗 Construir abre Construções e Armamentos. Bombas bloqueadas mostram o requisito; selecione uma disponível, escolha o alvo e confirme com o segundo clique.",
+	"<b>Centro Militar:</b> Construir abre Construções e Armamentos. Bombas bloqueadas mostram o requisito; selecione uma disponível, escolha o alvo e confirme com o segundo clique.",
 	"<b>Câmera:</b> arraste para mover, roda do mouse/pinça para zoom, WASD, F para ver o mundo, Espaço para sua capital.",
 	"<b>Atalhos:</b> 1–4 percentual, B construir, Esc cancelar, botão direito numa nação para diplomacia.",
 }, "\n")
@@ -466,7 +466,7 @@ hud = HUD.new(state, gui, {
 		-- Server still validates launches; block obviously unavailable weapons here.
 		local available, why = hud:weaponAvailability(kind)
 		if not available then
-			hud:toast("🔒 " .. why, "bad")
+			hud:toast("Armamento indisponível: " .. why, "bad")
 			return
 		end
 		if mode == "weapon" and buildKind == kind then setMode("weapon", nil)
@@ -489,9 +489,9 @@ task.spawn(function()
 		local phase = state.match.phase
 		local text
 		if mode == "build" then
-			text = buildKind and ("🏗 " .. Config.Buildings[buildKind].name .. " — escolha o local e confirme em ✓ ou cancele em ✕") or "🏗 Escolha uma construção"
+			text = buildKind and ("Construindo: " .. Config.Buildings[buildKind].name .. " - escolha o local e confirme") or "Escolha uma construção"
 		elseif mode == "weapon" then
-			text = buildKind and (Config.Weapons[buildKind].icon .. " Escolha o alvo · Esc cancela") or "💣 Escolha uma arma"
+			text = buildKind and ("Armamento: " .. Config.Weapons[buildKind].name .. " - escolha o alvo") or "Escolha um armamento"
 		elseif mode == "patrol" then
 			text = "🚢 Clique na água onde o barco deve patrulhar · Esc cancela"
 		elseif phase == "spawn" then
