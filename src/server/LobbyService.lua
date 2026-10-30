@@ -181,7 +181,10 @@ function LobbyService.start(config)
         parties[player.UserId] = nil
         destination.members[player.UserId] = true
         membership[player.UserId] = destination.leader
-        pcall(function() nativeInvites:RemoveAsync(ticket) end)
+        -- Never delay the Party UI on a network-backed ticket removal.
+        task.spawn(function()
+            pcall(function() nativeInvites:RemoveAsync(ticket) end)
+        end)
         syncAll()
         message(player, "Você entrou no Party de " .. leader.DisplayName .. "!", true)
         message(leader, player.DisplayName .. " aceitou o convite e entrou no Party!", true)
