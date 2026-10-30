@@ -144,9 +144,9 @@ function LobbyClient.start(config, protocol)
     resizeParty()
     label(party, "👥  PARTY", 25, 18, 390, 46, 29, WHITE, true)
     local close = button(party, "X", 464, 22, 48, 42, CARD)
-    label(party, "Convide um jogador do lobby para formar uma dupla.", 22, 75, 496, 40, 14, MUTED)
+    local inviteHint = label(party, "Convide amigos daqui ou de fora do jogo para sua dupla.", 22, 75, 496, 40, 14, MUTED)
     local membersTitle = label(party, "Membros: você", 22, 121, 496, 42, 16, GOLD, true)
-    local friends = button(party, "CONVIDAR AMIGOS DO ROBLOX", 20, 175, 500, 49, GOLD, Color3.fromRGB(30, 25, 16))
+    local friends = button(party, "CONVIDAR AMIGOS FORA DO JOGO", 20, 175, 500, 49, GOLD, Color3.fromRGB(30, 25, 16))
     local listTitle = label(party, "JOGADORES NESTE LOBBY", 20, 236, 500, 25, 15, WHITE, true)
     local scrolling = make("ScrollingFrame", party, {
         Position = UDim2.fromOffset(24, 267), Size = UDim2.fromOffset(490, 128),
@@ -160,14 +160,45 @@ function LobbyClient.start(config, protocol)
     partyButton.Activated:Connect(function() dim.Visible = true end)
     leave.Activated:Connect(function() command:FireServer("Leave") end)
 
+    local activeParty = nil
+    local nativePending = false
+    local function resetNativeInvite()
+        nativePending = false
+        friends.Text = "CONVIDAR AMIGOS FORA DO JOGO"
+        friends.Active = true
+    end
+
     friends.Activated:Connect(function()
-        local ok, allowed = pcall(function() return SocialService:CanSendGameInviteAsync(player) end)
-        if not ok or not allowed then
-            notice.Text = "Convites do Roblox indisponíveis neste dispositivo ou ambiente."
+        if nativePending then return end
+        if not activeParty or activeParty.leader ~= player.UserId then
+            inviteHint.Text = "Peça ao líder do Party para enviar convites."
             return
         end
-        local success = pcall(function() SocialService:PromptGameInvite(player) end)
-        if not success then notice.Text = "Não foi possível abrir o convite do Roblox." end
+        if #(activeParty.members or {}) >= 2 then
+            inviteHint.Text = "Seu Party já está completo (2/2)."
+            return
+        end
+        nativePending = true
+        friends.Active = false
+        friends.Text = "VERIFICANDO CONVITES..."
+        local ok, allowed = pcall(function()
+            return SocialService:CanSendGameInviteAsync(player)
+        end)
+        if not nativePending then return end
+        if not ok or not allowed then
+            resetNativeInvite()
+            inviteHint.Text = "Roblox não permitiu convites neste dispositivo/conta. Verifique as permissões."
+            notice.Text = inviteHint.Text
+            return
+        end
+        friends.Text = "PREPARANDO PARTY..."
+        command:FireServer("NativeInvite")
+        task.delay(12, function()
+            if nativePending then
+                resetNativeInvite()
+                inviteHint.Text = "Convite não respondeu. Tente novamente."
+            end
+        end)
     end)
 
     shopButton.Activated:Connect(function()
@@ -177,7 +208,6 @@ function LobbyClient.start(config, protocol)
     inviteGroup.Activated:Connect(function() dim.Visible = true end)
     play.Activated:Connect(function() command:FireServer("Play") end)
 
-    local activeParty = nil
     local people = {}
     local starting = false
     local function draw()
@@ -254,8 +284,33 @@ function LobbyClient.start(config, protocol)
             inviteLabel.Text = (data.name or "Jogador") .. " convidou você para um Party!"
             inviteWindow.Visible = true
             dim.Visible = false
+        elseif data.kind == "NativeInviteReady" then
+            if not nativePending then return end
+            resetNativeInvite()
+            if type(data.launchData) ~= "string" or #data.launchData > 200 then
+                inviteHint.Text = "Convite inválido. Tente novamente."
+                return
+            end
+            local options = Instance.new("ExperienceInviteOptions")
+            options.PromptMessage = "Convide um amigo para jogar Mundial War com você!"
+            options.LaunchData = data.launchData
+            dim.Visible = false
+            local success, err = pcall(function()
+                SocialService:PromptGameInvite(player, options)
+            end)
+            options:Destroy()
+            if success then
+                inviteHint.Text = "Quando seu amigo aceitar, ele entrará no mesmo Party."
+                notice.Text = "Convite do Roblox aberto. Selecione um amigo para enviar."
+            else
+                warn("[MundialWar] Native invite prompt failed: " .. tostring(err))
+                inviteHint.Text = "Falha ao abrir convite nativo do Roblox."
+                notice.Text = inviteHint.Text
+            end
         elseif data.kind == "Notice" then
             notice.Text = data.text or ""
+            inviteHint.Text = data.text or ""
+            if nativePending and data.good == false then resetNativeInvite() end
         elseif data.kind == "Starting" then
             starting = data.text ~= ""
             notice.Text = data.text or ""
