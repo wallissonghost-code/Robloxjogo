@@ -300,8 +300,8 @@ function LobbyClient.start(config, protocol)
             end)
             options:Destroy()
             if success then
-                inviteHint.Text = "Quando seu amigo aceitar, ele entrará no mesmo Party."
-                notice.Text = "Convite do Roblox aberto. Selecione um amigo para enviar."
+                inviteHint.Text = "Convite aberto. Aguarde no lobby até seu amigo entrar na dupla."
+                notice.Text = "Selecione um amigo no Roblox e espere ele aceitar antes de jogar."
             else
                 warn("[MundialWar] Native invite prompt failed: " .. tostring(err))
                 inviteHint.Text = "Falha ao abrir convite nativo do Roblox."
