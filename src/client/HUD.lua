@@ -553,7 +553,7 @@ function HUD:weaponAvailability(kind)
 	if (me.gold or 0) < w.gold then
 		return false, "Ouro insuficiente: " .. self.Protocol.formatK(w.gold) .. "."
 	end
-	if currentMode == "extreme" and w.oil and (me.oil or 0) < w.oil then
+	if w.oil and (me.oil or 0) < w.oil then
 		return false, "Requer " .. w.oil .. " petróleo."
 	end
 	return true, "PRONTO"
@@ -572,7 +572,9 @@ function HUD:refreshWeapons()
 		if costLabel then
 			-- Always show the gold price; missing requirements are shown in tooltip.
 			local launcherPresent = me and me.cooldowns and me.cooldowns[w.launcher] ~= nil
-			if w.minLevel and not available then
+			if not available and reason:find("petróleo", 1, true) then
+				costLabel.Text = "🛢 " .. w.oil
+			elseif w.minLevel and not available then
 				local maxLevel = 0
 				for _, built in pairs(self.state.buildings) do
 					if built.owner == self.state.you and built.kind == w.launcher then
