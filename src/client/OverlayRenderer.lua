@@ -137,6 +137,17 @@ function OverlayRenderer:updateLabels()
 			local cap = make("TextLabel", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Text = "★", Font = FONT, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, ZIndex = 5 })
 			self.capitals[id] = cap
 		end
+		-- Simplified identities on the map:
+		-- AI nations and tribes display only their geographic country name.
+		-- Humans retain their actual headshot (or the letter while it loads).
+		local isHuman = n.kind == "player" and type(n.userId) == "number" and n.userId > 0
+		local plainName = n.name
+		if not isHuman then
+			local country = self.Map.countries and self.Map.countries[n.country]
+			plainName = (country and country.name) or n.name:gsub("^Tribos de ", "")
+		end
+		item.avatar.Visible = isHuman
+		item.initial.Visible = isHuman and item.avatar.Image == ""
 		-- size follows the on-screen size of the territory, clamped
 		local area = math.max(1, n.labelSize or n.land or 1)
 		local px = math.sqrt(area) * scale
@@ -151,9 +162,10 @@ function OverlayRenderer:updateLabels()
 			item.avatar.Size = UDim2.fromOffset(font * 1.25, font * 1.25)
 			item.name.TextSize = font
 			item.name.Size = UDim2.fromOffset(0, font * 1.3)
-			local rel = state:relation(state.you, id)
-			item.name.Text = (rel == "ally" and "🤝 " or rel == "war" and "⚔ " or "") .. n.name
-			item.troops.Visible = isYou or lod >= 1 or font >= 14
+			-- No emoji prefixes on nation names. Bots: country only.
+			-- Player avatars are reserved for real Roblox users.
+			item.name.Text = plainName
+			item.troops.Visible = isHuman and (isYou or lod >= 1 or font >= 14)
 			item.troops.TextSize = math.max(9, font * 0.85)
 			item.troops.Size = UDim2.fromOffset(font * 6, font * 1.1)
 			item.troops.Text = self.Protocol.formatK(n.troops)
