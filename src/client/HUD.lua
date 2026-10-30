@@ -16,6 +16,11 @@ local MUTED = Color3.fromRGB(150, 160, 172)
 local ACCENT = Color3.fromRGB(240, 196, 92)
 local GOOD = Color3.fromRGB(110, 200, 130)
 local BAD = Color3.fromRGB(235, 110, 100)
+-- Card palette: can afford, cannot afford, missing prerequisite.
+local PRICE_READY = ACCENT
+local PRICE_LOCKED = Color3.fromRGB(143, 161, 189)
+local CARD_NORMAL = Color3.fromRGB(34, 44, 58)
+local CARD_LOCKED = Color3.fromRGB(29, 40, 56)
 
 local function make(class, parent, props)
 	local o = Instance.new(class)
@@ -87,14 +92,14 @@ function HUD.new(state, gui, handlers)
 	self.militaryPanel = panel(gui, {
 		Name = "MilitaryCenter", AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, -70),
-		Size = UDim2.fromOffset(760, 264), Visible = false, Active = true, ZIndex = 30,
+		Size = UDim2.fromOffset(620, 194), Visible = false, Active = true, ZIndex = 30,
 	})
 	make("UIStroke", self.militaryPanel, { Color = Color3.fromRGB(75, 97, 118), Transparency = 0.22, Thickness = 1 })
 	self.militaryScale = make("UIScale", self.militaryPanel, { Scale = 1 })
 	make("TextLabel", self.militaryPanel, {
-		Position = UDim2.fromOffset(12, 7), Size = UDim2.new(1, -60, 0, 22),
+		Position = UDim2.fromOffset(12, 7), Size = UDim2.fromOffset(144, 27),
 		BackgroundTransparency = 1, Text = "CENTRO MILITAR", Font = BOLD,
-		TextSize = 15, TextColor3 = ACCENT, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 32,
+		TextSize = 13, TextColor3 = ACCENT, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 32,
 	})
 	self.militaryTabs = {}
 	for index, tab in ipairs({
@@ -102,33 +107,33 @@ function HUD.new(state, gui, handlers)
 		{ key = "weapons", label = "Armamentos" },
 	}) do
 		local tabButton = button(self.militaryPanel, tab.label, {
-			Position = UDim2.fromOffset(10 + (index - 1) * 164, 35),
-			Size = UDim2.fromOffset(157, 31), TextSize = 13, ZIndex = 32,
+			Position = UDim2.fromOffset(162 + (index - 1) * 149, 6),
+			Size = UDim2.fromOffset(143, 28), TextSize = 12, ZIndex = 32,
 		})
 		tabButton.Activated:Connect(function() self.h.onMilitaryTab(tab.key) end)
 		self.militaryTabs[tab.key] = tabButton
 	end
 	local closeMilitary = button(self.militaryPanel, "X", {
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -9, 0, 8),
-		Size = UDim2.fromOffset(29, 25), TextSize = 14, ZIndex = 32,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -9, 0, 6),
+		Size = UDim2.fromOffset(27, 27), TextSize = 14, ZIndex = 32,
 	})
 	closeMilitary.Activated:Connect(function() self.h.onMilitaryClose() end)
 
 	self.cardIcons = { build = {}, weapons = {} }
 	-- Both existing catalogs are pages of the SAME panel, not floating windows.
-	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
+	-- Compact military catalog: two rows, horizontal scroll, icon/name/price only.
 	local function tray(name, order, defs, onPick)
-		-- Compact, native Roblox UI: no external asset IDs required.
+		-- PNG ImageLabels when published; original silhouette fallback while IDs are pending.
 		local t = make("Frame", self.militaryPanel, {
-			Name = name, Position = UDim2.fromOffset(0, 68),
-			Size = UDim2.new(1, 0, 1, -68), BackgroundTransparency = 1,
+			Name = name, Position = UDim2.fromOffset(0, 39),
+			Size = UDim2.new(1, 0, 1, -39), BackgroundTransparency = 1,
 			BorderSizePixel = 0, Visible = false, ZIndex = 31,
 		})
 		local grid = make("ScrollingFrame", t, {
-			Name = "Choices", Position = UDim2.fromOffset(8, 4),
-			Size = UDim2.new(1, -16, 1, -8), BackgroundTransparency = 1,
+			Name = "Choices", Position = UDim2.fromOffset(6, 1),
+			Size = UDim2.new(1, -12, 1, -3), BackgroundTransparency = 1,
 			BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X,
-			ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 122 + 8, 188),
+			ScrollBarThickness = 2, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 100 + 8, 148),
 			ZIndex = 32,
 		})
 		local buttons = {}
@@ -161,7 +166,7 @@ function HUD.new(state, gui, handlers)
 			tip.Visible = true
 		end
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 122, ((index - 1) % 2) * 93 + 2), Size = UDim2.fromOffset(116, 89), ZIndex = 33, TextSize = 10 })
+			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 100, ((index - 1) % 2) * 73 + 2), Size = UDim2.fromOffset(94, 69), ZIndex = 33, TextSize = 10 })
 			make("UICorner", b, { CornerRadius = UDim.new(0, 9) })
 			make("UIStroke", b, { Color = Color3.fromRGB(76, 101, 122), Transparency = 0.3, Thickness = 1 })
 			b.Text = ""
@@ -173,42 +178,36 @@ function HUD.new(state, gui, handlers)
 				local holder = make("Frame", b, {
 					Name = "Icon", AnchorPoint = Vector2.new(0.5, 0),
 					Position = UDim2.new(0.5, 0, 0, 2),
-					Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, ZIndex = 34,
+					Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, ZIndex = 34,
 				})
 				self.cardIcons[group][kind] = MilitaryIcons.attach(holder, kind)
 				make("TextLabel", b, {
-					Name = "Title", Position = UDim2.fromOffset(3, 34), Size = UDim2.new(1, -6, 0, 24),
+					Name = "Title", Position = UDim2.fromOffset(3, 28), Size = UDim2.new(1, -6, 0, 24),
 					BackgroundTransparency = 1, Text = def.name, TextColor3 = TEXT, Font = BOLD,
 					TextSize = 10, TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
 					TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 34,
 				})
 				make("TextLabel", b, {
-					Name = "Cost", Position = UDim2.fromOffset(2, 60), Size = UDim2.new(1, -4, 0, 15),
+					Name = "Cost", Position = UDim2.fromOffset(2, 53), Size = UDim2.new(1, -4, 0, 14),
 					BackgroundTransparency = 1, Text = "", TextColor3 = GOOD, Font = BOLD,
 					TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center,
 					TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 34,
 				})
-				make("TextLabel", b, {
-					Name = "Status", Position = UDim2.fromOffset(2, 77), Size = UDim2.new(1, -4, 0, 10),
-					BackgroundTransparency = 1, Text = "", TextColor3 = MUTED, Font = BOLD,
-					TextSize = 8, TextXAlignment = Enum.TextXAlignment.Center,
-					TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 34,
-				})
 				-- Geometric padlock: no emoji or font-dependent Unicode icon.
 				local lock = make("Frame", b, {
-					Name = "LockedBadge", Position = UDim2.new(1, -20, 0, 5),
-					Size = UDim2.fromOffset(14, 16), BackgroundTransparency = 1,
+					Name = "LockedBadge", Position = UDim2.new(1, -16, 0, 3),
+					Size = UDim2.fromOffset(12, 14), BackgroundTransparency = 1,
 					Visible = false, ZIndex = 35,
 				})
 				local shackle = make("Frame", lock, {
-					Position = UDim2.fromOffset(3, 0), Size = UDim2.fromOffset(8, 9),
+					Position = UDim2.fromOffset(3, 0), Size = UDim2.fromOffset(6, 8),
 					BackgroundTransparency = 1, ZIndex = 36,
 				})
 				make("UICorner", shackle, { CornerRadius = UDim.new(0, 4) })
-				make("UIStroke", shackle, { Color = MUTED, Thickness = 2 })
+				make("UIStroke", shackle, { Color = PRICE_LOCKED, Thickness = 1.5 })
 				make("Frame", lock, {
-					Position = UDim2.fromOffset(1, 7), Size = UDim2.fromOffset(12, 9),
-					BackgroundColor3 = MUTED, BorderSizePixel = 0, ZIndex = 37,
+					Position = UDim2.fromOffset(1, 6), Size = UDim2.fromOffset(10, 8),
+					BackgroundColor3 = PRICE_LOCKED, BorderSizePixel = 0, ZIndex = 37,
 				})
 			end
 			b.TextXAlignment = Enum.TextXAlignment.Center
@@ -243,6 +242,11 @@ function HUD.new(state, gui, handlers)
 				if defs == self.Config.Buildings then
 					local me = self.state.me
 					local def = defs[kind]
+					local unlocked, why = self:buildingUnlock(kind)
+					if not unlocked then
+						self:toast(why, "bad")
+						return
+					end
 					local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
 					if not me or (me.gold or 0) < cost then
 						self:toast("Ouro insuficiente! Necessário: " .. self.Protocol.formatK(cost) .. " ouro.", "bad")
@@ -414,12 +418,12 @@ function HUD.new(state, gui, handlers)
 		local narrow = gui.AbsoluteSize.X < 1000
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 805)
-		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
-		-- Two rows of 76px cards at y=2 and y=82 need at least 166px of content.
-		-- Keep the outer tray tall enough for both prices plus vertical padding.
-		self.militaryPanel.Size = UDim2.fromOffset(trayWidth, 264)
-		-- On landscape phones reserve space above the panel for Roblox CoreGui and notices.
-		self.militaryScale.Scale = math.min(1, math.max(0.50, (gui.AbsoluteSize.Y - 160) / 264))
+		-- Smaller than the previous 760x264 panel; preserve two readable rows.
+		self.militaryPanel.Size = UDim2.fromOffset(620, 194)
+		local viewport = gui.AbsoluteSize
+		self.militaryScale.Scale = math.clamp(math.min(
+			(viewport.X - 20) / 620, (viewport.Y - 105) / 194), 0.5, 1)
+		self.militaryPanel.Position = UDim2.new(0.5, 0, 1, -64)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
