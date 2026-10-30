@@ -155,10 +155,15 @@ function HUD.new(state, gui, handlers)
 					extra = extra .. "\nPetróleo: " .. def.oil .. " (saldo: " .. math.floor(me and me.oil or 0) .. ")"
 				end
 			else
-				if def.requires then extra = extra .. "\nRequer: " .. self.Config.Buildings[def.requires].name end
+				if def.requires then
+					local unlocked, reason = self:buildingUnlock(kind)
+					extra = extra .. "\n" .. (unlocked and "Requisito liberado." or reason)
+				end
 				if def.coastal then extra = extra .. "\nSomente no litoral." end
 			end
-			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro\n" .. (def.purpose or "")
+			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro"
+				.. "\nSeu ouro: " .. self.Protocol.formatK(me and me.gold or 0)
+				.. "\n" .. (def.purpose or "")
 				.. (#lines > 0 and ("\n" .. table.concat(lines, " · ")) or "") .. extra
 			local pos = b.AbsolutePosition
 			local bounds = gui.AbsoluteSize
@@ -244,18 +249,18 @@ function HUD.new(state, gui, handlers)
 					local def = defs[kind]
 					local unlocked, why = self:buildingUnlock(kind)
 					if not unlocked then
-						self:toast(why, "bad")
+						show(kind, b)
 						return
 					end
 					local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
 					if not me or (me.gold or 0) < cost then
-						self:toast("Ouro insuficiente! Necessário: " .. self.Protocol.formatK(cost) .. " ouro.", "bad")
+						show(kind, b)
 						return
 					end
 				else
 					local available, why = self:weaponAvailability(kind)
 					if not available then
-						self:toast("Armamento indisponível: " .. why, "bad")
+						show(kind, b)
 						return
 					end
 				end
@@ -269,6 +274,12 @@ function HUD.new(state, gui, handlers)
 	end
 	self.tray, self.trayButtons, self.trayInfo = tray("BuildTray", self.Config.BuildingOrder, self.Config.Buildings, function(kind) self.h.onBuild(kind) end)
 	self.weaponTray, self.weaponButtons, self.weaponInfo = tray("WeaponTray", self.Config.WeaponOrder, self.Config.Weapons, function(kind) self.h.onWeapon(kind) end)
+	-- Newly built factories, silos or airfields unlock the matching cards
+	-- immediately, without waiting for the next private economy update.
+	state:on("buildings", function()
+		if self.tray.Visible then self:refreshTray() end
+		if self.weaponTray.Visible then self:refreshWeapons() end
+	end)
 
 	-- Placement controls remain visible after the construction tray closes.
 	self.placement = panel(gui, { Name = "BuildPlacement", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -72), Size = UDim2.fromOffset(280, 54), Visible = false, ZIndex = 50 })
@@ -525,37 +536,60 @@ function HUD:refreshMe()
 	if self.weaponTray.Visible then self:refreshWeapons() end
 end
 
+-- Mirror the server-side BuildingService 'requires' rule, without modifying
+-- the actual build permission or economy logic. Blue-grey means a tech lock.
+function HUD:buildingUnlock(kind)
+	local def = self.Config.Buildings[kind]
+	if not def then return false, "Construção desconhecida." end
+	if def.mode and (not self.state.match or self.state.match.mode ~= def.mode) then
+		return false, "Indisponível neste modo."
+	end
+	if not self.state.you then return false, "Escolha uma nação primeiro." end
+	if def.requires then
+		for _, built in pairs(self.state.buildings) do
+			if built.owner == self.state.you and built.kind == def.requires then
+				return true
+			end
+		end
+		return false, "Requer " .. self.Config.Buildings[def.requires].name .. "."
+	end
+	return true
+end
+
 function HUD:refreshTray()
 	local me = self.state.me
 	for kind, card in pairs(self.trayButtons) do
 		local def = self.Config.Buildings[kind]
 		local cost = (me and me.costs and me.costs[kind]) or def.cost
+		local unlocked = self:buildingUnlock(kind)
 		local affordable = me and (me.gold or 0) >= cost
 		local selected = self.selectedBuild == kind
+		local color = not unlocked and PRICE_LOCKED or (affordable and PRICE_READY or BAD)
 		local price = card:FindFirstChild("Cost")
-		local status = card:FindFirstChild("Status")
 		local title = card:FindFirstChild("Title")
+		local lock = card:FindFirstChild("LockedBadge")
 		if price then
-			price.Text = self.Protocol.formatK(cost) .. " ouro"
-			price.TextColor3 = affordable and GOOD or BAD
+			-- One concise number only. The bottom HUD and details explain gold.
+			price.Text = self.Protocol.formatK(cost)
+			price.TextColor3 = color
 		end
-		if status then
-			status.Text = affordable and "DISPONÍVEL" or "OURO INSUFICIENTE"
-			status.TextColor3 = affordable and MUTED or BAD
-		end
-		if title then title.TextColor3 = selected and MilitaryIcons.SELECTED_COLOR or TEXT end
+		if lock then lock.Visible = not unlocked end
+		if title then title.TextColor3 = unlocked and TEXT or PRICE_LOCKED end
 		local icon = self.cardIcons.build[kind]
-		if icon then icon:setColor(selected and MilitaryIcons.SELECTED_COLOR or MilitaryIcons.DEFAULT_COLOR) end
-		-- Even when funds are lacking the button explains the requirement on tap.
+		if icon then
+			icon:setColor(not unlocked and MilitaryIcons.LOCKED_COLOR
+				or (selected and MilitaryIcons.SELECTED_COLOR or MilitaryIcons.DEFAULT_COLOR))
+		end
 		card.AutoButtonColor = true
-		card.BackgroundColor3 = selected and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
+		card.BackgroundColor3 = selected and Color3.fromRGB(92, 74, 30)
+			or (unlocked and CARD_NORMAL or CARD_LOCKED)
 	end
 	local kind = self.selectedBuild
 	if kind then
 		local def = self.Config.Buildings[kind]
 		self.trayInfo.Text = def.name .. ": " .. def.purpose
 	else
-		self.trayInfo.Text = "Escolha uma construção para ver sua função e posicioná-la no mapa."
+		self.trayInfo.Text = "Escolha uma construção. Segure para ver requisitos e detalhes."
 	end
 end
 
@@ -607,55 +641,35 @@ function HUD:refreshWeapons()
 		local w = self.Config.Weapons[kind]
 		local available, reason = self:weaponAvailability(kind)
 		local selected = self.selectedWeapon == kind
-		-- Resource shortage is separate from a missing unlock; the icon stays
-		-- light-grey while its cost/status is red, not dark-locked.
-		local poorGold = me and (me.gold or 0) < w.gold
-		local poorOil = me and w.oil and (me.oil or 0) < w.oil
-		local locked = not available and not
-			(reason:find("Ouro", 1, true) or reason:find("petróleo", 1, true))
+		local poorGold = not me or (me.gold or 0) < w.gold
+		local poorOil = w.oil and (not me or (me.oil or 0) < w.oil)
+		-- Prerequisites/launcher/level/cooldown take priority over money.
+		-- A weapon with its launcher unlocked, but no cash/oil, is RED.
+		local locked = not available and not (
+			reason:find("Ouro", 1, true) or reason:find("petróleo", 1, true))
+		local color = locked and PRICE_LOCKED
+			or ((poorGold or poorOil) and BAD or PRICE_READY)
 		local lock = card:FindFirstChild("LockedBadge")
-		local title, price, status = card:FindFirstChild("Title"),
-			card:FindFirstChild("Cost"), card:FindFirstChild("Status")
+		local title = card:FindFirstChild("Title")
+		local price = card:FindFirstChild("Cost")
 		if lock then lock.Visible = locked end
-		if title then title.TextColor3 = selected and MilitaryIcons.SELECTED_COLOR or TEXT end
+		if title then title.TextColor3 = locked and PRICE_LOCKED or TEXT end
 		if price then
-			price.Text = self.Protocol.formatK(w.gold) .. " ouro"
-			price.TextColor3 = poorGold and BAD or (locked and MUTED or GOOD)
-		end
-		if status then
-			if locked then
-				if reason:find("Construa ", 1, true) then
-					status.Text = w.launcher == "silo" and "REQUER SILO" or "REQUER BASE AÉREA"
-				elseif reason:find("nível", 1, true) then
-					status.Text = "REQUER NÍVEL " .. tostring(w.minLevel or "")
-				elseif reason:find("Recarga", 1, true) then
-					status.Text = "EM RECARGA"
-				elseif reason:find("Extrema", 1, true) then
-					status.Text = "MODO EXTREMO"
-				else
-					status.Text = "BLOQUEADO"
-				end
-			elseif poorGold then
-				status.Text = "OURO INSUFICIENTE"
-			elseif poorOil then
-				status.Text = "FALTA PETRÓLEO"
-			else
-				status.Text = "DISPONÍVEL"
-			end
-			status.TextColor3 = (poorGold or poorOil) and BAD or MUTED
+			price.Text = self.Protocol.formatK(w.gold)
+			price.TextColor3 = color
 		end
 		local icon = self.cardIcons.weapons[kind]
 		if icon then
-			icon:setColor(selected and MilitaryIcons.SELECTED_COLOR
-				or (locked and MilitaryIcons.LOCKED_COLOR or MilitaryIcons.DEFAULT_COLOR))
+			icon:setColor(locked and MilitaryIcons.LOCKED_COLOR
+				or (selected and MilitaryIcons.SELECTED_COLOR or MilitaryIcons.DEFAULT_COLOR))
 		end
 		card.BackgroundColor3 = selected and Color3.fromRGB(92, 74, 30)
-			or (locked and Color3.fromRGB(30, 37, 47) or Color3.fromRGB(34, 44, 58))
-		card.AutoButtonColor = true -- tap locked cards for an explicit requirement
+			or (locked and CARD_LOCKED or CARD_NORMAL)
+		card.AutoButtonColor = true
 	end
-	local selectedWeapon = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
-	self.weaponInfo.Text = selectedWeapon and selectedWeapon.name or
-		"Toque em um armamento para selecioná-lo ou em um bloqueado para ver seus requisitos."
+	local w = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
+	self.weaponInfo.Text = w and w.name or
+		"Escolha um armamento. Segure para ver requisitos e detalhes."
 end
 
 function HUD:showPlacement(visible, kind, ready)
