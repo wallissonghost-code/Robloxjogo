@@ -418,8 +418,8 @@ function HUD.new(state, gui, handlers)
 		-- Two rows of 76px cards at y=2 and y=82 need at least 166px of content.
 		-- Keep the outer tray tall enough for both prices plus vertical padding.
 		self.militaryPanel.Size = UDim2.fromOffset(trayWidth, 264)
-		-- On short landscape phones, fit the tabs and cards without clipping.
-		self.militaryScale.Scale = math.min(1, math.max(0.6, (gui.AbsoluteSize.Y - 92) / 264))
+		-- On landscape phones reserve space above the panel for Roblox CoreGui and notices.
+		self.militaryScale.Scale = math.min(1, math.max(0.50, (gui.AbsoluteSize.Y - 160) / 264))
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
