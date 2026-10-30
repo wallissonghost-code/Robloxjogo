@@ -85,12 +85,54 @@ function HUD.new(state, gui, handlers)
 	self.tools.build = button(bar, "🏗 Construir", { Size = UDim2.fromOffset(105, 34), LayoutOrder = 10, TextSize = 13, ZIndex = 21 })
 	self.tools.build.Activated:Connect(function() self.h.onTool("build") end)
 
+	-- A single military center holds BOTH tabs; no second floating weapons menu.
+	-- Preserve the existing build/weapon selection handlers and map interaction.
+	self.militaryPanel = panel(gui, {
+		Name = "MilitaryCenter", AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -70),
+		Size = UDim2.fromOffset(760, 242), Visible = false, Active = true, ZIndex = 30,
+	})
+	make("UIStroke", self.militaryPanel, { Color = Color3.fromRGB(75, 97, 118), Transparency = 0.22, Thickness = 1 })
+	self.militaryScale = make("UIScale", self.militaryPanel, { Scale = 1 })
+	make("TextLabel", self.militaryPanel, {
+		Position = UDim2.fromOffset(12, 7), Size = UDim2.new(1, -60, 0, 22),
+		BackgroundTransparency = 1, Text = "⚔ CENTRO MILITAR", Font = BOLD,
+		TextSize = 15, TextColor3 = ACCENT, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 32,
+	})
+	self.militaryTabs = {}
+	for index, tab in ipairs({
+		{ key = "build", label = "🏗 Construções" },
+		{ key = "weapons", label = "💣 Armamentos" },
+	}) do
+		local tabButton = button(self.militaryPanel, tab.label, {
+			Position = UDim2.fromOffset(10 + (index - 1) * 164, 35),
+			Size = UDim2.fromOffset(157, 31), TextSize = 13, ZIndex = 32,
+		})
+		tabButton.Activated:Connect(function() self.h.onMilitaryTab(tab.key) end)
+		self.militaryTabs[tab.key] = tabButton
+	end
+	local closeMilitary = button(self.militaryPanel, "✕", {
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -9, 0, 8),
+		Size = UDim2.fromOffset(29, 25), TextSize = 14, ZIndex = 32,
+	})
+	closeMilitary.Activated:Connect(function() self.h.onMilitaryClose() end)
+
+	-- Both existing catalogs are pages of the SAME panel, not floating windows.
 	-- Build and weapon trays (above the tools): a grid of choices plus an explanation line ----
 	local function tray(name, order, defs, onPick)
 		-- Compact, native Roblox UI: no external asset IDs required.
-		local t = panel(gui, { Name = name, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -70), Size = UDim2.new(0.96, 0, 0, 184), Visible = false, ZIndex = 30 })
-		make("UISizeConstraint", t, { MaxSize = Vector2.new(760, 184) })
-		local grid = make("ScrollingFrame", t, { Name = "Choices", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 1, -12), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 110 + 8, 166), ZIndex = 31 })
+		local t = make("Frame", self.militaryPanel, {
+			Name = name, Position = UDim2.fromOffset(0, 68),
+			Size = UDim2.new(1, 0, 1, -68), BackgroundTransparency = 1,
+			BorderSizePixel = 0, Visible = false, ZIndex = 31,
+		})
+		local grid = make("ScrollingFrame", t, {
+			Name = "Choices", Position = UDim2.fromOffset(8, 4),
+			Size = UDim2.new(1, -16, 1, -8), BackgroundTransparency = 1,
+			BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.X,
+			ScrollBarThickness = 3, CanvasSize = UDim2.fromOffset(math.ceil(#order / 2) * 110 + 8, 166),
+			ZIndex = 32,
+		})
 		local buttons = {}
 		local tip = panel(gui, { Name = name .. "Details", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 45 })
 		make("UIPadding", tip, { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
@@ -100,8 +142,16 @@ function HUD.new(state, gui, handlers)
 			local def = defs[kind]
 			local me = self.state.me
 			local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
-			local lines = defs == self.Config.Buildings and self.state.Stats.lines(self.Config, kind, 1) or {}
-			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro\n" .. (def.purpose or "") .. (#lines > 0 and ("\n" .. table.concat(lines, " · ")) or "")
+			local isBuilding = defs == self.Config.Buildings
+			local lines = isBuilding and self.state.Stats.lines(self.Config, kind, 1) or {}
+			local extra = ""
+			if not isBuilding then
+				local available, reason = self:weaponAvailability(kind)
+				extra = "\n" .. (available and "✓ Pronta para selecionar" or "🔒 " .. reason)
+				if def.oil and def.oil > 0 then extra = extra .. "\nPetróleo necessário: " .. def.oil end
+			end
+			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro\n" .. (def.purpose or "")
+				.. (#lines > 0 and ("\n" .. table.concat(lines, " · ")) or "") .. extra
 			local pos = b.AbsolutePosition
 			local bounds = gui.AbsoluteSize
 			tip.Position = UDim2.fromOffset(math.clamp(pos.X, 8, math.max(8, bounds.X - 286)), math.clamp(t.AbsolutePosition.Y - 155, 55, math.max(55, bounds.Y - 180)))
@@ -114,9 +164,9 @@ function HUD.new(state, gui, handlers)
 			b.Text = ""
 			b.TextWrapped = true
 			b.RichText = false
-			if defs == self.Config.Buildings then
+			if true then
 				local def = defs[kind]
-				if kind == "city" then
+				if defs == self.Config.Buildings and kind == "city" then
 					local artHolder = make("Frame", b, { Name = "Icon", Position = UDim2.new(0.5, -16, 0, 1), Size = UDim2.fromOffset(32, 27), BackgroundTransparency = 1, ZIndex = 32 })
 					cityArt(artHolder, 33)
 				else
@@ -160,6 +210,12 @@ function HUD.new(state, gui, handlers)
 					local cost = me and me.costs and me.costs[kind] or def.cost or def.gold or 0
 					if not me or (me.gold or 0) < cost then
 						self:toast("Ouro insuficiente! Necessário: " .. self.Protocol.formatK(cost) .. " ouro.", "bad")
+						return
+					end
+				else
+					local available, why = self:weaponAvailability(kind)
+					if not available then
+						self:toast("🔒 " .. why, "bad")
 						return
 					end
 				end
@@ -325,8 +381,9 @@ function HUD.new(state, gui, handlers)
 		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
 		-- Two rows of 76px cards at y=2 and y=82 need at least 166px of content.
 		-- Keep the outer tray tall enough for both prices plus vertical padding.
-		self.tray.Size = UDim2.fromOffset(trayWidth, 184)
-		self.weaponTray.Size = UDim2.fromOffset(trayWidth, 184)
+		self.militaryPanel.Size = UDim2.fromOffset(trayWidth, 242)
+		-- On short landscape phones, fit the tabs and cards without clipping.
+		self.militaryScale.Scale = math.min(1, math.max(0.6, (gui.AbsoluteSize.Y - 92) / 242))
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
@@ -414,22 +471,14 @@ function HUD:refreshMe()
 	self.rateText.Text = "+" .. F(me.rate) .. "/s"
 	self.goldText.Text = "💰 " .. F(me.gold)
 	self.sendText.Text = "Enviar " .. F(math.floor(me.troops * state.percent))
-	-- show only what exists in the current mode
-	for kind, b in pairs(self.trayButtons) do
-		local m = self.Config.Buildings[kind].mode
-		b.Visible = m == nil or m == me.mode
-	end
-	for kind, b in pairs(self.weaponButtons) do
-		local m = self.Config.Weapons[kind].mode
-		b.Visible = m == nil or m == me.mode
-	end
+	-- Every catalog entry remains visible: locked weapons explain their requirements.
+	-- The server still enforces launch restrictions and prerequisites.
 	local mine = 0
 	for _, o in ipairs(state.orders) do
 		if o[2] == state.you then mine = mine + 1 end
 	end
 	self.cancelButton.Visible = mine > 0
 	self.cancelButton.Text = mine > 1 and ("✖" .. mine) or "✖"
-	-- weapons only once something can launch them
 	if self.tray.Visible then self:refreshTray() end
 	if self.weaponTray.Visible then self:refreshWeapons() end
 end
@@ -463,21 +512,86 @@ function HUD:refreshTray()
 	end
 end
 
+-- This client-side check is informational; StrategicService.launch remains
+-- authoritative. Keep locked cards visible so players can discover every bomb.
+function HUD:weaponAvailability(kind)
+	local w = self.Config.Weapons[kind]
+	if not w then return false, "Armamento inválido." end
+	local me = self.state.me
+	local currentMode = (me and me.mode) or (self.state.match and self.state.match.mode)
+	if w.mode and w.mode ~= currentMode then
+		return false, "Disponível apenas na Conquista Extrema."
+	end
+	if not self.state.you or not me then
+		return false, "Escolha uma nação para usar armamentos."
+	end
+	local hasLauncher, maxLevel = false, 0
+	for _, built in pairs(self.state.buildings) do
+		if built.owner == self.state.you and built.kind == w.launcher then
+			hasLauncher = true
+			if not built.off then maxLevel = math.max(maxLevel, built.level or 1) end
+		end
+	end
+	local launcherName = self.Config.Buildings[w.launcher].name
+	if not hasLauncher then return false, "Construa " .. launcherName .. "." end
+	if maxLevel == 0 then return false, launcherName .. " desativado por EMP." end
+	if w.minLevel and maxLevel < w.minLevel then
+		return false, "Requer " .. launcherName .. " nível " .. w.minLevel .. "."
+	end
+	local cooldown = me.cooldowns and me.cooldowns[w.launcher]
+	if cooldown == nil then return false, "Aguardando atualização do lançador." end
+	if cooldown > 0 then return false, "Recarga: " .. math.ceil(cooldown) .. "s." end
+	if (me.gold or 0) < w.gold then
+		return false, "Ouro insuficiente: " .. self.Protocol.formatK(w.gold) .. "."
+	end
+	if currentMode == "extreme" and w.oil and (me.oil or 0) < w.oil then
+		return false, "Requer " .. w.oil .. " petróleo."
+	end
+	return true, "PRONTO"
+end
+
 function HUD:refreshWeapons()
 	local me = self.state.me
 	for kind, b in pairs(self.weaponButtons) do
 		local w = self.Config.Weapons[kind]
-		local ready = me and me.cooldowns and me.cooldowns[w.launcher]
-		local affordable = me and me.gold >= w.gold and ready ~= nil
-		local status = ready == nil and ("requer " .. self.Config.Buildings[w.launcher].name)
-			or (ready > 0 and string.format("recarga %ds", math.ceil(ready)) or ("💰 " .. self.Protocol.formatK(w.gold)))
-		b.Text = w.icon .. "\n" .. w.name
-		b.BackgroundColor3 = (self.selectedWeapon == kind) and Color3.fromRGB(120, 48, 44) or Color3.fromRGB(34, 44, 58)
-		b.TextTransparency = affordable and 0 or 0.35
+		local available, reason = self:weaponAvailability(kind)
+		local icon = b:FindFirstChild("Icon")
+		local title = b:FindFirstChild("Title")
+		local costLabel = b:FindFirstChild("Cost")
+		if icon then icon.TextTransparency = available and 0 or 0.35 end
+		if title then title.TextTransparency = available and 0 or 0.25 end
+		if costLabel then
+			-- Always show the gold price; missing requirements are shown in tooltip.
+			local launcherPresent = me and me.cooldowns and me.cooldowns[w.launcher] ~= nil
+			if w.minLevel and not available then
+				local maxLevel = 0
+				for _, built in pairs(self.state.buildings) do
+					if built.owner == self.state.you and built.kind == w.launcher then
+						maxLevel = math.max(maxLevel, built.level or 1)
+					end
+				end
+				if maxLevel > 0 and maxLevel < w.minLevel then
+					costLabel.Text = "🔒 Nível " .. w.minLevel
+				else
+					costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
+				end
+			elseif not launcherPresent then
+				costLabel.Text = "🔒 " .. (w.launcher == "silo" and "Silo" or "Base aérea")
+			elseif reason:find("Recarga", 1, true) then
+				costLabel.Text = "⏳ Recarga"
+			elseif w.mode and w.mode ~= ((me and me.mode) or (self.state.match and self.state.match.mode)) then
+				costLabel.Text = "🔒 Modo Extremo"
+			else
+				costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
+			end
+			costLabel.TextColor3 = available and GOOD or BAD
+		end
+		b.BackgroundColor3 = self.selectedWeapon == kind and Color3.fromRGB(120, 48, 44)
+			or (available and Color3.fromRGB(34, 44, 58) or Color3.fromRGB(32, 36, 45))
+		b.AutoButtonColor = true -- blocked items show a helpful reason when tapped
 	end
 	local w = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
-	self.weaponInfo.Text = w and ("<b>" .. w.name .. "</b>: " .. w.purpose .. " Raio " .. w.radius .. ". Clique no alvo e confirme com um segundo clique.")
-		or "Escolha uma arma. Aviões saem da base aérea; bombas EMP, atômica e de hidrogênio, do silo."
+	self.weaponInfo.Text = w and w.name or "Escolha uma arma. Toque em itens bloqueados para saber como liberá-los."
 end
 
 function HUD:showPlacement(visible, kind, ready)
@@ -488,15 +602,27 @@ function HUD:showPlacement(visible, kind, ready)
 	self.placementConfirm.BackgroundColor3 = ready and Color3.fromRGB(188, 138, 46) or Color3.fromRGB(72, 77, 85)
 end
 
+function HUD:refreshMilitaryTabs()
+	self.militaryPanel.Visible = self.tray.Visible or self.weaponTray.Visible
+	for key, b in pairs(self.militaryTabs) do
+		local chosen = (key == "build" and self.tray.Visible)
+			or (key == "weapons" and self.weaponTray.Visible)
+		b.BackgroundColor3 = chosen and Color3.fromRGB(95, 77, 39) or Color3.fromRGB(34, 44, 58)
+		b.TextColor3 = chosen and ACCENT or TEXT
+	end
+end
+
 function HUD:showWeapons(visible, selected)
 	self.weaponTray.Visible = visible
 	self.selectedWeapon = selected
+	self:refreshMilitaryTabs()
 	if visible then self:refreshWeapons() end
 end
 
 function HUD:showTray(visible, selected)
 	self.tray.Visible = visible
 	self.selectedBuild = selected
+	self:refreshMilitaryTabs()
 	if visible then self:refreshTray() end
 end
 
@@ -563,6 +689,7 @@ function HUD:showResults(match)
 	self.center.Visible = false
 	self.tray.Visible = false
 	self.weaponTray.Visible = false
+	self.militaryPanel.Visible = false
 	self.placement.Visible = false
 	self.popover.Visible = false
 
