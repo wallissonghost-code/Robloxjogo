@@ -187,12 +187,6 @@ function OverlayRenderer:updateLabels()
 						initial.Visible = false
 					end
 				end)
-				local cap = make("TextLabel", self.layer, {
-					BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
-					Text = "★", Font = FONT, TextColor3 = WHITE,
-					TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, ZIndex = 5,
-				})
-				self.capitals[id] = cap
 			end
 		end
 		local area = math.max(1, n.labelSize or n.land or 1)
