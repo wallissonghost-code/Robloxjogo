@@ -104,8 +104,8 @@ function OverlayRenderer:updateLabels()
 	local alive = {}
 	for id, n in pairs(state.nations) do
 		alive[id] = true
-		-- Bots/tribes get only a plain nation name. Real players keep
-		-- Roblox profile picture + name + troop count, without relation emojis.
+		-- Bots/tribes: plain country name and troop count, without avatar/emojis.
+		-- Real players: Roblox profile picture, name and troop count.
 		local isPlayer = n.kind == "player" and type(n.userId) == "number" and n.userId > 0
 		local item = self.labels[id]
 		-- Conquista Extrema changes a country's bot into a human (or back)
@@ -162,14 +162,12 @@ function OverlayRenderer:updateLabels()
 				TextStrokeTransparency = 0.25,
 				Text = n.name, LayoutOrder = 2, ZIndex = 6,
 			})
-			local troops
-			if isPlayer then
-				troops = make("TextLabel", frame, {
-					BackgroundTransparency = 1, Font = FONT,
-					TextColor3 = INK, TextStrokeColor3 = Color3.fromRGB(245, 242, 232),
-					TextStrokeTransparency = 0.35, LayoutOrder = 2, ZIndex = 6,
-				})
-			end
+			-- All nations have troops. Avatar creation stays player-only.
+			local troops = make("TextLabel", frame, {
+				BackgroundTransparency = 1, Font = FONT,
+				TextColor3 = INK, TextStrokeColor3 = Color3.fromRGB(245, 242, 232),
+				TextStrokeTransparency = 0.35, LayoutOrder = 2, ZIndex = 6,
+			})
 			item = { frame = frame, head = head, avatar = avatar,
 				initial = initial, name = name, troops = troops,
 				isPlayer = isPlayer, userId = isPlayer and n.userId or nil }
@@ -206,8 +204,8 @@ function OverlayRenderer:updateLabels()
 		item.frame.Visible = visible
 		if visible then
 			item.frame.Position = self:pos(n.labelCell or n.capital)
-			item.frame.Size = UDim2.fromOffset(math.max(60, font * 10),
-				font * (isPlayer and 2.4 or 1.35))
+			-- Reserve a second line for troop numbers for BOTH bots and players.
+			item.frame.Size = UDim2.fromOffset(math.max(60, font * 10), font * 2.4)
 			item.head.Size = UDim2.fromOffset(0, font * 1.3)
 			if item.avatar then
 				item.avatar.Size = UDim2.fromOffset(font * 1.25, font * 1.25)
@@ -223,12 +221,11 @@ function OverlayRenderer:updateLabels()
 				displayName = (country and country.name) or n.name:gsub("^Tribos de ", "")
 			end
 			item.name.Text = displayName
-			if item.troops then
-				item.troops.Visible = isYou or lod >= 1 or font >= 14
-				item.troops.TextSize = math.max(9, font * 0.85)
-				item.troops.Size = UDim2.fromOffset(font * 6, font * 1.1)
-				item.troops.Text = self.Protocol.formatK(n.troops)
-			end
+			-- When a nation's label is visible its troop count is visible too.
+			item.troops.Visible = true
+			item.troops.TextSize = math.max(9, font * 0.85)
+			item.troops.Size = UDim2.fromOffset(font * 6, font * 1.1)
+			item.troops.Text = self.Protocol.formatK(n.troops)
 		end
 		local cap = self.capitals[id]
 		if cap then
