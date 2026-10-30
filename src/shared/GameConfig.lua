@@ -11,7 +11,7 @@ GameConfig.Modes = {
 	classic = { name = "Mundial", icon = "🌍",
 		description = "Funde sua nação em qualquer terra livre e cresça a partir de um ponto. Nações de IA nascem nos maiores países." },
 	extreme = { name = "Conquista Extrema", icon = "🔥",
-		description = "Escolha um país inteiro e domine os outros. Todos os países já começam ocupados. Construções existem nos dois modos; aqui você também usa ponte aérea e bomba de fogo." },
+		description = "Escolha um país inteiro e domine os outros. Todos os países já começam ocupados. Mesmo arsenal do Mundial; mudam o início e a intensidade dos combates." },
 }
 GameConfig.ModeOrder = { "classic", "extreme" }
 
@@ -207,7 +207,7 @@ GameConfig.Naval = {
 	CargoValue = 250,                  -- gold delivered when the ship comes home (+60 per port level)
 	CargoValuePerLevel = 60,
 	CargoCaptureFactor = 1.5,          -- a capturing nation receives value * factor
-	-- Air bridge (Conquista Extrema): troops flown from an air base, faster than ships
+	-- Air bridge: troops flown from an air base in either game mode, faster than ships
 	AirliftSpeed = 40,
 	AirliftMaxTroops = 4000,           -- per flight (+2000 per air base level)
 	AirliftMaxPerLevel = 2000,
@@ -236,14 +236,14 @@ GameConfig.Weapons = {
 		radius = 18, fallout = 11, troopKill = 2.5, destroys = true,
 		purpose = "A maior explosão. Requer silo nível 3." },
 	firebomb = { name = "Bomba de fogo", icon = "🔥", gold = 3000, oil = 80, launcher = "airfield", aircraft = true, cooldown = 45, speed = 38,
-		radius = 2, fire = { radius = 9, grow = 0.4, seconds = 30, troopBurn = 0.25 }, destroys = false, mode = "extreme",
+		radius = 2, fire = { radius = 9, grow = 0.4, seconds = 30, troopBurn = 0.25 }, destroys = false,
 		purpose = "Incêndio que se espalha devagar até 9 células: queima tropas a cada segundo e destrói construções que o fogo alcança." },
 	endofera = { name = "Fim de Era", icon = "🌋", gold = 50000, oil = 400, launcher = "silo", minLevel = 5, cooldown = 300, speed = 20,
 		radius = 10, troopKill = 2, warheads = 5, unstoppable = true, destroys = true,
 		fire = { radius = 12, grow = 0.6, seconds = 40, troopBurn = 0.3 }, disable = 60,
 		purpose = "Ogivas múltiplas: atinge o alvo e as capitais de até 4 outros inimigos em guerra com você, com fogo e EMP juntos. Nenhuma antiaérea consegue parar. Requer silo nível 5." },
 	airlift = { name = "Ponte aérea", icon = "🪂", gold = 500, oil = 60, launcher = "airfield", aircraft = true, cooldown = 20, speed = 40,
-		radius = 1, troops = true, mode = "extreme",
+		radius = 1, troops = true,
 		purpose = "Leva tropas de avião, muito mais rápido que navio, para qualquer terra no alcance da base aérea. Usa o % de tropas escolhido." },
 }
 -- airstrike, cluster and firebomb are aircraft: the flak building can shoot them down
