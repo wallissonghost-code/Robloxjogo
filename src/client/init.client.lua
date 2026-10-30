@@ -403,8 +403,12 @@ hud = HUD.new(state, gui, {
 	onCancel = function() send(Actions.Cancel, nil) end,
 	onTool = function(name)
 		if name == "build" then
-			-- The bottom button toggles the entire military center.
-			setMode((mode == "build" or mode == "weapon") and nil or "build")
+			-- Reopen the catalog while aiming/placing; otherwise toggle the panel.
+			if buildKind then
+				setMode("build")
+			else
+				setMode((mode == "build" or mode == "weapon") and nil or "build")
+			end
 		elseif name == "weapons" then
 			setMode(mode ~= "weapon" and "weapon" or nil)
 		elseif name == "ranking" then hud:toggleRanking()
