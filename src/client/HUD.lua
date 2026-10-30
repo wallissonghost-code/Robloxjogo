@@ -543,8 +543,12 @@ function HUD:weaponAvailability(kind)
 	if w.minLevel and maxLevel < w.minLevel then
 		return false, "Requer " .. launcherName .. " nível " .. w.minLevel .. "."
 	end
-	local cooldown = me.cooldowns and me.cooldowns[w.launcher]
-	if cooldown == nil then return false, "Aguardando atualização do lançador." end
+	local cooldown = me.weaponCooldowns and me.weaponCooldowns[kind]
+	if not me.weaponCooldowns then
+		-- Backward compatible with older servers while a new version deploys.
+		cooldown = me.cooldowns and me.cooldowns[w.launcher]
+	end
+	if cooldown == nil then return false, "Lançador compatível indisponível." end
 	if cooldown > 0 then return false, "Recarga: " .. math.ceil(cooldown) .. "s." end
 	if (me.gold or 0) < w.gold then
 		return false, "Ouro insuficiente: " .. self.Protocol.formatK(w.gold) .. "."
