@@ -80,7 +80,7 @@ GameConfig.Gold = {
 	StartGold = 600,
 }
 
--- Oil (Conquista Extrema): produced by oil wells, spent on the air bridge, fire bombs and the End of an Era
+-- Oil: produced by wells in either mode; spent on oil-consuming strategic weapons.
 GameConfig.Oil = {
 	Base = 0,
 	PerCell = 0.01,
@@ -164,20 +164,20 @@ GameConfig.Buildings = {
 	silo = { name = "Silo de mísseis", icon = "🚀", cost = 6000, requires = "factory", cooldownFactor = 1,
 		perLevel = { cooldownFactor = -0.12 },
 		purpose = "Lança bombas EMP, atômicas, de hidrogênio (nível 3) e o Fim de Era (nível 5). Cada nível recarrega mais rápido." },
-	-- Conquista Extrema only
-	wall = { name = "Muro", icon = "🧱", cost = 400, radius = 2, defense = 3, defensive = true, mode = "extreme",
+	-- Shared defensive and resource structures for both public game modes.
+	wall = { name = "Muro", icon = "🧱", cost = 400, radius = 2, defense = 3, defensive = true,
 		perLevel = { radius = 0.5, defense = 0.6 },
 		purpose = "Barreira curta e barata: atacar perto do muro custa muito mais tropas." },
-	trench = { name = "Trincheira", icon = "🪖", cost = 700, radius = 4, attrition = 0.03, shelter = 0.5, defensive = true, mode = "extreme",
+	trench = { name = "Trincheira", icon = "🪖", cost = 700, radius = 4, attrition = 0.03, shelter = 0.5, defensive = true,
 		perLevel = { radius = 1, attrition = 0.01, shelter = -0.06 },
 		purpose = "Seus soldados se protegem: frentes inimigas perdem tropas a cada segundo e você perde menos ao ceder terreno." },
-	antinaval = { name = "Anti-naval", icon = "🎆", cost = 1600, radius = 10, damage = 20, landing = 2, coastal = true, defensive = true, mode = "extreme",
+	antinaval = { name = "Anti-naval", icon = "🎆", cost = 1600, radius = 10, damage = 20, landing = 2, coastal = true, defensive = true,
 		perLevel = { radius = 2, damage = 6, landing = 0.4 },
 		purpose = "Só no litoral. Atira em barcos e frotas inimigas no alcance e encarece desembarques." },
-	flak = { name = "Antiaérea de aviões", icon = "🛩", cost = 1000, radius = 12, intercept = 0.85, defensive = true, mode = "extreme",
+	flak = { name = "Antiaérea de aviões", icon = "🛩", cost = 1000, radius = 12, intercept = 0.85, defensive = true,
 		perLevel = { radius = 2, intercept = 0.03 },
 		purpose = "Especializada em aviões: derruba ataques aéreos, bombas de fragmentação, bombas de fogo e pontes aéreas inimigas. Não para mísseis do silo." },
-	oilwell = { name = "Poço de petróleo", icon = "🛢", cost = 1200, oil = 4, mode = "extreme",
+	oilwell = { name = "Poço de petróleo", icon = "🛢", cost = 1200, oil = 4,
 		perLevel = { oil = 3 },
 		purpose = "Extrai petróleo, usado na ponte aérea, na bomba de fogo e no Fim de Era." },
 }
