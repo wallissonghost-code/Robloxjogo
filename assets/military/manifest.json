@@ -1,0 +1,263 @@
+{
+  "style": "Original white RGBA silhouettes tinted by ImageColor3 #B8BFCC",
+  "atlas": "assets/military/military-atlas.png",
+  "dimensions": [
+    320,
+    320
+  ],
+  "tileSize": 64,
+  "assetId": null,
+  "filesPendingUpload": true,
+  "items": [
+    {
+      "kind": "city",
+      "name": "Cidade",
+      "group": "building",
+      "filename": "assets/military/icons/city.png",
+      "atlasOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "kind": "factory",
+      "name": "Fábrica",
+      "group": "building",
+      "filename": "assets/military/icons/factory.png",
+      "atlasOffset": [
+        64,
+        0
+      ]
+    },
+    {
+      "kind": "port",
+      "name": "Porto",
+      "group": "building",
+      "filename": "assets/military/icons/port.png",
+      "atlasOffset": [
+        128,
+        0
+      ]
+    },
+    {
+      "kind": "bunker",
+      "name": "Bunker",
+      "group": "building",
+      "filename": "assets/military/icons/bunker.png",
+      "atlasOffset": [
+        192,
+        0
+      ]
+    },
+    {
+      "kind": "tower",
+      "name": "Torre sniper",
+      "group": "building",
+      "filename": "assets/military/icons/tower.png",
+      "atlasOffset": [
+        256,
+        0
+      ]
+    },
+    {
+      "kind": "machinegun",
+      "name": "Metralhadora",
+      "group": "building",
+      "filename": "assets/military/icons/machinegun.png",
+      "atlasOffset": [
+        0,
+        64
+      ]
+    },
+    {
+      "kind": "artillery",
+      "name": "Artilharia",
+      "group": "building",
+      "filename": "assets/military/icons/artillery.png",
+      "atlasOffset": [
+        64,
+        64
+      ]
+    },
+    {
+      "kind": "tankfactory",
+      "name": "Fábrica tanques",
+      "group": "building",
+      "filename": "assets/military/icons/tankfactory.png",
+      "atlasOffset": [
+        128,
+        64
+      ]
+    },
+    {
+      "kind": "airfield",
+      "name": "Base aérea",
+      "group": "building",
+      "filename": "assets/military/icons/airfield.png",
+      "atlasOffset": [
+        192,
+        64
+      ]
+    },
+    {
+      "kind": "airdefense",
+      "name": "Defesa antiaérea",
+      "group": "building",
+      "filename": "assets/military/icons/airdefense.png",
+      "atlasOffset": [
+        256,
+        64
+      ]
+    },
+    {
+      "kind": "silo",
+      "name": "Silo mísseis",
+      "group": "building",
+      "filename": "assets/military/icons/silo.png",
+      "atlasOffset": [
+        0,
+        128
+      ]
+    },
+    {
+      "kind": "wall",
+      "name": "Muro",
+      "group": "building",
+      "filename": "assets/military/icons/wall.png",
+      "atlasOffset": [
+        64,
+        128
+      ]
+    },
+    {
+      "kind": "trench",
+      "name": "Trincheira",
+      "group": "building",
+      "filename": "assets/military/icons/trench.png",
+      "atlasOffset": [
+        128,
+        128
+      ]
+    },
+    {
+      "kind": "antinaval",
+      "name": "Anti-naval",
+      "group": "building",
+      "filename": "assets/military/icons/antinaval.png",
+      "atlasOffset": [
+        192,
+        128
+      ]
+    },
+    {
+      "kind": "flak",
+      "name": "Antiaérea aviões",
+      "group": "building",
+      "filename": "assets/military/icons/flak.png",
+      "atlasOffset": [
+        256,
+        128
+      ]
+    },
+    {
+      "kind": "oilwell",
+      "name": "Poço petróleo",
+      "group": "building",
+      "filename": "assets/military/icons/oilwell.png",
+      "atlasOffset": [
+        0,
+        192
+      ]
+    },
+    {
+      "kind": "airlift",
+      "name": "Ponte aérea",
+      "group": "weapon",
+      "filename": "assets/military/icons/airlift.png",
+      "atlasOffset": [
+        64,
+        192
+      ]
+    },
+    {
+      "kind": "airstrike",
+      "name": "Ataque aéreo",
+      "group": "weapon",
+      "filename": "assets/military/icons/airstrike.png",
+      "atlasOffset": [
+        128,
+        192
+      ]
+    },
+    {
+      "kind": "cluster",
+      "name": "Bomba fragmentação",
+      "group": "weapon",
+      "filename": "assets/military/icons/cluster.png",
+      "atlasOffset": [
+        192,
+        192
+      ]
+    },
+    {
+      "kind": "firebomb",
+      "name": "Bomba de fogo",
+      "group": "weapon",
+      "filename": "assets/military/icons/firebomb.png",
+      "atlasOffset": [
+        256,
+        192
+      ]
+    },
+    {
+      "kind": "emp",
+      "name": "Bomba EMP",
+      "group": "weapon",
+      "filename": "assets/military/icons/emp.png",
+      "atlasOffset": [
+        0,
+        256
+      ]
+    },
+    {
+      "kind": "atomic",
+      "name": "Bomba atômica",
+      "group": "weapon",
+      "filename": "assets/military/icons/atomic.png",
+      "atlasOffset": [
+        64,
+        256
+      ]
+    },
+    {
+      "kind": "hydrogen",
+      "name": "Bomba hidrogênio",
+      "group": "weapon",
+      "filename": "assets/military/icons/hydrogen.png",
+      "atlasOffset": [
+        128,
+        256
+      ]
+    },
+    {
+      "kind": "endofera",
+      "name": "Fim de Era",
+      "group": "weapon",
+      "filename": "assets/military/icons/endofera.png",
+      "atlasOffset": [
+        192,
+        256
+      ]
+    },
+    {
+      "kind": "biohazard",
+      "name": "Biológico (arte reservada, arma inexistente)",
+      "group": "reserved",
+      "filename": "assets/military/icons/biohazard.png",
+      "atlasOffset": [
+        256,
+        256
+      ]
+    }
+  ]
+}
