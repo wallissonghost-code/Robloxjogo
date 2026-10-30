@@ -189,20 +189,38 @@ function World:privatePayload(userId)
 	if not n or not n.alive then return nil end
 	local costs = {}
 	for kind in pairs(ctx.Config.Buildings) do costs[kind] = ctx.Buildings.cost(n.id, kind) end
-	local cooldowns = {}
+	local cooldowns, weaponCooldowns = {}, {}
+	local launchers = {}
+	local now = ctx.now()
 	for _, kind in ipairs({ "silo", "airfield" }) do
 		local best = nil
-		for _, b in ipairs(ctx.Buildings.ofKind(n.id, kind)) do
-			local left = math.max(0, b.readyAt - ctx.now())
-			if not best or left < best then best = left end
+		local list = ctx.Buildings.ofKind(n.id, kind)
+		launchers[kind] = list
+		for _, b in ipairs(list) do
+			if b.active then
+				local left = math.max(0, b.readyAt - now)
+				if best == nil or left < best then best = left end
+			end
 		end
 		cooldowns[kind] = best
+	end
+	-- Per-weapon readiness avoids showing hydrogen/Fim de Era as ready
+	-- just because a weaker silo is off cooldown. No extra global scans.
+	for weaponKind, def in pairs(ctx.Config.Weapons) do
+		local best = nil
+		for _, b in ipairs(launchers[def.launcher] or {}) do
+			if b.active and (not def.minLevel or b.level >= def.minLevel) then
+				local left = math.max(0, b.readyAt - now)
+				if best == nil or left < best then best = left end
+			end
+		end
+		weaponCooldowns[weaponKind] = best
 	end
 	return {
 		k = "me", id = n.id, troops = math.floor(n.troops), max = math.floor(n.maxTroops),
 		rate = n.troopRate, gold = math.floor(n.gold), goldRate = n.goldRate, land = n.land,
 		oil = math.floor(n.oil or 0), oilRate = n.oilRate or 0, mode = ctx.mode,
-		share = n.land / ctx.Map.landCount, costs = costs, cooldowns = cooldowns,
+		share = n.land / ctx.Map.landCount, costs = costs, cooldowns = cooldowns, weaponCooldowns = weaponCooldowns,
 		requests = ctx.Diplomacy.pendingFor(n.id),
 	}
 end
