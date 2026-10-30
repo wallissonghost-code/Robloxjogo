@@ -128,7 +128,7 @@ local function setMode(newMode, kind)
 	hud:showTray(mode == "build" and not buildKind, mode == "build" and buildKind or nil)
 	hud:showPlacement(mode == "build" and buildKind ~= nil, buildKind, false)
 	hud:showWeapons(mode == "weapon", mode == "weapon" and buildKind or nil)
-	hud.tools.build.BackgroundColor3 = mode == "build" and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
+	hud.tools.build.BackgroundColor3 = (mode == "build" or mode == "weapon") and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
 	updateRanges(nil)
 end
 
@@ -389,7 +389,7 @@ local helpText = table.concat({
 	"<b>Expandir/atacar:</b> escolha o % de tropas e clique no destino. A fronteira avança sozinha.",
 	"<b>Construções:</b> 🏗 mostra para que serve cada uma e o alcance no mapa. Clique numa construção sua para melhorar o nível.",
 	"<b>Mar:</b> construa um porto e clique numa costa do outro lado. No porto, compre barcos de defesa; clique num barco e depois na água para escolher a patrulha.",
-	"<b>Bombas:</b> 💣 aparece quando você tem base aérea ou silo. Clique no alvo e confirme com um segundo clique.",
+	"<b>Centro Militar:</b> 🏗 Construir abre Construções e Armamentos. Bombas bloqueadas mostram o requisito; selecione uma disponível, escolha o alvo e confirme com o segundo clique.",
 	"<b>Câmera:</b> arraste para mover, roda do mouse/pinça para zoom, WASD, F para ver o mundo, Espaço para sua capital.",
 	"<b>Atalhos:</b> 1–4 percentual, B construir, Esc cancelar, botão direito numa nação para diplomacia.",
 }, "\n")
@@ -402,7 +402,9 @@ hud = HUD.new(state, gui, {
 	end,
 	onCancel = function() send(Actions.Cancel, nil) end,
 	onTool = function(name)
-		if name == "build" then setMode(mode ~= "build" and "build" or nil)
+		if name == "build" then
+			-- The bottom button toggles the entire military center.
+			setMode((mode == "build" or mode == "weapon") and nil or "build")
 		elseif name == "weapons" then
 			setMode(mode ~= "weapon" and "weapon" or nil)
 		elseif name == "ranking" then hud:toggleRanking()
@@ -411,6 +413,16 @@ hud = HUD.new(state, gui, {
 			local ok, msg = switchMapMode()
 			hud:toast(msg, ok and "good" or "bad")
 		elseif name == "help" then hud:showCenter("Mundial War", helpText, true) end
+	end,
+	onMilitaryTab = function(tab)
+		if tab == "build" then
+			if mode ~= "build" or buildKind then setMode("build") end
+		elseif tab == "weapons" then
+			if mode ~= "weapon" or buildKind then setMode("weapon") end
+		end
+	end,
+	onMilitaryClose = function()
+		setMode(nil)
 	end,
 	onBuild = function(kind)
 		local me = state.me
@@ -447,7 +459,14 @@ hud = HUD.new(state, gui, {
 		send(Actions.ReturnLobby)
 	end,
 	onWeapon = function(kind)
-		if buildKind == kind then setMode("weapon", nil) else setMode("weapon", kind) end
+		-- Server still validates launches; block obviously unavailable weapons here.
+		local available, why = hud:weaponAvailability(kind)
+		if not available then
+			hud:toast("🔒 " .. why, "bad")
+			return
+		end
+		if mode == "weapon" and buildKind == kind then setMode("weapon", nil)
+		else setMode("weapon", kind) end
 	end,
 })
 
