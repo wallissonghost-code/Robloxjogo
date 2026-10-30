@@ -312,7 +312,8 @@ function MapRenderer:paintRowChunk(y, cx)
 				segments[used] = frame
 			end
 			frame.Position = UDim2.fromScale(x / W, y / H)
-			frame.Size = UDim2.new((stop - x) / W, 1, 1 / H, 1)
+			-- Do not bleed a pixel into another chunk's territory.
+			frame.Size = UDim2.new((stop - x) / W, stop < xEnd and 1 or 0, 1 / H, 1)
 			frame.BackgroundColor3 = Color3.fromRGB(c[1], c[2], c[3])
 			frame.Visible = true
 		end
