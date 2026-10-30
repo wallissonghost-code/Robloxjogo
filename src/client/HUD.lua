@@ -72,17 +72,18 @@ function HUD.new(state, gui, handlers)
 	self.troopsText = stat("Troops", 1, 75)
 	self.rateText = stat("TroopsPerSecond", 2, 72, Color3.fromRGB(238, 159, 108))
 	self.goldText = stat("Gold", 3, 76, ACCENT)
+	self.oilText = stat("Oil", 4, 64, Color3.fromRGB(202, 185, 123))
 	self.percentButtons = {}
 	for index, p in ipairs(self.Config.TroopPercents) do
-		local b = button(bar, math.floor(p * 100) .. "%", { Size = UDim2.fromOffset(44, 34), LayoutOrder = index + 3, TextSize = 13, ZIndex = 21 })
+		local b = button(bar, math.floor(p * 100) .. "%", { Size = UDim2.fromOffset(44, 34), LayoutOrder = index + 4, TextSize = 13, ZIndex = 21 })
 		b.Activated:Connect(function() self.h.onPercent(p) end)
 		self.percentButtons[p] = b
 	end
-	self.sendText = stat("Sending", 8, 76)
-	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(35, 34), LayoutOrder = 9, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21, Visible = false })
+	self.sendText = stat("Sending", 9, 76)
+	self.cancelButton = button(bar, "✖", { Size = UDim2.fromOffset(35, 34), LayoutOrder = 10, BackgroundColor3 = Color3.fromRGB(110, 46, 44), ZIndex = 21, Visible = false })
 	self.cancelButton.Activated:Connect(function() self.h.onCancel() end)
 	self.tools = {}
-	self.tools.build = button(bar, "🏗 Construir", { Size = UDim2.fromOffset(105, 34), LayoutOrder = 10, TextSize = 13, ZIndex = 21 })
+	self.tools.build = button(bar, "🏗 Construir", { Size = UDim2.fromOffset(105, 34), LayoutOrder = 11, TextSize = 13, ZIndex = 21 })
 	self.tools.build.Activated:Connect(function() self.h.onTool("build") end)
 
 	-- A single military center holds BOTH tabs; no second floating weapons menu.
@@ -148,7 +149,9 @@ function HUD.new(state, gui, handlers)
 			if not isBuilding then
 				local available, reason = self:weaponAvailability(kind)
 				extra = "\n" .. (available and "✓ Pronta para selecionar" or "🔒 " .. reason)
-				if def.oil and def.oil > 0 then extra = extra .. "\nPetróleo necessário: " .. def.oil end
+				if def.oil and def.oil > 0 then
+					extra = extra .. "\nPetróleo: " .. def.oil .. " (saldo: " .. math.floor(me and me.oil or 0) .. ")"
+				end
 			end
 			detail.Text = def.name .. "\nCusto: " .. self.Protocol.formatK(cost) .. " ouro\n" .. (def.purpose or "")
 				.. (#lines > 0 and ("\n" .. table.concat(lines, " · ")) or "") .. extra
@@ -377,7 +380,7 @@ function HUD.new(state, gui, handlers)
 	local function layout()
 		local narrow = gui.AbsoluteSize.X < 1000
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
-		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 740)
+		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 805)
 		local trayWidth = math.min(760, math.max(260, gui.AbsoluteSize.X - 24))
 		-- Two rows of 76px cards at y=2 and y=82 need at least 166px of content.
 		-- Keep the outer tray tall enough for both prices plus vertical padding.
@@ -463,6 +466,7 @@ function HUD:refreshMe()
 		self.troopsText.Text = "👥 —"
 		self.rateText.Text = "+—/s"
 		self.goldText.Text = "💰 —"
+		self.oilText.Text = "🛢 —"
 		self.sendText.Text = "Enviar —"
 		self.cancelButton.Visible = false
 		return
@@ -470,6 +474,7 @@ function HUD:refreshMe()
 	self.troopsText.Text = "👥 " .. F(me.troops)
 	self.rateText.Text = "+" .. F(me.rate) .. "/s"
 	self.goldText.Text = "💰 " .. F(me.gold)
+	self.oilText.Text = "🛢 " .. F(me.oil or 0)
 	self.sendText.Text = "Enviar " .. F(math.floor(me.troops * state.percent))
 	-- Every catalog entry remains visible: locked weapons explain their requirements.
 	-- The server still enforces launch restrictions and prerequisites.
