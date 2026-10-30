@@ -280,6 +280,7 @@ GameConfig.Network = {
 
 -- Map presentation (client) ------------------------------------------------------
 GameConfig.View = {
+	ChunkSize = 64,                     -- 640x320 => 50 cached rendering chunks; never changes game cells
 	MaxPixelsPerCell = 28,
 	ZoomStep = 1.15,
 	KeyboardPanSpeed = 900,            -- screen pixels per second
