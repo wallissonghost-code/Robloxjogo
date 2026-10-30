@@ -47,7 +47,11 @@ end
 
 function ClientState:nationColor(id)
 	local n = self.nations[id]
-	return n and self.Palette.Nations[n.color] or self.Palette.Neutral
+	if not n then return self.Palette.Neutral end
+	-- Tribes have a shared map/UI colour; nation identity and server colour IDs
+	-- stay untouched for all game rules and other factions.
+	if n.kind == "tribe" then return self.Palette.Tribe end
+	return self.Palette.Nations[n.color] or self.Palette.Neutral
 end
 
 function ClientState:applyInit(data)

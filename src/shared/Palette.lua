@@ -5,6 +5,9 @@ local Palette = {}
 Palette.Water = { 46, 92, 138 }
 Palette.WaterCoast = { 62, 112, 158 }
 Palette.Neutral = { 214, 208, 192 }
+-- All tribal factions share this muted beige-grey display colour. Unlike neutral
+-- land, owned tribal cells keep a dark border so their territory stays legible.
+Palette.Tribe = { 178, 169, 150 }
 Palette.NeutralPolar = { 228, 230, 228 }
 Palette.NeutralCoast = { 198, 192, 176 }
 Palette.CountryLine = { 188, 181, 163 }

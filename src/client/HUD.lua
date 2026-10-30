@@ -91,10 +91,11 @@ function HUD.new(state, gui, handlers)
 		return label
 	end
 	self.troopsText = stat("Troops", 1, 75, nil, true)
-	-- Fixed-width gauge. Only its inner fill changes with troops / maximum.
+	-- Fixed 84px gauge: same left edge beneath the troop count, extended
+	-- rightward to just before the +troops/s label. Only the fill varies.
 	local troopTrack = make("Frame", self.troopsText, {
-		Name = "CapacityTrack", AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.new(1, -12, 0, 4),
+		Name = "CapacityTrack", AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 6, 1, -1), Size = UDim2.fromOffset(84, 4),
 		BackgroundColor3 = Color3.fromRGB(55, 70, 78), BorderSizePixel = 0,
 		ClipsDescendants = true, ZIndex = 22,
 	})
@@ -509,7 +510,9 @@ function HUD.new(state, gui, handlers)
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 805)
 		local viewport = gui.AbsoluteSize
-		local scale = math.max(0.45, math.min(1, (viewport.X - 16) / 410, (viewport.Y - 100) / 290))
+		-- 75% of the previous panel, proportionally scaling text and spacing.
+		-- Narrow screens may shrink it further to remain within the viewport.
+		local scale = math.clamp(math.min(0.75, (viewport.X - 16) / 410, (viewport.Y - 100) / 290), 0.2, 0.75)
 		self.statsScale.Scale = scale
 		local scaledWidth = 410 * scale
 		local leftOfBar = (viewport.X - 805 * bar.UIScale.Scale) / 2
@@ -833,7 +836,7 @@ function HUD:refreshRanking()
 	for k, row in ipairs(self.rankRows) do
 		local n = list[k]
 		if n then
-			local c = state.Palette.Nations[n.color] or state.Palette.Neutral
+			local c = state:nationColor(n.id)
 			local hex = string.format("#%02x%02x%02x", c[1], c[2], c[3])
 			local you = n.id == state.you
 			row.Text = string.format("<font color=\"%s\">■</font> %s%s <font color=\"#96a0ac\">%.1f%% · %s</font>",

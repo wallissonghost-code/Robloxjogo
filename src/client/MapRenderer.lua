@@ -111,8 +111,10 @@ end
 function MapRenderer:recolor()
 	local P = self.Palette
 	self.colors = {}
-	for id, n in pairs(self.state.nations) do
-		local base = P.Nations[n.color] or P.Neutral
+	for id in pairs(self.state.nations) do
+		-- Use the display colour, not the server-side colour index: tribes are
+		-- beige-grey in both EditableImage and low-graphics Frames renderers.
+		local base = self.state:nationColor(id)
 		self.colors[id] = {
 			fill = base,
 			border = P.shade(base, BORDER_SHADE),
