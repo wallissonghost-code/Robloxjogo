@@ -158,22 +158,22 @@ function HUD.new(state, gui, handlers)
 			tip.Visible = true
 		end
 		for index, kind in ipairs(order) do
-			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 110, ((index - 1) % 2) * 80 + 2), Size = UDim2.fromOffset(104, 76), ZIndex = 31, TextSize = 11 })
+			local b = button(grid, "", { Position = UDim2.fromOffset(math.floor((index - 1) / 2) * 110, ((index - 1) % 2) * 80 + 2), Size = UDim2.fromOffset(104, 76), ZIndex = 33, TextSize = 11 })
 			make("UICorner", b, { CornerRadius = UDim.new(0, 9) })
 			make("UIStroke", b, { Color = Color3.fromRGB(76, 101, 122), Transparency = 0.3, Thickness = 1 })
 			b.Text = ""
 			b.TextWrapped = true
 			b.RichText = false
-			if true then
+			do
 				local def = defs[kind]
 				if defs == self.Config.Buildings and kind == "city" then
-					local artHolder = make("Frame", b, { Name = "Icon", Position = UDim2.new(0.5, -16, 0, 1), Size = UDim2.fromOffset(32, 27), BackgroundTransparency = 1, ZIndex = 32 })
-					cityArt(artHolder, 33)
+					local artHolder = make("Frame", b, { Name = "Icon", Position = UDim2.new(0.5, -16, 0, 1), Size = UDim2.fromOffset(32, 27), BackgroundTransparency = 1, ZIndex = 34 })
+					cityArt(artHolder, 35)
 				else
-					make("TextLabel", b, { Name = "Icon", Position = UDim2.new(0, 0, 0, 2), Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, Text = def.icon or "■", TextColor3 = TEXT, Font = BOLD, TextSize = 21, ZIndex = 32 })
+					make("TextLabel", b, { Name = "Icon", Position = UDim2.new(0, 0, 0, 2), Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, Text = def.icon or "■", TextColor3 = TEXT, Font = BOLD, TextSize = 21, ZIndex = 34 })
 				end
-				make("TextLabel", b, { Name = "Title", Position = UDim2.new(0, 3, 0, 27), Size = UDim2.new(1, -6, 0, 24), BackgroundTransparency = 1, Text = def.name, TextColor3 = TEXT, Font = BOLD, TextSize = 10, TextWrapped = true, ZIndex = 32 })
-				make("TextLabel", b, { Name = "Cost", Position = UDim2.new(0, 2, 0, 55), Size = UDim2.new(1, -4, 0, 18), BackgroundTransparency = 1, Text = "", TextColor3 = GOOD, Font = BOLD, TextSize = 12, ZIndex = 32 })
+				make("TextLabel", b, { Name = "Title", Position = UDim2.new(0, 3, 0, 27), Size = UDim2.new(1, -6, 0, 24), BackgroundTransparency = 1, Text = def.name, TextColor3 = TEXT, Font = BOLD, TextSize = 10, TextWrapped = true, ZIndex = 34 })
+				make("TextLabel", b, { Name = "Cost", Position = UDim2.new(0, 2, 0, 55), Size = UDim2.new(1, -4, 0, 18), BackgroundTransparency = 1, Text = "", TextColor3 = GOOD, Font = BOLD, TextSize = 12, ZIndex = 34 })
 			end
 			b.TextXAlignment = Enum.TextXAlignment.Center
 			local pressing, longPressed = false, false
