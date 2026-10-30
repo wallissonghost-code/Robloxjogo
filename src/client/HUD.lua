@@ -523,30 +523,35 @@ end
 
 function HUD:refreshTray()
 	local me = self.state.me
-	for kind, b in pairs(self.trayButtons) do
+	for kind, card in pairs(self.trayButtons) do
 		local def = self.Config.Buildings[kind]
-		local cost = me and me.costs and me.costs[kind] or def.cost
-		local affordable = me and me.gold >= cost
-		b.AutoButtonColor = affordable and true or false
-		-- The cost is supplied by the server and includes existing-building scaling.
-		local costLabel = b:FindFirstChild("Cost")
-		if costLabel then
-			costLabel.Text = "● " .. self.Protocol.formatK(cost)
-			costLabel.TextColor3 = affordable and GOOD or BAD
+		local cost = (me and me.costs and me.costs[kind]) or def.cost
+		local affordable = me and (me.gold or 0) >= cost
+		local selected = self.selectedBuild == kind
+		local price = card:FindFirstChild("Cost")
+		local status = card:FindFirstChild("Status")
+		local title = card:FindFirstChild("Title")
+		if price then
+			price.Text = self.Protocol.formatK(cost) .. " ouro"
+			price.TextColor3 = affordable and GOOD or BAD
 		end
-		local iconLabel = b:FindFirstChild("Icon")
-		if iconLabel and iconLabel:IsA("TextLabel") then iconLabel.TextTransparency = affordable and 0 or 0.45 end
-		local titleLabel = b:FindFirstChild("Title")
-		if titleLabel then titleLabel.TextTransparency = affordable and 0 or 0.35 end
-		b.BackgroundColor3 = (self.selectedBuild == kind) and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
+		if status then
+			status.Text = affordable and "DISPONÍVEL" or "OURO INSUFICIENTE"
+			status.TextColor3 = affordable and MUTED or BAD
+		end
+		if title then title.TextColor3 = selected and MilitaryIcons.SELECTED_COLOR or TEXT end
+		local icon = self.cardIcons.build[kind]
+		if icon then icon:setColor(selected and MilitaryIcons.SELECTED_COLOR or MilitaryIcons.DEFAULT_COLOR) end
+		-- Even when funds are lacking the button explains the requirement on tap.
+		card.AutoButtonColor = true
+		card.BackgroundColor3 = selected and Color3.fromRGB(92, 74, 30) or Color3.fromRGB(34, 44, 58)
 	end
 	local kind = self.selectedBuild
 	if kind then
 		local def = self.Config.Buildings[kind]
-		local lines = self.state.Stats.lines(self.Config, kind, 1)
-		self.trayInfo.Text = "<b>" .. def.name .. "</b>: " .. def.purpose .. "\n" .. table.concat(lines, " · ")
+		self.trayInfo.Text = def.name .. ": " .. def.purpose
 	else
-		self.trayInfo.Text = "Escolha uma construção para ver para que serve e o alcance; depois clique numa célula sua."
+		self.trayInfo.Text = "Escolha uma construção para ver sua função e posicioná-la no mapa."
 	end
 end
 
@@ -594,48 +599,59 @@ end
 
 function HUD:refreshWeapons()
 	local me = self.state.me
-	for kind, b in pairs(self.weaponButtons) do
+	for kind, card in pairs(self.weaponButtons) do
 		local w = self.Config.Weapons[kind]
 		local available, reason = self:weaponAvailability(kind)
-		local icon = b:FindFirstChild("Icon")
-		local title = b:FindFirstChild("Title")
-		local costLabel = b:FindFirstChild("Cost")
-		if icon then icon.TextTransparency = available and 0 or 0.35 end
-		if title then title.TextTransparency = available and 0 or 0.25 end
-		if costLabel then
-			-- Show the first unlock requirement directly on each card.
-			local launcherPresent = me and me.cooldowns and me.cooldowns[w.launcher] ~= nil
-			if w.mode and w.mode ~= ((me and me.mode) or (self.state.match and self.state.match.mode)) then
-				costLabel.Text = "🔒 Modo Extremo"
-			elseif not launcherPresent then
-				costLabel.Text = "🔒 " .. (w.launcher == "silo" and "Silo" or "Base aérea")
-			elseif w.minLevel and not available then
-				local maxLevel = 0
-				for _, built in pairs(self.state.buildings) do
-					if built.owner == self.state.you and built.kind == w.launcher then
-						maxLevel = math.max(maxLevel, built.level or 1)
-					end
-				end
-				if maxLevel > 0 and maxLevel < w.minLevel then
-					costLabel.Text = "🔒 Nível " .. w.minLevel
-				else
-					costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
-				end
-			elseif reason:find("Recarga", 1, true) then
-				costLabel.Text = "⏳ Recarga"
-			elseif not available and reason:find("petróleo", 1, true) then
-				costLabel.Text = "🛢 " .. w.oil
-			else
-				costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
-			end
-			costLabel.TextColor3 = available and GOOD or BAD
+		local selected = self.selectedWeapon == kind
+		-- Resource shortage is separate from a missing unlock; the icon stays
+		-- light-grey while its cost/status is red, not dark-locked.
+		local poorGold = me and (me.gold or 0) < w.gold
+		local poorOil = me and w.oil and (me.oil or 0) < w.oil
+		local locked = not available and not
+			(reason:find("Ouro", 1, true) or reason:find("petróleo", 1, true))
+		local lock = card:FindFirstChild("LockedBadge")
+		local title, price, status = card:FindFirstChild("Title"),
+			card:FindFirstChild("Cost"), card:FindFirstChild("Status")
+		if lock then lock.Visible = locked end
+		if title then title.TextColor3 = selected and MilitaryIcons.SELECTED_COLOR or TEXT end
+		if price then
+			price.Text = self.Protocol.formatK(w.gold) .. " ouro"
+			price.TextColor3 = poorGold and BAD or (locked and MUTED or GOOD)
 		end
-		b.BackgroundColor3 = self.selectedWeapon == kind and Color3.fromRGB(120, 48, 44)
-			or (available and Color3.fromRGB(34, 44, 58) or Color3.fromRGB(32, 36, 45))
-		b.AutoButtonColor = true -- blocked items show a helpful reason when tapped
+		if status then
+			if locked then
+				if reason:find("Construa ", 1, true) then
+					status.Text = w.launcher == "silo" and "REQUER SILO" or "REQUER BASE AÉREA"
+				elseif reason:find("nível", 1, true) then
+					status.Text = "REQUER NÍVEL " .. tostring(w.minLevel or "")
+				elseif reason:find("Recarga", 1, true) then
+					status.Text = "EM RECARGA"
+				elseif reason:find("Extrema", 1, true) then
+					status.Text = "MODO EXTREMO"
+				else
+					status.Text = "BLOQUEADO"
+				end
+			elseif poorGold then
+				status.Text = "OURO INSUFICIENTE"
+			elseif poorOil then
+				status.Text = "FALTA PETRÓLEO"
+			else
+				status.Text = "DISPONÍVEL"
+			end
+			status.TextColor3 = (poorGold or poorOil) and BAD or MUTED
+		end
+		local icon = self.cardIcons.weapons[kind]
+		if icon then
+			icon:setColor(selected and MilitaryIcons.SELECTED_COLOR
+				or (locked and MilitaryIcons.LOCKED_COLOR or MilitaryIcons.DEFAULT_COLOR))
+		end
+		card.BackgroundColor3 = selected and Color3.fromRGB(92, 74, 30)
+			or (locked and Color3.fromRGB(30, 37, 47) or Color3.fromRGB(34, 44, 58))
+		card.AutoButtonColor = true -- tap locked cards for an explicit requirement
 	end
-	local w = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
-	self.weaponInfo.Text = w and w.name or "Escolha uma arma. Toque em itens bloqueados para saber como liberá-los."
+	local selectedWeapon = self.selectedWeapon and self.Config.Weapons[self.selectedWeapon]
+	self.weaponInfo.Text = selectedWeapon and selectedWeapon.name or
+		"Toque em um armamento para selecioná-lo ou em um bloqueado para ver seus requisitos."
 end
 
 function HUD:showPlacement(visible, kind, ready)
