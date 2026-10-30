@@ -11,7 +11,7 @@ local REMOTE_FOLDER = "MW_LobbyRemotes"
 local ROOM_MAP = "MW_PublicMatchRooms_v2"
 local ROOM_LIFETIME = 180
 local INVITE_LIFETIME = 30
-local NATIVE_INVITE_LIFETIME = 600 -- 10 minutes to open Roblox invitation
+local NATIVE_INVITE_LIFETIME = 1800 -- 30 minutes to accept a Roblox invitation
 local PARTY_INVITES_MAP = "MW_PartyNativeInvites_v1"
 local LAUNCH_PREFIX = "MWP:"
 
@@ -110,6 +110,7 @@ function LobbyService.start(config)
     -- Called only for an actual Roblox invite from the client. Never allow
     -- clients to decide another user's Party or target server.
     local function issueNativeInvite(player)
+        if player.Parent ~= Players or busy[player.UserId] then return end
         local group = groupFor(player)
         if not group or group.leader ~= player.UserId or memberCount(group) >= config.Lobby.PartyMaxMembers then
             message(player, "Só o líder pode convidar; seu Party precisa ter uma vaga.", false)
@@ -130,6 +131,7 @@ function LobbyService.start(config)
             message(player, "Convite temporariamente indisponível. Tente novamente.", false)
             return
         end
+        if player.Parent ~= Players or busy[player.UserId] then return end
         send(player, {kind = "NativeInviteReady", launchData = LAUNCH_PREFIX .. ticket})
     end
 
