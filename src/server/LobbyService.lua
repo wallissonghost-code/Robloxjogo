@@ -11,6 +11,9 @@ local REMOTE_FOLDER = "MW_LobbyRemotes"
 local ROOM_MAP = "MW_PublicMatchRooms_v2"
 local ROOM_LIFETIME = 180
 local INVITE_LIFETIME = 30
+local NATIVE_INVITE_LIFETIME = 600 -- 10 minutes to open Roblox invitation
+local PARTY_INVITES_MAP = "MW_PartyNativeInvites_v1"
+local LAUNCH_PREFIX = "MWP:"
 
 local function newRemote(folder, name)
     local r = Instance.new("RemoteEvent")
@@ -26,11 +29,15 @@ function LobbyService.start(config)
     local command = newRemote(folder, "Command")
     local event = newRemote(folder, "Event")
     local rooms = MemoryStoreService:GetSortedMap(ROOM_MAP)
+    -- Ticket stores the host's public-lobby JobId. Roblox LaunchData then
+    -- directs invited friends here even when they initially join another lobby.
+    local nativeInvites = MemoryStoreService:GetSortedMap(PARTY_INVITES_MAP)
     local parties = {} -- leader userId -> {leader, members, mode, private}
     local membership = {} -- userId -> leader userId
     local invites = {} -- target userId -> {from, expires}
     local busy = {}
     local lastInvite = {}
+    local lastNativeInvite = {}
     local lastPlay = {}
 
     local function send(player, payload)
@@ -92,6 +99,130 @@ function LobbyService.start(config)
 
     local function message(player, text, good)
         send(player, {kind = "Notice", text = text, good = good == true})
+    end
+
+    local function memberCount(party)
+        local count = 0
+        for _ in pairs(party.members) do count = count + 1 end
+        return count
+    end
+
+    -- Called only for an actual Roblox invite from the client. Never allow
+    -- clients to decide another user's Party or target server.
+    local function issueNativeInvite(player)
+        local group = groupFor(player)
+        if not group or group.leader ~= player.UserId or memberCount(group) >= config.Lobby.PartyMaxMembers then
+            message(player, "Só o líder pode convidar; seu Party precisa ter uma vaga.", false)
+            return
+        end
+        if (lastNativeInvite[player.UserId] or 0) + 3 > os.clock() then return end
+        lastNativeInvite[player.UserId] = os.clock()
+        local ticket = HttpService:GenerateGUID(false)
+        local ok, err = pcall(function()
+            nativeInvites:SetAsync(ticket, {
+                leader = player.UserId,
+                lobbyJobId = game.JobId,
+                expiresAt = os.time() + NATIVE_INVITE_LIFETIME,
+            }, NATIVE_INVITE_LIFETIME, os.time())
+        end)
+        if not ok then
+            warn("[MundialWar] Could not create Roblox party invite: " .. tostring(err))
+            message(player, "Convite temporariamente indisponível. Tente novamente.", false)
+            return
+        end
+        send(player, {kind = "NativeInviteReady", launchData = LAUNCH_PREFIX .. ticket})
+    end
+
+    local function joinPartyFromTicket(player, ticket)
+        if not player or player.Parent ~= Players or type(ticket) ~= "string" then return end
+        if not ticket:match("^[0-9a-fA-F%-]+$") or #ticket > 64 then return end
+
+        local ok, record = pcall(function() return nativeInvites:GetAsync(ticket) end)
+        if not ok then
+            message(player, "Não foi possível verificar o convite. Tente novamente.", false)
+            return
+        end
+        if type(record) ~= "table" or type(record.leader) ~= "number"
+            or type(record.lobbyJobId) ~= "string"
+            or record.expiresAt == nil or record.expiresAt < os.time() then
+            message(player, "Esse convite expirou. Peça outro ao seu amigo.", false)
+            return
+        end
+        if record.lobbyJobId ~= game.JobId then
+            local options = Instance.new("TeleportOptions")
+            options.ServerInstanceId = record.lobbyJobId
+            options:SetTeleportData({mwPartyTicket = ticket, mwPartyRedirect = true})
+            send(player, {kind = "Starting", text = "Entrando no lobby do seu amigo..."})
+            local transferred, err = pcall(function()
+                TeleportService:TeleportAsync(game.PlaceId, {player}, options)
+            end)
+            if not transferred then
+                warn("[MundialWar] party invite lobby transfer failed: " .. tostring(err))
+                message(player, "Não foi possível entrar no lobby do amigo. Peça um novo convite.", false)
+                send(player, {kind = "Starting", text = ""})
+            end
+            return
+        end
+
+        local leader = Players:GetPlayerByUserId(record.leader)
+        local destination = leader and groupFor(leader)
+        local current = groupFor(player)
+        if not destination or destination.leader ~= record.leader or not current then
+            message(player, "O amigo não está mais aguardando nesse lobby.", false)
+            return
+        end
+        if destination.members[player.UserId] then return end
+        if memberCount(destination) >= config.Lobby.PartyMaxMembers or current.leader ~= player.UserId
+            or memberCount(current) ~= 1 then
+            message(player, "O Party já está cheio ou você está em outro grupo.", false)
+            return
+        end
+        -- No yielding between capacity verification and mutation.
+        parties[player.UserId] = nil
+        destination.members[player.UserId] = true
+        membership[player.UserId] = destination.leader
+        pcall(function() nativeInvites:RemoveAsync(ticket) end)
+        syncAll()
+        message(player, "Você entrou no Party de " .. leader.DisplayName .. "!", true)
+        message(leader, player.DisplayName .. " aceitou o convite e entrou no Party!", true)
+    end
+
+    local function readJoinTicket(player)
+        -- LaunchData from Roblox notifications can arrive after PlayerAdded.
+        -- TeleportData is checked first for our one-hop lobby redirect.
+        for attempt = 1, 12 do
+            if player.Parent ~= Players then return nil end
+            local ok, join = pcall(function() return player:GetJoinData() end)
+            if ok and type(join) == "table" then
+                local transfer = join.TeleportData
+                if type(transfer) == "table" and transfer.mwPartyRedirect == true
+                    and join.SourcePlaceId == game.PlaceId
+                    and type(transfer.mwPartyTicket) == "string" then
+                    return transfer.mwPartyTicket, true
+                end
+                local launch = join.LaunchData
+                if type(launch) == "string" then
+                    local ticket = launch:match("^MWP:([0-9a-fA-F%-]+)$")
+                    if ticket then return ticket, false end
+                end
+            end
+            if attempt < 12 then task.wait(1) end
+        end
+        return nil
+    end
+
+    local function processJoiningInvite(player)
+        local ticket, redirected = readJoinTicket(player)
+        if not ticket or player.Parent ~= Players then return end
+        -- The invitation must end at its host, not be endlessly forwarded.
+        if redirected then
+            local ok, info = pcall(function() return nativeInvites:GetAsync(ticket) end)
+            if not ok or not info or info.lobbyJobId ~= game.JobId then
+                message(player, "O lobby do amigo não está disponível. Peça outro convite.", false)
+                return
+            end
+        end
+        joinPartyFromTicket(player, ticket)
     end
 
     local function playGroup(leader)
@@ -236,6 +367,9 @@ function LobbyService.start(config)
         elseif action == "Privacy" then
             -- Private matchmaking was removed: parties always join public wars.
             if group.private then group.private = false; syncAll() end
+        elseif action == "NativeInvite" then
+            -- Native Roblox invite (friends outside this game or another server).
+            task.spawn(issueNativeInvite, player)
         elseif action == "Invite" then
             if group.leader ~= player.UserId or type(data) ~= "number" or data == player.UserId then return end
             if (lastInvite[player.UserId] or 0) + 2 > os.clock() then return end
@@ -296,10 +430,12 @@ function LobbyService.start(config)
     Players.PlayerAdded:Connect(function(player)
         makeSolo(player)
         syncAll()
+        task.spawn(processJoiningInvite, player)
     end)
     Players.PlayerRemoving:Connect(function(player)
         invites[player.UserId] = nil
         lastInvite[player.UserId] = nil
+        lastNativeInvite[player.UserId] = nil
         lastPlay[player.UserId] = nil
         local group = groupFor(player)
         if group then
@@ -320,9 +456,12 @@ function LobbyService.start(config)
         task.defer(syncAll)
     end)
 
-    for _, player in ipairs(Players:GetPlayers()) do makeSolo(player) end
+    for _, player in ipairs(Players:GetPlayers()) do
+        makeSolo(player)
+        task.spawn(processJoiningInvite, player)
+    end
     syncAll()
-    print("[MundialWar] Lobby ativo: salas públicas, privadas e Party de 2 jogadores.")
+    print("[MundialWar] Lobby ativo: partidas públicas e convites de Party dentro/fora do jogo.")
 end
 
 return LobbyService
