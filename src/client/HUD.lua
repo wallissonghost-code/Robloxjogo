@@ -77,14 +77,82 @@ function HUD.new(state, gui, handlers)
 	make("UIScale", bar, { Name = "UIScale", Scale = 1 })
 	make("UIListLayout", bar, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder })
 	make("UIPadding", bar, { PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7) })
-	local function stat(name, order, width, color)
-		local label = make("TextLabel", bar, { Name = name, LayoutOrder = order, Size = UDim2.fromOffset(width, 34), BackgroundTransparency = 1, Font = BOLD, TextSize = 13, TextColor3 = color or TEXT, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 21, Text = "—" })
+	local function stat(name, order, width, color, tappable)
+		local label = make(tappable and "TextButton" or "TextLabel", bar, {
+			Name = name, LayoutOrder = order, Size = UDim2.fromOffset(width, 34),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Font = BOLD, TextSize = 13,
+			TextColor3 = color or TEXT, TextXAlignment = Enum.TextXAlignment.Center,
+			ZIndex = 21, Text = "—",
+		})
+		if tappable then
+			label.AutoButtonColor = false
+			label.Activated:Connect(function() self:toggleStats() end)
+		end
 		return label
 	end
-	self.troopsText = stat("Troops", 1, 75)
-	self.rateText = stat("TroopsPerSecond", 2, 72, Color3.fromRGB(238, 159, 108))
-	self.goldText = stat("Gold", 3, 76, ACCENT)
-	self.oilText = stat("Oil", 4, 64, Color3.fromRGB(202, 185, 123))
+	self.troopsText = stat("Troops", 1, 75, nil, true)
+	-- Fixed-width gauge. Only its inner fill changes with troops / maximum.
+	local troopTrack = make("Frame", self.troopsText, {
+		Name = "CapacityTrack", AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.new(1, -12, 0, 4),
+		BackgroundColor3 = Color3.fromRGB(55, 70, 78), BorderSizePixel = 0,
+		ClipsDescendants = true, ZIndex = 22,
+	})
+	make("UICorner", troopTrack, { CornerRadius = UDim.new(1, 0) })
+	self.troopFill = make("Frame", troopTrack, {
+		Name = "CapacityFill", Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = GOOD, BorderSizePixel = 0, ZIndex = 23,
+	})
+	make("UICorner", self.troopFill, { CornerRadius = UDim.new(1, 0) })
+	self.rateText = stat("TroopsPerSecond", 2, 72, Color3.fromRGB(238, 159, 108), true)
+	self.goldText = stat("Gold", 3, 76, ACCENT, true)
+	self.oilText = stat("Oil", 4, 64, Color3.fromRGB(202, 185, 123), true)
+	-- One read-only economic summary opened by tapping any resource counter.
+	self.statsPanel = panel(gui, {
+		Name = "EconomyDetails", AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.fromOffset(8, 400), Size = UDim2.fromOffset(410, 290),
+		Visible = false, Active = true, ZIndex = 35,
+	})
+	self.statsPanel.BackgroundColor3 = Color3.fromRGB(20, 30, 47)
+	self.statsPanel.BackgroundTransparency = 0.08
+	make("UICorner", self.statsPanel, { CornerRadius = UDim.new(0, 12) })
+	make("UIStroke", self.statsPanel, {
+		Color = Color3.fromRGB(75, 91, 115), Transparency = 0.3, Thickness = 1,
+	})
+	self.statsScale = make("UIScale", self.statsPanel, { Scale = 1 })
+	self.statsName = make("TextLabel", self.statsPanel, {
+		Position = UDim2.fromOffset(16, 12), Size = UDim2.new(1, -66, 0, 31),
+		BackgroundTransparency = 1, Text = "Estatísticas", Font = BOLD,
+		TextSize = 19, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 36,
+	})
+	local statsClose = button(self.statsPanel, "X", {
+		Position = UDim2.new(1, -43, 0, 9), Size = UDim2.fromOffset(32, 32),
+		TextSize = 15, ZIndex = 36,
+	})
+	statsClose.Activated:Connect(function() self.statsPanel.Visible = false end)
+	self.statsValues = {}
+	local info = {
+		{ "Tropas", "troops", TEXT }, { "Crescimento", "rate", GOOD },
+		{ "Ouro", "gold", ACCENT }, { "Renda", "income", GOOD },
+		{ "Petróleo", "oil", Color3.fromRGB(202, 185, 123) },
+		{ "Terra", "land", TEXT }, { "Cada pedido envia", "send", ACCENT },
+	}
+	for i, row in ipairs(info) do
+		local y = 52 + (i - 1) * 29
+		make("TextLabel", self.statsPanel, {
+			Position = UDim2.fromOffset(17, y), Size = UDim2.fromOffset(196, 25),
+			BackgroundTransparency = 1, Text = row[1], Font = FONT,
+			TextSize = 15, TextColor3 = MUTED,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 36,
+		})
+		self.statsValues[row[2]] = make("TextLabel", self.statsPanel, {
+			Position = UDim2.new(1, -193, 0, y), Size = UDim2.fromOffset(177, 25),
+			BackgroundTransparency = 1, Text = "—", Font = BOLD,
+			TextSize = 15, TextColor3 = row[3], TextXAlignment = Enum.TextXAlignment.Right,
+			ZIndex = 36,
+		})
+	end
 	self.percentButtons = {}
 	for index, p in ipairs(self.Config.TroopPercents) do
 		local b = button(bar, math.floor(p * 100) .. "%", { Size = UDim2.fromOffset(44, 34), LayoutOrder = index + 4, TextSize = 13, ZIndex = 21 })
@@ -440,6 +508,14 @@ function HUD.new(state, gui, handlers)
 		local narrow = gui.AbsoluteSize.X < 1000
 		bar.Position = UDim2.new(0.5, 0, 1, -12)
 		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 805)
+		local viewport = gui.AbsoluteSize
+		local scale = math.max(0.45, math.min(1, (viewport.X - 16) / 410, (viewport.Y - 100) / 290))
+		self.statsScale.Scale = scale
+		local scaledWidth = 410 * scale
+		local leftOfBar = (viewport.X - 805 * bar.UIScale.Scale) / 2
+		local x = math.clamp(leftOfBar, 8, math.max(8, viewport.X - scaledWidth - 8))
+		local y = math.max(10 + 290 * scale, viewport.Y - 12 - 46 * bar.UIScale.Scale - 8)
+		self.statsPanel.Position = UDim2.fromOffset(x, y)
 		-- Smaller than the previous 760x264 panel; preserve two readable rows.
 		self.militaryPanel.Size = UDim2.fromOffset(620, 194)
 		local viewport = gui.AbsoluteSize
@@ -479,8 +555,35 @@ function HUD.new(state, gui, handlers)
 	return self
 end
 
+function HUD:toggleStats()
+	if not self.state.me or not self.state.you then return end
+	self.statsPanel.Visible = not self.statsPanel.Visible
+	if self.statsPanel.Visible then self:refreshStats() end
+end
+
+function HUD:refreshStats()
+	local me = self.state.me
+	if not me then
+		self.statsPanel.Visible = false
+		return
+	end
+	local F = self.Protocol.formatK
+	local nation = self.state.nations[self.state.you]
+	self.statsName.Text = nation and nation.name or Players.LocalPlayer.DisplayName
+	self.statsValues.troops.Text = F(me.troops or 0) .. " / " .. F(me.max or 0)
+	self.statsValues.rate.Text = "+" .. F(me.rate or 0) .. "/s"
+	self.statsValues.gold.Text = F(me.gold or 0)
+	self.statsValues.income.Text = "+" .. F(me.goldRate or 0) .. "/s"
+	self.statsValues.oil.Text = F(me.oil or 0) .. " (+" .. F(me.oilRate or 0) .. "/s)"
+	self.statsValues.land.Text = string.format("%.2f%%", (me.share or 0) * 100)
+	self.statsValues.send.Text = string.format("%d%% · %s",
+		math.floor(self.state.percent * 100 + 0.5),
+		F(math.floor((me.troops or 0) * self.state.percent)))
+end
+
 function HUD:setPercent(p)
 	if self.state.me then self.sendText.Text = "Enviar " .. self.Protocol.formatK(math.floor(self.state.me.troops * p)) end
+	if self.statsPanel.Visible then self:refreshStats() end
 	for value, b in pairs(self.percentButtons) do
 		local on = math.abs(value - p) < 1e-6
 		b.BackgroundColor3 = on and ACCENT or Color3.fromRGB(34, 44, 58)
@@ -528,8 +631,14 @@ function HUD:refreshMe()
 		self.oilText.Text = "🛢 —"
 		self.sendText.Text = "Enviar —"
 		self.cancelButton.Visible = false
+		self.troopFill.Size = UDim2.fromScale(0, 1)
+		self.statsPanel.Visible = false
 		return
 	end
+	local maxTroops = math.max(0, me.max or 0)
+	local portion = maxTroops > 0 and math.clamp((me.troops or 0) / maxTroops, 0, 1) or 0
+	self.troopFill.Size = UDim2.fromScale(portion, 1)
+	self:refreshStats()
 	self.troopsText.Text = "👥 " .. F(me.troops)
 	self.rateText.Text = "+" .. F(me.rate) .. "/s"
 	self.goldText.Text = "💰 " .. F(me.gold)
@@ -775,6 +884,7 @@ function HUD:showResults(match)
 	local results = match and match.results
 	if not results then return end
 	self.resultsOverlay.Visible = true
+	self.statsPanel.Visible = false
 	self.center.Visible = false
 	self.tray.Visible = false
 	self.weaponTray.Visible = false
