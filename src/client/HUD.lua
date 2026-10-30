@@ -504,30 +504,46 @@ function HUD.new(state, gui, handlers)
 	self.resultsLobby.TextColor3 = Color3.fromRGB(30, 24, 10)
 	self.resultsLobby.Activated:Connect(function() self.h.onReturnLobby() end)
 
-	-- narrow screens (phones/tablets): lift the percentage bar above the player card
-	local function layout()
-		local narrow = gui.AbsoluteSize.X < 1000
-		bar.Position = UDim2.new(0.5, 0, 1, -12)
-		bar.UIScale.Scale = math.min(1, (gui.AbsoluteSize.X - 16) / 805)
+	-- Align the economy details with the ACTUAL left edge/top of the bottom HUD.
+	-- The bar uses AutomaticSize and can grow when the cancel button appears;
+	-- a hard-coded 805px width made the popover drift left on mobile.
+	local function layoutStats()
 		local viewport = gui.AbsoluteSize
-		-- 75% of the previous panel, proportionally scaling text and spacing.
-		-- Narrow screens may shrink it further to remain within the viewport.
-		local scale = math.clamp(math.min(0.75, (viewport.X - 16) / 410, (viewport.Y - 100) / 290), 0.2, 0.75)
-		self.statsScale.Scale = scale
-		local scaledWidth = 410 * scale
-		local leftOfBar = (viewport.X - 805 * bar.UIScale.Scale) / 2
-		local x = math.clamp(leftOfBar, 8, math.max(8, viewport.X - scaledWidth - 8))
-		local y = math.max(10 + 290 * scale, viewport.Y - 12 - 46 * bar.UIScale.Scale - 8)
-		self.statsPanel.Position = UDim2.fromOffset(x, y)
+		if viewport.X <= 0 or viewport.Y <= 0 then return end
+
+		local barSize = bar.AbsoluteSize
+		local barPos = bar.AbsolutePosition
+		-- First-frame fallback until Roblox completes the automatic layout.
+		local barWidth = barSize.X > 1 and barSize.X or 698 * bar.UIScale.Scale
+		local barLeft = barSize.X > 1 and barPos.X or (viewport.X - barWidth) * 0.5
+		local barTop = barSize.Y > 1 and barPos.Y or (viewport.Y - 12 - 46 * bar.UIScale.Scale)
+		local bottom = barTop - 10 -- constant gap: never cover troop/send controls
+
+		-- Keep the requested 25% reduction; shrink further only when needed
+		-- to fit a small display without crossing the top or the bottom HUD.
+		local scale = math.min(0.75, (viewport.X - 16) / 410, (bottom - 8) / 290)
+		self.statsScale.Scale = math.max(0.1, scale)
+		local width = 410 * self.statsScale.Scale
+		local x = math.clamp(barLeft, 8, math.max(8, viewport.X - width - 8))
+		self.statsPanel.Position = UDim2.fromOffset(x, bottom)
+	end
+	self.layoutStats = layoutStats
+
+	local function layout()
+		local viewport = gui.AbsoluteSize
+		bar.Position = UDim2.new(0.5, 0, 1, -12)
+		bar.UIScale.Scale = math.min(1, (viewport.X - 16) / 805)
+		layoutStats()
 		-- Smaller than the previous 760x264 panel; preserve two readable rows.
 		self.militaryPanel.Size = UDim2.fromOffset(620, 194)
-		local viewport = gui.AbsoluteSize
 		self.militaryScale.Scale = math.clamp(math.min(
 			(viewport.X - 20) / 620, (viewport.Y - 105) / 194), 0.5, 1)
 		self.militaryPanel.Position = UDim2.new(0.5, 0, 1, -64)
 		self.ranking.Visible = false
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
+	bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutStats)
+	bar:GetPropertyChangedSignal("AbsolutePosition"):Connect(layoutStats)
 	layout()
 
 	-- Mode menu: shown during the vote that opens every round -----------------------------------
@@ -561,7 +577,10 @@ end
 function HUD:toggleStats()
 	if not self.state.me or not self.state.you then return end
 	self.statsPanel.Visible = not self.statsPanel.Visible
-	if self.statsPanel.Visible then self:refreshStats() end
+	if self.statsPanel.Visible then
+		if self.layoutStats then self.layoutStats() end
+		self:refreshStats()
+	end
 end
 
 function HUD:refreshStats()
