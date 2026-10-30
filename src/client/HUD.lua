@@ -516,8 +516,10 @@ function HUD.new(state, gui, handlers)
 		-- First-frame fallback until Roblox completes the automatic layout.
 		local barWidth = barSize.X > 1 and barSize.X or 698 * bar.UIScale.Scale
 		local barLeft = barSize.X > 1 and barPos.X or (viewport.X - barWidth) * 0.5
-		local barTop = barSize.Y > 1 and barPos.Y or (viewport.Y - 12 - 46 * bar.UIScale.Scale)
-		local bottom = barTop - 10 -- constant gap: never cover troop/send controls
+		-- Restore the panel's ORIGINAL vertical placement: it was already correct.
+		-- AbsolutePosition belongs to a different coordinate space on some mobile
+		-- screen insets, which incorrectly lifted the panel in the last revision.
+		local bottom = viewport.Y - 12 - 46 * bar.UIScale.Scale - 8
 
 		-- Keep the requested 25% reduction; shrink further only when needed
 		-- to fit a small display without crossing the top or the bottom HUD.
