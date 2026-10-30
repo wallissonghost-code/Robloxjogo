@@ -104,27 +104,70 @@ function OverlayRenderer:updateLabels()
 	local alive = {}
 	for id, n in pairs(state.nations) do
 		alive[id] = true
+		-- Bots/tribes get only a plain nation name. Real players keep
+		-- Roblox profile picture + name + troop count, without relation emojis.
+		local isPlayer = n.kind == "player" and type(n.userId) == "number" and n.userId > 0
 		local item = self.labels[id]
 		if not item then
-			local frame = make("Frame", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 6 })
-			local list = make("UIListLayout", frame, { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 0) })
+			local frame = make("Frame", self.layer, {
+				BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 6,
+			})
+			local list = make("UIListLayout", frame, {
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 0),
+			})
 			list.SortOrder = Enum.SortOrder.LayoutOrder
-			local head = make("Frame", frame, { BackgroundTransparency = 1, LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X })
-			make("UIListLayout", head, { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
-			local avatar = make("ImageLabel", head, { BackgroundColor3 = rgb(state:nationColor(id)), BorderSizePixel = 0, LayoutOrder = 1, ZIndex = 6 })
-			make("UICorner", avatar, { CornerRadius = UDim.new(1, 0) })
-			make("UIStroke", avatar, { Color = WHITE, Thickness = 1.5 })
-			local initial = make("TextLabel", avatar, { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = FONT, TextColor3 = WHITE, TextScaled = true, Text = string.sub(n.name, 1, (utf8.offset(n.name, 2) or 2) - 1), ZIndex = 7 })
-			local name = make("TextLabel", head, { BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Font = FONT, TextColor3 = INK, TextStrokeColor3 = Color3.fromRGB(245, 242, 232), TextStrokeTransparency = 0.25, Text = n.name, LayoutOrder = 2, ZIndex = 6 })
-			local troops = make("TextLabel", frame, { BackgroundTransparency = 1, Font = FONT, TextColor3 = INK, TextStrokeColor3 = Color3.fromRGB(245, 242, 232), TextStrokeTransparency = 0.35, LayoutOrder = 2, ZIndex = 6 })
-			item = { frame = frame, head = head, avatar = avatar, initial = initial, name = name, troops = troops }
+			local head = make("Frame", frame, {
+				BackgroundTransparency = 1, LayoutOrder = 1, AutomaticSize = Enum.AutomaticSize.X,
+			})
+			make("UIListLayout", head, {
+				FillDirection = Enum.FillDirection.Horizontal,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, isPlayer and 4 or 0),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			})
+			local avatar, initial
+			if isPlayer then
+				avatar = make("ImageLabel", head, {
+					BackgroundColor3 = rgb(state:nationColor(id)),
+					BorderSizePixel = 0, LayoutOrder = 1, ZIndex = 6,
+				})
+				make("UICorner", avatar, { CornerRadius = UDim.new(1, 0) })
+				make("UIStroke", avatar, { Color = WHITE, Thickness = 1.5 })
+				initial = make("TextLabel", avatar, {
+					BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
+					Font = FONT, TextColor3 = WHITE, TextScaled = true,
+					Text = string.sub(n.name, 1, (utf8.offset(n.name, 2) or 2) - 1),
+					ZIndex = 7,
+				})
+			end
+			local name = make("TextLabel", head, {
+				BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X,
+				Font = FONT, TextColor3 = INK,
+				TextStrokeColor3 = Color3.fromRGB(245, 242, 232),
+				TextStrokeTransparency = 0.25,
+				Text = n.name, LayoutOrder = 2, ZIndex = 6,
+			})
+			local troops
+			if isPlayer then
+				troops = make("TextLabel", frame, {
+					BackgroundTransparency = 1, Font = FONT,
+					TextColor3 = INK, TextStrokeColor3 = Color3.fromRGB(245, 242, 232),
+					TextStrokeTransparency = 0.35, LayoutOrder = 2, ZIndex = 6,
+				})
+			end
+			item = { frame = frame, head = head, avatar = avatar,
+				initial = initial, name = name, troops = troops, isPlayer = isPlayer }
 			self.labels[id] = item
-			if n.userId and n.userId > 0 then
+			if isPlayer then
 				task.spawn(function()
 					local thumb = self.thumbs[n.userId]
 					if not thumb then
 						local ok, url = pcall(function()
-							return Players:GetUserThumbnailAsync(n.userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+							return Players:GetUserThumbnailAsync(n.userId,
+								Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
 						end)
 						if ok then thumb = url self.thumbs[n.userId] = url end
 					end
@@ -133,55 +176,56 @@ function OverlayRenderer:updateLabels()
 						initial.Visible = false
 					end
 				end)
+				local cap = make("TextLabel", self.layer, {
+					BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
+					Text = "★", Font = FONT, TextColor3 = WHITE,
+					TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, ZIndex = 5,
+				})
+				self.capitals[id] = cap
 			end
-			local cap = make("TextLabel", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Text = "★", Font = FONT, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, ZIndex = 5 })
-			self.capitals[id] = cap
 		end
-		-- Simplified identities on the map:
-		-- AI nations and tribes display only their geographic country name.
-		-- Humans retain their actual headshot (or the letter while it loads).
-		local isHuman = n.kind == "player" and type(n.userId) == "number" and n.userId > 0
-		local plainName = n.name
-		if not isHuman then
-			local country = self.Map.countries and self.Map.countries[n.country]
-			plainName = (country and country.name) or n.name:gsub("^Tribos de ", "")
-		end
-		item.avatar.Visible = isHuman
-		item.initial.Visible = isHuman and item.avatar.Image == ""
-		-- size follows the on-screen size of the territory, clamped
 		local area = math.max(1, n.labelSize or n.land or 1)
 		local px = math.sqrt(area) * scale
 		local font = math.clamp(px * 0.16, 9, 30)
 		local isYou = id == state.you
-		local visible = n.land > 0 and (isYou or (lod == 0 and px > 30) or (lod == 1 and px > 20) or lod == 2)
+		local visible = n.land > 0 and (isYou or (lod == 0 and px > 30)
+			or (lod == 1 and px > 20) or lod == 2)
 		item.frame.Visible = visible
 		if visible then
 			item.frame.Position = self:pos(n.labelCell or n.capital)
-			item.frame.Size = UDim2.fromOffset(math.max(60, font * 10), font * 2.4)
+			item.frame.Size = UDim2.fromOffset(math.max(60, font * 10),
+				font * (isPlayer and 2.4 or 1.35))
 			item.head.Size = UDim2.fromOffset(0, font * 1.3)
-			item.avatar.Size = UDim2.fromOffset(font * 1.25, font * 1.25)
+			if item.avatar then
+				item.avatar.Size = UDim2.fromOffset(font * 1.25, font * 1.25)
+			end
 			item.name.TextSize = font
 			item.name.Size = UDim2.fromOffset(0, font * 1.3)
-			-- No emoji prefixes on nation names. Bots: country only.
-			-- Player avatars are reserved for real Roblox users.
-			item.name.Text = plainName
-			item.troops.Visible = isHuman and (isYou or lod >= 1 or font >= 14)
-			item.troops.TextSize = math.max(9, font * 0.85)
-			item.troops.Size = UDim2.fromOffset(font * 6, font * 1.1)
-			item.troops.Text = self.Protocol.formatK(n.troops)
+			item.name.Text = n.name -- no flag, relation emoji, or initial before bot names
+			if item.troops then
+				item.troops.Visible = isYou or lod >= 1 or font >= 14
+				item.troops.TextSize = math.max(9, font * 0.85)
+				item.troops.Size = UDim2.fromOffset(font * 6, font * 1.1)
+				item.troops.Text = self.Protocol.formatK(n.troops)
+			end
 		end
 		local cap = self.capitals[id]
-		cap.Visible = n.land > 0 and (lod >= 1 or isYou)
-		cap.Position = self:pos(n.capital)
-		cap.TextSize = math.clamp(scale * 1.6, 10, 22)
-		cap.Size = UDim2.fromOffset(cap.TextSize, cap.TextSize)
-		cap.TextColor3 = isYou and Color3.fromRGB(255, 226, 120) or WHITE
+		if cap then
+			cap.Visible = n.land > 0 and (lod >= 1 or isYou)
+			cap.Position = self:pos(n.capital)
+			cap.TextSize = math.clamp(scale * 1.6, 10, 22)
+			cap.Size = UDim2.fromOffset(cap.TextSize, cap.TextSize)
+			cap.TextColor3 = isYou and Color3.fromRGB(255, 226, 120) or WHITE
+		end
 	end
 	for id, item in pairs(self.labels) do
 		if not alive[id] then
 			item.frame:Destroy()
 			self.labels[id] = nil
-			if self.capitals[id] then self.capitals[id]:Destroy() self.capitals[id] = nil end
+			if self.capitals[id] then
+				self.capitals[id]:Destroy()
+				self.capitals[id] = nil
+			end
 		end
 	end
 end
