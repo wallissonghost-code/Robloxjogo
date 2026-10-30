@@ -570,10 +570,12 @@ function HUD:refreshWeapons()
 		if icon then icon.TextTransparency = available and 0 or 0.35 end
 		if title then title.TextTransparency = available and 0 or 0.25 end
 		if costLabel then
-			-- Always show the gold price; missing requirements are shown in tooltip.
+			-- Show the first unlock requirement directly on each card.
 			local launcherPresent = me and me.cooldowns and me.cooldowns[w.launcher] ~= nil
-			if not available and reason:find("petróleo", 1, true) then
-				costLabel.Text = "🛢 " .. w.oil
+			if w.mode and w.mode ~= ((me and me.mode) or (self.state.match and self.state.match.mode)) then
+				costLabel.Text = "🔒 Modo Extremo"
+			elseif not launcherPresent then
+				costLabel.Text = "🔒 " .. (w.launcher == "silo" and "Silo" or "Base aérea")
 			elseif w.minLevel and not available then
 				local maxLevel = 0
 				for _, built in pairs(self.state.buildings) do
@@ -586,12 +588,10 @@ function HUD:refreshWeapons()
 				else
 					costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
 				end
-			elseif not launcherPresent then
-				costLabel.Text = "🔒 " .. (w.launcher == "silo" and "Silo" or "Base aérea")
 			elseif reason:find("Recarga", 1, true) then
 				costLabel.Text = "⏳ Recarga"
-			elseif w.mode and w.mode ~= ((me and me.mode) or (self.state.match and self.state.match.mode)) then
-				costLabel.Text = "🔒 Modo Extremo"
+			elseif not available and reason:find("petróleo", 1, true) then
+				costLabel.Text = "🛢 " .. w.oil
 			else
 				costLabel.Text = "💰 " .. self.Protocol.formatK(w.gold)
 			end
