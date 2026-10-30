@@ -21,6 +21,17 @@ local PRICE_READY = ACCENT
 local PRICE_LOCKED = Color3.fromRGB(143, 161, 189)
 local CARD_NORMAL = Color3.fromRGB(34, 44, 58)
 local CARD_LOCKED = Color3.fromRGB(29, 40, 56)
+-- Short labels only inside compact military cards. Official names in
+-- GameConfig and the long-press details remain untouched.
+local CARD_NAMES = {
+	tower = "Sniper", machinegun = "Metralhadora",
+	tankfactory = "Fáb. tanques", airdefense = "Defesa AA",
+	flak = "AA aviões", oilwell = "Poço petróleo",
+	silo = "Silo", antinaval = "Anti-naval",
+	cluster = "Fragmentação", hydrogen = "Hidrogênio",
+	firebomb = "Incendiária", atomic = "Bomba atômica",
+	airlift = "Ponte aérea", airstrike = "Ataque aéreo",
+}
 
 local function make(class, parent, props)
 	local o = Instance.new(class)
@@ -188,7 +199,7 @@ function HUD.new(state, gui, handlers)
 				self.cardIcons[group][kind] = MilitaryIcons.attach(holder, kind)
 				make("TextLabel", b, {
 					Name = "Title", Position = UDim2.fromOffset(3, 28), Size = UDim2.new(1, -6, 0, 24),
-					BackgroundTransparency = 1, Text = def.name, TextColor3 = TEXT, Font = BOLD,
+					BackgroundTransparency = 1, Text = CARD_NAMES[kind] or def.name, TextColor3 = TEXT, Font = BOLD,
 					TextSize = 10, TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
 					TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 34,
 				})
