@@ -11,7 +11,7 @@ GameConfig.Modes = {
 	classic = { name = "Mundial", icon = "🌍",
 		description = "Funde sua nação em qualquer terra livre e cresça a partir de um ponto. Nações de IA nascem nos maiores países." },
 	extreme = { name = "Conquista Extrema", icon = "🔥",
-		description = "Escolha um país inteiro e domine os outros. Todos os países já começam ocupados. Libera muros, trincheiras, anti-naval, antiaérea contra aviões, petróleo, ponte aérea e bomba de fogo." },
+		description = "Escolha um país inteiro e domine os outros. Todos os países já começam ocupados. Construções existem nos dois modos; aqui você também usa ponte aérea e bomba de fogo." },
 }
 GameConfig.ModeOrder = { "classic", "extreme" }
 
