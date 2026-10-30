@@ -108,6 +108,17 @@ function OverlayRenderer:updateLabels()
 		-- Roblox profile picture + name + troop count, without relation emojis.
 		local isPlayer = n.kind == "player" and type(n.userId) == "number" and n.userId > 0
 		local item = self.labels[id]
+		-- Conquista Extrema changes a country's bot into a human (or back)
+		-- without changing its nation id: rebuild only that label on role changes.
+		if item and (item.isPlayer ~= isPlayer or (isPlayer and item.userId ~= n.userId)) then
+			item.frame:Destroy()
+			self.labels[id] = nil
+			if self.capitals[id] then
+				self.capitals[id]:Destroy()
+				self.capitals[id] = nil
+			end
+			item = nil
+		end
 		if not item then
 			local frame = make("Frame", self.layer, {
 				BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 6,
@@ -139,7 +150,8 @@ function OverlayRenderer:updateLabels()
 				initial = make("TextLabel", avatar, {
 					BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
 					Font = FONT, TextColor3 = WHITE, TextScaled = true,
-					Text = string.sub(n.name, 1, (utf8.offset(n.name, 2) or 2) - 1),
+					Text = string.sub(n.name:match("%((.-)%)$") or n.name, 1,
+						(utf8.offset(n.name:match("%((.-)%)$") or n.name, 2) or 2) - 1),
 					ZIndex = 7,
 				})
 			end
@@ -159,7 +171,8 @@ function OverlayRenderer:updateLabels()
 				})
 			end
 			item = { frame = frame, head = head, avatar = avatar,
-				initial = initial, name = name, troops = troops, isPlayer = isPlayer }
+				initial = initial, name = name, troops = troops,
+				isPlayer = isPlayer, userId = isPlayer and n.userId or nil }
 			self.labels[id] = item
 			if isPlayer then
 				task.spawn(function()
@@ -201,7 +214,15 @@ function OverlayRenderer:updateLabels()
 			end
 			item.name.TextSize = font
 			item.name.Size = UDim2.fromOffset(0, font * 1.3)
-			item.name.Text = n.name -- no flag, relation emoji, or initial before bot names
+			local displayName = n.name
+			if isPlayer then
+				-- Extreme mode: "Angola (Player)" -> "Player".
+				displayName = n.name:match("%((.-)%)$") or n.name
+			else
+				local country = self.Map.countries and self.Map.countries[n.country]
+				displayName = (country and country.name) or n.name:gsub("^Tribos de ", "")
+			end
+			item.name.Text = displayName
 			if item.troops then
 				item.troops.Visible = isYou or lod >= 1 or font >= 14
 				item.troops.TextSize = math.max(9, font * 0.85)
