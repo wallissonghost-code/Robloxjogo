@@ -10,7 +10,7 @@ function ClientState.new(Map, Protocol, Config, Palette, Stats)
 	self.nations = {}          -- id -> { info + troops, land, labelCell, labelSize }
 	self.buildings = {}        -- cell -> { kind, owner }
 	self.relations = {}        -- "a:b" -> kind
-	self.orders = {}           -- list { id, nation, target, troops, front, anchor, origin }
+	self.orders = {}           -- list { id, nation, target, troops, front, anchor, origin, visualX, visualY }
 	self.fleets = {}           -- id -> { id, nation, troops, path, speed, target, progress, t0 }
 	self.boats = {}           -- list { id, nation, x, y, health, patrolCell, level }
 	self.missiles = {}         -- id -> { id, kind, nation, from, to, speed, progress, t0 }
@@ -43,6 +43,17 @@ function ClientState:relation(a, b)
 	if not a or not b then return "neutral" end
 	if a == b then return "self" end
 	return self.relations[key(a, b)] or "neutral"
+end
+
+-- Show only battles that matter to this player: our own attack, an
+-- attack against us, or an attack against one of our direct allies.
+-- Allies' outgoing attacks and unrelated wars do not clutter the map.
+function ClientState:shouldShowOrder(attacker, target)
+	local me = self.you
+	if not me then return false end
+	if attacker == me then return true end
+	if not target or target <= 0 then return false end
+	return target == me or self:relation(me, target) == "ally"
 end
 
 function ClientState:nationColor(id)

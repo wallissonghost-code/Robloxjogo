@@ -94,6 +94,8 @@ local function seedWave(o)
 	o.waveDepth = {}
 	o.waveSeedRadius = radius
 	o.waveMaxDepth = 0
+	-- A redirected order starts a new visual front; combat still uses o.front.
+	o.visualX, o.visualY = nil, nil
 	local seeded = false
 	for i in pairs(Territory.borderCells(o.nation) or {}) do
 		if Map:distance(i, o.originCell) <= radius and adjacentToTarget(i, o.target) then
@@ -288,13 +290,16 @@ local function advance(o, dt)
 	local tx, ty = ax - ox, ay - oy
 	local L = math.sqrt(tx * tx + ty * ty)
 	local function scoreCandidates(count)
-		local valid = 0
+		local valid, sumX, sumY = 0, 0, 0
 		for k = 1, count do
 			local c = candidates[k]
 			local depth = candidateDepth(o, c)
 			if depth then
 				valid = valid + 1
 				local cx, cy = Map:xy(c)
+				-- Average the connected territorial front, not the last captured
+				-- cell. Captures on opposite sides of a wave no longer teleport the label.
+				sumX, sumY = sumX + cx + 0.5, sumY + cy + 0.5
 				local vx, vy = cx - ox, cy - oy
 				local radius = math.sqrt(vx * vx + vy * vy)
 				local penalty = 0
@@ -314,14 +319,22 @@ local function advance(o, dt)
 			end
 		end
 		for k = valid + 1, count do candidates[k] = nil end
-		return valid
+		if valid == 0 then return 0 end
+		return valid, sumX / valid, sumY / valid
 	end
-	local m = scoreCandidates(count)
+	local m, centerX, centerY = scoreCandidates(count)
 	if m == 0 then
 		_, count = Territory.frontier(o.nation, o.target, candidates)
-		m = scoreCandidates(count)
+		m, centerX, centerY = scoreCandidates(count)
 	end
 	if m == 0 then finish(o, true) return end
+
+	-- Visual position is independent of the last claimed cell (o.front).
+	-- Smooth on the server too, so a sudden change in which flank captures
+	-- cells will not move the red/blue number across the entire battle.
+	local blend = 0.25
+	o.visualX = o.visualX and (o.visualX + (centerX - o.visualX) * blend) or centerX
+	o.visualY = o.visualY and (o.visualY + (centerY - o.visualY) * blend) or centerY
 
 	local rate = math.min(E.CellsPerTickMax, E.CellsPerTickBase + sq / E.CellsPerTickTroopDivisor)
 	if o.target > 0 then rate = rate * E.EnemyRateFactor end
@@ -375,11 +388,16 @@ function ExpansionService.tick(dt)
 	sweep()
 end
 
--- Compact public view for clients: { id, nation, target, troops, front, anchor, origin }
+-- Compact view: the first seven fields remain compatible with existing clients.
+-- [8],[9] are the stable fractional map coordinates of the active front center.
 function ExpansionService.publicView()
 	local out = {}
 	for _, o in ipairs(orders) do
-		out[#out + 1] = { o.id, o.nation, o.target, math.floor(o.troops), o.front or 0, o.anchor, o.origin or 0 }
+		out[#out + 1] = {
+			o.id, o.nation, o.target, math.floor(o.troops),
+			o.front or 0, o.anchor, o.origin or 0,
+			o.visualX, o.visualY,
+		}
 	end
 	return out
 end

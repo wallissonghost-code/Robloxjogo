@@ -47,17 +47,20 @@ function OverlayRenderer.new(state, camera, world)
 	state:on("nations", function() self:updateLabels() end)
 	state:on("buildings", function() self:updateBuildings() end)
 	state:on("orders", function() self:updateOrders() end)
-	state:on("relations", function() self:updateLabels() end)
+	state:on("relations", function()
+		self:updateLabels()
+		self:updateOrders() -- alliance changes immediately hide/show relevant battles
+	end)
 	state:on("impact", function(kind, cell, stopped) self:flash(kind, cell, stopped) end)
 	camera:onChanged(function() self.needsLayout = true end)
-	RunService.RenderStepped:Connect(function()
+	RunService.RenderStepped:Connect(function(dt)
 		if self.needsLayout then
 			self.needsLayout = false
 			self:updateLabels()
 			self:updateBuildings()
 			self:updateOrders()
 		end
-		self:animate()
+		self:animate(dt)
 	end)
 	return self
 end
@@ -90,6 +93,13 @@ function OverlayRenderer:rebuildAll()
 	for _, l in pairs(self.labels) do l.frame:Destroy() end
 	for _, c in pairs(self.capitals) do c:Destroy() end
 	for _, icon in pairs(self.icons) do icon:Destroy() end
+	-- Order IDs restart every match; never reuse stale interpolated positions.
+	for _, item in pairs(self.orderItems) do
+		item.line:Destroy()
+		item.ring:Destroy()
+		item.label:Destroy()
+	end
+	self.orderItems = {}
 	self.labels, self.capitals, self.icons = {}, {}, {}
 	self:updateLabels()
 	self:updateBuildings()
@@ -310,55 +320,68 @@ local function release(list)
 	end
 end
 
--- Fronts: arrow from where the order left our border to the clicked point, plus the
--- troops still in the field next to the active front cell.
+-- Fronts: show only our attacks and incoming threats to us or our direct allies.
+-- Troop labels follow a smoothed center of the wave instead of a last-captured cell.
 function OverlayRenderer:updateOrders()
 	local state, cam = self.state, self.camera
 	local attackBlue = Color3.fromRGB(90, 185, 255)
 	local defenseRed = Color3.fromRGB(255, 100, 111)
 	local lod = cam:lod()
 	for _, o in ipairs(state.orders) do
-		local id, nation, target, troops, front, anchor, origin = o[1], o[2], o[3], o[4], o[5], o[6], o[7]
-		local mine = nation == state.you
-		local item = pool(self.orderItems, id, function()
-			return {
-				line = make("Frame", self.layer, { BorderSizePixel = 0, ZIndex = 3, BackgroundTransparency = 0.25 }),
-				ring = make("Frame", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3 }),
-				label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0), TextStrokeTransparency = 0, Font = FONT, ZIndex = 7, AutomaticSize = Enum.AutomaticSize.X }),
-			}
-		end)
-		if not item.ring:FindFirstChild("Stroke") then
-			make("UICorner", item.ring, { CornerRadius = UDim.new(1, 0) })
-			make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
-		end
-		-- Military order colors communicate the combat role, never the nation palette:
-		-- blue for every outgoing attack (including other players/bots), red when
-		-- the local player is defending against this incoming order.
-		local incoming = state.you ~= nil and target == state.you and not mine
-		local color = incoming and defenseRed or attackBlue
-		local showArrow = mine and origin and origin > 0
-		item.line.Visible = showArrow
-		item.ring.Visible = mine
-		if showArrow then
-			local ax, ay = self:center(origin)
-			local bx, by = self:center(anchor)
-			self:line(item.line, ax, ay, bx, by, 2)
-			item.line.BackgroundColor3 = color
-		end
-		item.ring.Position = self:pos(anchor)
-		item.ring.Size = UDim2.fromOffset(14, 14)
-		item.ring.Stroke.Color = color
-		local showLabel = front and front > 0 and (mine or lod >= 1 or troops >= 5000)
-		item.label.Visible = showLabel
-		if showLabel then
-			item.label.Position = self:pos(front, 0, -0.6)
-			item.label.TextSize = mine and 13 or 11
-			-- Clean numeric indicators. Blue = our outgoing attack; red = incoming.
-			-- No emoji or symbol prefixes, and no change to nation colors on the map.
-			item.label.Text = self.Protocol.formatK(troops)
-			item.label.TextColor3 = color
-			item.label.Size = UDim2.fromOffset(0, mine and 18 or 15)
-			item.label.BackgroundTransparency = 1
+		if state:shouldShowOrder(o[2], o[3]) then
+			local id, nation, target, troops, front, anchor, origin = o[1], o[2], o[3], o[4], o[5], o[6], o[7]
+			local mine = nation == state.you
+			local incoming = not mine
+			local item = pool(self.orderItems, id, function()
+				return {
+					line = make("Frame", self.layer, { BorderSizePixel = 0, ZIndex = 3, BackgroundTransparency = 0.25 }),
+					ring = make("Frame", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3 }),
+					label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0), TextStrokeTransparency = 0, Font = FONT, ZIndex = 7, AutomaticSize = Enum.AutomaticSize.X }),
+				}
+			end)
+			if not item.ring:FindFirstChild("Stroke") then
+				make("UICorner", item.ring, { CornerRadius = UDim.new(1, 0) })
+				make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
+			end
+			-- Blue for our attack, red for troops attacking us or our allies.
+			local color = incoming and defenseRed or attackBlue
+			local showArrow = mine and origin and origin > 0
+			item.line.Visible = showArrow
+			item.ring.Visible = mine
+			if showArrow then
+				local ax, ay = self:center(origin)
+				local bx, by = self:center(anchor)
+				self:line(item.line, ax, ay, bx, by, 2)
+				item.line.BackgroundColor3 = color
+			end
+			item.ring.Position = self:pos(anchor)
+			item.ring.Size = UDim2.fromOffset(14, 14)
+			item.ring.Stroke.Color = color
+			-- An ally under attack must be visible even for fewer than 5K troops.
+			local showLabel = front and front > 0
+			item.label.Visible = showLabel
+			if showLabel then
+				local x, y = o[8], o[9]
+				if type(x) ~= "number" or type(y) ~= "number" then
+					x, y = self:center(front) -- compatible with older order packets
+				end
+				item.targetX, item.targetY = x, y
+				if item.anchor ~= anchor then
+					-- A deliberate reinforcement can redirect the wave; switch its
+					-- visual center immediately rather than dragging it across the map.
+					item.visualX, item.visualY = x, y
+					item.anchor = anchor
+				elseif not item.visualX then
+					item.visualX, item.visualY = x, y
+				end
+				item.label.Position = self:posXY(item.visualX, item.visualY - 0.6)
+				item.label.TextSize = mine and 13 or 11
+				-- Numbers only, colored by combat role, outlined in black, no background.
+				item.label.Text = self.Protocol.formatK(troops)
+				item.label.TextColor3 = color
+				item.label.Size = UDim2.fromOffset(0, mine and 18 or 15)
+				item.label.BackgroundTransparency = 1
+			end
 		end
 	end
 	release(self.orderItems)
@@ -437,9 +460,20 @@ function OverlayRenderer:updateOrders()
 end
 
 -- Fleets and missiles move every frame between server updates.
-function OverlayRenderer:animate()
+-- Combat numbers use a stable map-space goal, updated by the server,
+-- with lightweight frame interpolation (no repeated Tween objects).
+function OverlayRenderer:animate(dt)
 	local state, Map = self.state, self.Map
 	local now = os.clock()
+	local step = math.max(0, math.min(dt or 0, 0.15))
+	local blend = 1 - math.exp(-8 * step)
+	for _, item in pairs(self.orderItems) do
+		if item.label.Visible and item.targetX then
+			item.visualX = item.visualX + (item.targetX - item.visualX) * blend
+			item.visualY = item.visualY + (item.targetY - item.visualY) * blend
+			item.label.Position = self:posXY(item.visualX, item.visualY - 0.6)
+		end
+	end
 	for id, f in pairs(state.fleets) do
 		local item = pool(self.fleetItems, id, function()
 			local it = {

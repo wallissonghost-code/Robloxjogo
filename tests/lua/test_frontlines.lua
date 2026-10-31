@@ -139,3 +139,38 @@ do
 	ok(found, "defender receives explicit red incoming-attack notice")
 end
 print("PASS combat alert status")
+
+-- The public order includes a stable centroid, separate from the last cell
+-- conquered by this wave. The seven legacy fields keep their positions.
+do
+	local world, ctx = H.newWorld({ mapData = map, Config = cfg })
+	world:step(0.1, 1)
+	local a = assert(ctx.Nations.create("player", "Label", cell(ctx, 5, 10), { userId = 1 }))
+	ctx.Match.startPlaying()
+	for y = 4, 17 do
+		for x = 4, 8 do
+			local i = cell(ctx, x, y)
+			if ctx.Territory.ownerOf(i) == 0 then ctx.Territory.setOwner(i, a.id) end
+		end
+	end
+	a.troops = 30000
+	ok(ctx.Expansion.issue(a.id, cell(ctx, 60, 10), 1), "label wave accepted")
+	H.run(world, 0.4, 1)
+	local order = ctx.Expansion.ordersOf(a.id)[1]
+	local row = ctx.Expansion.publicView()[1]
+	ok(order ~= nil and row ~= nil, "order still active for label check")
+	ok(row[1] == order.id and row[5] == order.front and row[6] == order.anchor,
+		"legacy order fields unchanged")
+	ok(type(row[8]) == "number" and type(row[9]) == "number",
+		"stable front-center coordinates replicated")
+	ok(row[8] >= 0 and row[8] < ctx.Map.W and row[9] >= 0 and row[9] < ctx.Map.H,
+		"label center is on the map")
+	local lastX, lastY = row[8], row[9]
+	H.run(world, 0.2, 1)
+	row = ctx.Expansion.publicView()[1]
+	ok(row ~= nil, "order still active after next wave")
+	ok(math.abs(row[8] - lastX) <= ctx.Map.W * 0.25
+		and math.abs(row[9] - lastY) <= ctx.Map.H * 0.25,
+		"server smooths wave center instead of jumping between captured cells")
+end
+print("PASS stabilized combat label center")
