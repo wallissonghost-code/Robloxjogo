@@ -324,13 +324,12 @@ function OverlayRenderer:updateOrders()
 			return {
 				line = make("Frame", self.layer, { BorderSizePixel = 0, ZIndex = 3, BackgroundTransparency = 0.25 }),
 				ring = make("Frame", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3 }),
-				label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundColor3 = INK, BackgroundTransparency = 0.25, TextColor3 = WHITE, Font = FONT, ZIndex = 7, AutomaticSize = Enum.AutomaticSize.X }),
+				label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0), TextStrokeTransparency = 0, Font = FONT, ZIndex = 7, AutomaticSize = Enum.AutomaticSize.X }),
 			}
 		end)
 		if not item.ring:FindFirstChild("Stroke") then
 			make("UICorner", item.ring, { CornerRadius = UDim.new(1, 0) })
 			make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
-			make("UICorner", item.label, { CornerRadius = UDim.new(0, 4) })
 		end
 		-- Military order colors communicate the combat role, never the nation palette:
 		-- blue for every outgoing attack (including other players/bots), red when
@@ -356,11 +355,10 @@ function OverlayRenderer:updateOrders()
 			item.label.TextSize = mine and 13 or 11
 			-- Clean numeric indicators. Blue = our outgoing attack; red = incoming.
 			-- No emoji or symbol prefixes, and no change to nation colors on the map.
-			item.label.Text = " " .. self.Protocol.formatK(troops) .. " "
+			item.label.Text = self.Protocol.formatK(troops)
 			item.label.TextColor3 = color
 			item.label.Size = UDim2.fromOffset(0, mine and 18 or 15)
-			item.label.BackgroundColor3 = mine and Color3.fromRGB(20, 38, 58)
-				or (incoming and Color3.fromRGB(60, 28, 38) or INK)
+			item.label.BackgroundTransparency = 1
 		end
 	end
 	release(self.orderItems)
