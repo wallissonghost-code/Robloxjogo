@@ -332,8 +332,11 @@ function OverlayRenderer:updateOrders()
 			make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
 			make("UICorner", item.label, { CornerRadius = UDim.new(0, 4) })
 		end
+		-- Military order colors communicate the combat role, never the nation palette:
+		-- blue for every outgoing attack (including other players/bots), red when
+		-- the local player is defending against this incoming order.
 		local incoming = state.you ~= nil and target == state.you and not mine
-		local color = mine and attackBlue or (incoming and defenseRed or rgb(state:nationColor(nation)))
+		local color = incoming and defenseRed or attackBlue
 		local showArrow = mine and origin and origin > 0
 		item.line.Visible = showArrow
 		item.ring.Visible = mine
