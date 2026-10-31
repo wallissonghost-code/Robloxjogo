@@ -74,7 +74,15 @@ function NetworkService.start(theWorld)
 		end
 		local ok, message = ctx.Commands.handle(player.UserId, player.DisplayName, action, a, b, os.clock(), c)
 		if message then
-			eventRemote:FireClient(player, { k = Protocol.Events.Notice, text = message, kind = ok and "good" or "bad" })
+			local kind = ok and "good" or "bad"
+			if ok and action == Protocol.Actions.Target and ctx.Map:valid(a) then
+				local nation = ctx.Nations.forUser(player.UserId)
+				local target = ctx.Territory.ownerOf(a)
+				if nation and target and target > 0 and target ~= nation.id then
+					kind = "attack"
+				end
+			end
+			eventRemote:FireClient(player, { k = Protocol.Events.Notice, text = message, kind = kind })
 		end
 	end)
 

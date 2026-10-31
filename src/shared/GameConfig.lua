@@ -109,11 +109,13 @@ GameConfig.Expansion = {
 	EnclaveMaxCells = 80,              -- enclosed neutral pockets up to this size are annexed for free
 	ReachSearchLimit = 40000,          -- cells searched to prove a land route from the click to our border
 	FrontSearchMargin = 30,            -- cells around the active wave scanned each tick
-	WaveStartRadiusBase = 2,            -- initial half-width along our border
-	WaveStartTroopDivisor = 30,         -- bigger launched armies start wider
-	WaveStartRadiusMax = 14,
-	WaveDepthWeight = 12,               -- one complete wave layer before the next
-	WaveDirectionPenalty = 3,          -- click direction orders cells WITHIN a layer
+	WaveStartRadiusBase = 3,           -- opening width of the territorial wave
+	WaveStartTroopDivisor = 18,        -- more troops produce a broader initial front
+	WaveStartRadiusMax = 22,
+	WaveSideGrowth = 1.35,             -- grow laterally as the wave moves forward
+	WaveSideMax = 48,                  -- never recruit distant borders instantly
+	WaveDepthWeight = 12,             -- complete each wave layer before the next
+	WaveDirectionPenalty = 3,         -- direction affects selection within a layer
 }
 
 GameConfig.Combat = {

@@ -314,6 +314,8 @@ end
 -- troops still in the field next to the active front cell.
 function OverlayRenderer:updateOrders()
 	local state, cam = self.state, self.camera
+	local attackBlue = Color3.fromRGB(90, 185, 255)
+	local defenseRed = Color3.fromRGB(255, 100, 111)
 	local lod = cam:lod()
 	for _, o in ipairs(state.orders) do
 		local id, nation, target, troops, front, anchor, origin = o[1], o[2], o[3], o[4], o[5], o[6], o[7]
@@ -330,7 +332,8 @@ function OverlayRenderer:updateOrders()
 			make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
 			make("UICorner", item.label, { CornerRadius = UDim.new(0, 4) })
 		end
-		local color = rgb(state:nationColor(nation))
+		local incoming = state.you ~= nil and target == state.you and not mine
+		local color = mine and attackBlue or (incoming and defenseRed or rgb(state:nationColor(nation)))
 		local showArrow = mine and origin and origin > 0
 		item.line.Visible = showArrow
 		item.ring.Visible = mine
@@ -348,9 +351,13 @@ function OverlayRenderer:updateOrders()
 		if showLabel then
 			item.label.Position = self:pos(front, 0, -0.6)
 			item.label.TextSize = mine and 13 or 11
-			item.label.Text = (target == 0 and " ➜ " or " ⚔ ") .. self.Protocol.formatK(troops) .. " "
+			-- Clean numeric indicators. Blue = our outgoing attack; red = incoming.
+			-- No emoji or symbol prefixes, and no change to nation colors on the map.
+			item.label.Text = " " .. self.Protocol.formatK(troops) .. " "
+			item.label.TextColor3 = color
 			item.label.Size = UDim2.fromOffset(0, mine and 18 or 15)
-			item.label.BackgroundColor3 = mine and Color3.fromRGB(30, 44, 60) or INK
+			item.label.BackgroundColor3 = mine and Color3.fromRGB(20, 38, 58)
+				or (incoming and Color3.fromRGB(60, 28, 38) or INK)
 		end
 	end
 	release(self.orderItems)

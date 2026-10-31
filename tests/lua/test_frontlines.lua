@@ -94,3 +94,48 @@ do
 	ok(a.labelSize == a.land, "wave remains connected to the original territory")
 end
 print("PASS broad directional wave and connected land")
+
+-- The directional wave also recruits flanking segments of an extended border.
+do
+	local wider = {}
+	for _ = 1, 54 do wider[#wider + 1] = string.rep("A", 90) end
+	local broadMap = H.asciiMap(wider)
+	local world, ctx = H.newWorld({ mapData = broadMap, Config = cfg })
+	world:step(0.1, 1)
+	local a = assert(ctx.Nations.create("player", "Fan", cell(ctx, 5, 26), { userId = 1 }))
+	ctx.Match.startPlaying()
+	for y = 3, 50 do
+		for x = 4, 8 do
+			local i = cell(ctx, x, y)
+			if ctx.Territory.ownerOf(i) == 0 then ctx.Territory.setOwner(i, a.id) end
+		end
+	end
+	a.troops = 60000
+	ok(ctx.Expansion.issue(a.id, cell(ctx, 75, 26), 1), "broad wave accepted")
+	local order = ctx.Expansion.ordersOf(a.id)[1]
+	local initialRadius = order.waveSeedRadius
+	H.run(world, 5, 1)
+	local farthestSide = 0
+	for y = 0, 53 do
+		if ctx.Territory.ownerOf(cell(ctx, 9, y)) == a.id then
+			farthestSide = math.max(farthestSide, math.abs(y - 26))
+		end
+	end
+	ok(farthestSide > initialRadius + 1, "wave recruits lateral border as it spreads: " .. farthestSide)
+	ctx.Territory.analyze(a.id)
+	ok(a.labelSize == a.land, "widened territory remains connected")
+end
+print("PASS lateral fan growth and connectivity")
+
+-- Defence notifications communicate incoming threats without emoji prefixes.
+do
+	local world, ctx, a, b = opponents(20000, 10000)
+	local found = false
+	for _, entry in ipairs(ctx.outbox) do
+		if entry.to == b.id and entry.payload.kind == "defense" then
+			found = entry.payload.text:find("está atacando", 1, true) ~= nil
+		end
+	end
+	ok(found, "defender receives explicit red incoming-attack notice")
+end
+print("PASS combat alert status")

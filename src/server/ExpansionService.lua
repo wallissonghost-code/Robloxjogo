@@ -92,6 +92,8 @@ local function seedWave(o)
 	local radius = math.min(E.WaveStartRadiusMax,
 		E.WaveStartRadiusBase + math.sqrt(math.max(0, o.sent)) / E.WaveStartTroopDivisor)
 	o.waveDepth = {}
+	o.waveSeedRadius = radius
+	o.waveMaxDepth = 0
 	local seeded = false
 	for i in pairs(Territory.borderCells(o.nation) or {}) do
 		if Map:distance(i, o.originCell) <= radius and adjacentToTarget(i, o.target) then
@@ -106,17 +108,32 @@ local function seedWave(o)
 		E.FrontConeBase + math.sqrt(math.max(0, o.sent)) / E.FrontConeTroopDivisor))
 end
 
--- BFS depth in the expanding, connected ownership graph; only the immediate
--- four neighbours are inspected, never a full-map flood fill in the tick loop.
+-- Multi-source wave depth, updated locally from the captured front.
+-- The initial contact broadens sideways as its wave progresses. New flanking
+-- border cells are admitted at the depth needed to reach them, not depth zero:
+-- this makes the front a growing arc instead of a permanent narrow strip.
+-- Do not recruit distant national borders: they would teleport the attack.
 local function candidateDepth(o, cell)
 	local best = nil
+	local E = Config.Expansion
+	local sideGain = E.WaveSideGrowth
+	local lateralReach = math.min(E.WaveSideMax, o.waveMaxDepth * sideGain)
 	local n = Map:neighbors(cell, scratch)
 	for k = 1, n do
 		local neighbor = scratch[k]
-		local depth = o.waveDepth[neighbor]
-		if depth and Territory.ownerOf(neighbor) == o.nation then
-			local nextDepth = depth + 1
-			if not best or nextDepth < best then best = nextDepth end
+		if Territory.ownerOf(neighbor) == o.nation then
+			local depth = o.waveDepth[neighbor]
+			if depth then
+				depth = depth + 1
+			else
+				-- An uncaptured segment of OUR border can reinforce the same
+				-- advancing wave once its lateral distance is in range.
+				local offset = Map:distance(neighbor, o.originCell) - o.waveSeedRadius
+				if offset <= lateralReach and offset > 0 then
+					depth = math.ceil(offset / sideGain) + 1
+				end
+			end
+			if depth and (not best or depth < best) then best = depth end
 		end
 	end
 	return best
@@ -213,6 +230,10 @@ function ExpansionService.issue(nid, cell, percent)
 	end
 	n.troops = n.troops - troops
 	local o = ExpansionService.start(nid, target, cell, troops)
+	if target > 0 and not existing then
+		ctx.notify(target, n.name .. " está atacando seu território com "
+			.. ctx.Protocol.formatK(troops) .. " tropas.", "defense")
+	end
 	local targetName = target == 0 and "terra livre" or ctx.Nations.get(target).name
 	return true, (existing and "Reforço enviado: " or "Avanço iniciado: ") .. troops .. " tropas → " .. targetName, o
 end
@@ -333,6 +354,7 @@ local function advance(o, dt)
 			end
 			Territory.setOwner(cell, o.nation)
 			o.waveDepth[cell] = depths[t]
+			o.waveMaxDepth = math.max(o.waveMaxDepth, depths[t])
 			o.front = cell
 			taken = taken + 1
 		end

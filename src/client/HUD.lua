@@ -16,6 +16,8 @@ local MUTED = Color3.fromRGB(150, 160, 172)
 local ACCENT = Color3.fromRGB(240, 196, 92)
 local GOOD = Color3.fromRGB(110, 200, 130)
 local BAD = Color3.fromRGB(235, 110, 100)
+local ATTACK_BLUE = Color3.fromRGB(90, 185, 255)
+local DEFENSE_RED = Color3.fromRGB(255, 100, 111)
 -- Card palette: can afford, cannot afford, missing prerequisite.
 local PRICE_READY = ACCENT
 local PRICE_LOCKED = Color3.fromRGB(143, 161, 189)
@@ -617,7 +619,9 @@ end
 
 function HUD:toast(text, kind)
 	if not text or text == "" then return end
-	local color = kind == "bad" and BAD or kind == "good" and GOOD or kind == "war" and Color3.fromRGB(255, 140, 110) or TEXT
+	local color = kind == "attack" and ATTACK_BLUE
+		or ((kind == "defense" or kind == "war") and DEFENSE_RED)
+		or (kind == "bad" and BAD or kind == "good" and GOOD or TEXT)
 	local children = {}
 	for _, c in ipairs(self.toasts:GetChildren()) do
 		if c:IsA("TextLabel") then children[#children + 1] = c end
