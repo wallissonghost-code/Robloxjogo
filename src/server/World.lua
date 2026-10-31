@@ -50,8 +50,8 @@ function World.new(deps)
 		ctx[name].reset()
 	end
 	self.ctx = ctx
-	self.timers = { sim = 0, econ = 0, comp = 0, encl = 0 }
-	self.enclaveQueue, self.analyzeQueue = {}, {}
+	self.timers = { sim = 0, econ = 0, comp = 0 }
+	self.analyzeQueue = {}
 	self.stats = { simTime = 0, simCount = 0, worst = 0 }
 	return self
 end
@@ -67,7 +67,6 @@ function World:step(dt, humanCount, clock)
 	t.sim = t.sim + dt
 	t.econ = t.econ + dt
 	t.comp = t.comp + dt
-	t.encl = t.encl + dt
 	local started = clock and clock()
 	while t.sim >= T.Simulation do
 		t.sim = t.sim - T.Simulation
@@ -87,24 +86,11 @@ function World:step(dt, humanCount, clock)
 	end
 	-- territory analysis is spread over several steps (a few nations per step) so a world
 	-- with dozens of empires never produces a long single frame
-	if t.encl >= T.EnclaveFill then
-		t.encl = 0
-		if ctx.Match.isPlaying() then
-			for id, n in pairs(ctx.Nations.all()) do
-				if n.alive then self.enclaveQueue[#self.enclaveQueue + 1] = id end
-			end
-		end
-	end
 	if t.comp >= T.Components then
 		t.comp = 0
 		for id, n in pairs(ctx.Nations.all()) do
 			if n.alive then self.analyzeQueue[#self.analyzeQueue + 1] = id end
 		end
-	end
-	for _ = 1, 3 do
-		local id = table.remove(self.enclaveQueue)
-		if not id then break end
-		if ctx.Nations.alive(id) then ctx.Territory.fillEnclaves(id) end
 	end
 	for _ = 1, 3 do
 		local id = table.remove(self.analyzeQueue)

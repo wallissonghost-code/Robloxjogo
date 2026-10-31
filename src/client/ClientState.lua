@@ -71,7 +71,10 @@ function ClientState:applyInit(data)
 	self.Protocol.decodeRuns(data.owners, self.owner)
 	self.nations = {}
 	for _, info in ipairs(data.nations) do
-		info.troops, info.land, info.labelCell, info.labelSize = 0, 0, info.capital, 1
+		info.troops = info.troops or 0
+		info.land = info.land or 0
+		info.labelCell = info.labelCell or info.capital
+		info.labelSize = info.labelSize or math.max(1, info.land)
 		self.nations[info.id] = info
 	end
 	self.buildings = {}
@@ -120,7 +123,11 @@ end
 function ClientState:applyNations(data)
 	if data.add then
 		local info = data.add
-		info.troops, info.land, info.labelCell, info.labelSize = 0, 0, info.capital, 1
+		local old = self.nations[info.id]
+		info.troops = info.troops or (old and old.troops) or 0
+		info.land = info.land or (old and old.land) or 0
+		info.labelCell = info.labelCell or (old and old.labelCell) or info.capital
+		info.labelSize = info.labelSize or (old and old.labelSize) or math.max(1, info.land)
 		self.nations[info.id] = info
 		self:fire("nationList")
 		return

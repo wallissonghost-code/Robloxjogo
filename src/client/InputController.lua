@@ -1,7 +1,6 @@
 -- Mundial War · mouse, keyboard and touch → camera moves and map clicks.
 -- Never relies on hover for anything essential, so phones and tablets work the same way.
 local UserInputService = game:GetService("UserInputService")
-local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 
 local InputController = {}
@@ -47,7 +46,8 @@ function InputController.new(camera, Config, handlers)
 		local t = input.UserInputType
 		if t == Enum.UserInputType.MouseWheel then
 			if processed then return end
-			local mouse = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+			-- The map uses ScreenInsets.None: raw screen coordinates are correct.
+			local mouse = UserInputService:GetMouseLocation()
 			local step = Config.View.ZoomStep
 			camera:zoomAt(mouse, input.Position.Z > 0 and step or 1 / step)
 		elseif t == Enum.UserInputType.MouseMovement then

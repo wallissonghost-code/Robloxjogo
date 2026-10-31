@@ -209,6 +209,11 @@ function NationService.publicInfo(n)
 	return {
 		id = n.id, kind = n.kind, name = n.name, userId = n.userId, color = n.color,
 		capital = n.capital, country = n.country, alive = n.alive,
+		-- Send identity and live numbers together when a capital moves.
+		troops = math.floor(n.troops or 0), land = n.land or 0,
+		labelCell = n.labelCell or n.capital,
+		labelSize = ctx.Match.phase() == "spawn" and math.max(1, n.land or 0)
+			or math.max(1, n.labelSize or 1),
 	}
 end
 

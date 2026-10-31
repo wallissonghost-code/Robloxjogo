@@ -678,6 +678,9 @@ function HUD:refreshMe()
 	for _, o in ipairs(state.orders) do
 		if o[2] == state.you then mine = mine + 1 end
 	end
+	for _, f in pairs(state.fleets) do
+		if f.nation == state.you and not f.finishing then mine = mine + 1 end
+	end
 	self.cancelButton.Visible = mine > 0
 	self.cancelButton.Text = mine > 1 and ("✖" .. mine) or "✖"
 	if self.tray.Visible then self:refreshTray() end

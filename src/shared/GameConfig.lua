@@ -51,7 +51,6 @@ GameConfig.Tick = {
 	PublicNations = 1.0,               -- troops/land/label for every nation
 	PublicOrders = 0.4,
 	Components = 3.0,                  -- label centroid + exclave detection (only for nations that changed)
-	EnclaveFill = 3.0,
 }
 
 -- Spawning -----------------------------------------------------------------
@@ -91,7 +90,8 @@ GameConfig.DefaultTroopPercent = 0.25
 
 -- Expansion and combat -------------------------------------------------------
 GameConfig.Expansion = {
-	MaxOrdersPerNation = 3,            -- one order per target owner, at most this many fronts
+	MaxOrdersPerNation = 3,            -- independent regional orders (including islands)
+	MergeRadius = 36,                   -- merge only nearby orders on same landmass
 	MinTroopsToSend = 10,
 	NeutralBaseCost = 2.5,
 	DistanceCostPerCell = 0.004,       -- extra cost per cell of distance from the capital
@@ -106,7 +106,6 @@ GameConfig.Expansion = {
 	ConePenalty = 2.5,                 -- how strongly cells outside the cone are postponed
 	OwnNeighborWeight = 1.6,           -- prefer cells already hugged by our territory (no holes)
 	Jitter = 1.4,                      -- organic, non-grid edges
-	EnclaveMaxCells = 80,              -- enclosed neutral pockets up to this size are annexed for free
 	ReachSearchLimit = 40000,          -- cells searched to prove a land route from the click to our border
 	FrontSearchMargin = 30,            -- cells around the active wave scanned each tick
 	WaveStartRadiusBase = 3,           -- opening width of the territorial wave

@@ -53,6 +53,25 @@ function NavalService.fleets()
 	return fleets
 end
 
+-- Recalling an army stops all of its troop transports (including airlifts).
+-- Warships and commercial cargo are deliberately unaffected.
+function NavalService.cancelTransports(nid)
+	local n = ctx.Nations.get(nid)
+	if not n or not n.alive then return 0 end
+	local kept, count = {}, 0
+	for _, f in ipairs(fleets) do
+		if f.nation == nid then
+			n.troops = n.troops + math.floor(math.max(0, f.troops))
+			ctx.emit(nil, { k = ctx.Protocol.Events.Orders, fleetEnd = f.id })
+			count = count + 1
+		else
+			kept[#kept + 1] = f
+		end
+	end
+	fleets = kept
+	return count
+end
+
 function NavalService.boats()
 	return boats
 end
@@ -568,7 +587,7 @@ local function land(f)
 		Territory.setOwner(f.target, f.nation)
 		local remaining = math.floor(f.troops - cost)
 		if remaining >= Config.Expansion.MinTroopsToSend then
-			ctx.Expansion.start(f.nation, owner, f.target, remaining)
+			ctx.Expansion.start(f.nation, owner, f.target, remaining, { fromLanding = true })
 		elseif remaining > 0 then
 			n.troops = n.troops + remaining
 		end

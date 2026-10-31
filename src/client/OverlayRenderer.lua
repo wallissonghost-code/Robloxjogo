@@ -1,5 +1,5 @@
 -- Mundial War · everything drawn on top of the territory: nation names, capitals,
--- structures, fronts, fleets, missiles and the aiming arrow. Items live inside the
+-- structures, fronts, fleets, missiles and the aiming preview. Items live inside the
 -- world frame with scale positions, so panning costs nothing; sizes follow the zoom (LOD).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,11 +16,8 @@ local function rgb(c)
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 
-local CityModel = require(script.Parent.CityModel)
+local MilitaryIcons = require(script.Parent.MilitaryIcons)
 local TransportTrail = require(script.Parent.TransportTrail)
-local function cityArt(parent, z)
-	return CityModel.attach(parent, z)
-end
 
 local function make(class, parent, props)
 	local o = Instance.new(class)
@@ -95,11 +92,7 @@ function OverlayRenderer:rebuildAll()
 	for _, c in pairs(self.capitals) do c:Destroy() end
 	for _, icon in pairs(self.icons) do icon:Destroy() end
 	-- Order IDs restart every match; never reuse stale interpolated positions.
-	for _, item in pairs(self.orderItems) do
-		item.line:Destroy()
-		item.ring:Destroy()
-		item.label:Destroy()
-	end
+	for _, item in pairs(self.orderItems) do item.label:Destroy() end
 	self.orderItems = {}
 	-- Fleet IDs also restart each round. Destroy their old GUI/wake immediately
 	-- instead of reusing a previous voyage under the same ID.
@@ -261,45 +254,73 @@ function OverlayRenderer:updateLabels()
 	end
 end
 
+-- Only visible buildings consume GUIs. The silhouette comes from exactly the
+-- same MilitaryIcons atlas/bitmap as the Construir menu, never an emoji.
+-- A cap protects low-graphics clients that use the bitmap-Frame fallback.
 function OverlayRenderer:updateBuildings()
-	local state, cam = self.state, self.camera
+	local state, cam, Map = self.state, self.camera, self.Map
 	local lod = cam:lod()
-	local defs = self.Config.Buildings
-	local size = math.floor(math.clamp(cam.scale * 1.7, 12, 28))
-	local sizeChanged = size ~= self.iconSize or lod ~= self.iconLod
-	self.iconSize, self.iconLod = size, lod
-	for cell, b in pairs(state.buildings) do
-		local icon = self.icons[cell]
-		local fresh = false
-		if not icon or icon:GetAttribute("Kind") ~= b.kind then
-			if icon then icon:Destroy() end
-			icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0, Font = FONT, TextScaled = true, ZIndex = 4 })
-			make("UICorner", icon, { CornerRadius = UDim.new(0.3, 0) })
-			make("UIStroke", icon, { Color = WHITE, Thickness = 1, Transparency = 0.2 })
-			icon:SetAttribute("Kind", b.kind)
-			icon.Text = b.kind == "city" and "" or (defs[b.kind] and defs[b.kind].icon or "?")
-			if b.kind == "city" then cityArt(icon, 5) end
-			icon.Position = self:pos(cell)
-			self.icons[cell] = icon
-			fresh = true
-		end
-		if fresh or icon:GetAttribute("Owner") ~= b.owner or icon:GetAttribute("Level") ~= b.level or icon:GetAttribute("Off") ~= b.off then
-			icon:SetAttribute("Owner", b.owner)
-			icon:SetAttribute("Level", b.level)
-			icon:SetAttribute("Off", b.off)
-			icon.BackgroundColor3 = b.off and Color3.fromRGB(70, 70, 70) or rgb(state.Palette.shade(state:nationColor(b.owner), 0.75))
-			local badge = icon:FindFirstChild("Level") or make("TextLabel", icon, { Name = "Level", AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1.15, 1.15), Size = UDim2.fromScale(0.55, 0.55), BackgroundColor3 = INK, TextColor3 = Color3.fromRGB(240, 196, 92), Font = FONT, TextScaled = true, BorderSizePixel = 0, ZIndex = 5 })
-			badge.Text = tostring(b.level)
-			badge.Visible = b.level > 1
-		end
-		if fresh or sizeChanged then
-			icon.Size = UDim2.fromOffset(size, size)
-			-- world view hides structures; our own appear once zoomed in a little
-			icon.Visible = lod >= 1
+	local active = {}
+	local count = 0
+	-- One ImageLabel per building on capable clients; the bitmap-Frame
+	-- compatibility fallback has a much smaller object budget.
+	local maxShown = MilitaryIcons.mapTextureReady() and 110 or 32
+	local viewport = cam.viewport.AbsoluteSize
+	local halfW = viewport.X / math.max(0.01, 2 * cam.scale)
+	local halfH = viewport.Y / math.max(0.01, 2 * cam.scale)
+	local minX, maxX = cam.cx - halfW - 2, cam.cx + halfW + 2
+	local minY, maxY = cam.cy - halfH - 2, cam.cy + halfH + 2
+	local size = math.floor(math.clamp(cam.scale * 1.6, 13, 25))
+	if lod >= 1 then
+		for cell, b in pairs(state.buildings) do
+			local x, y = Map:xy(cell)
+			if count < maxShown and x >= minX and x <= maxX
+				and y >= minY and y <= maxY and MilitaryIcons.Items[b.kind] then
+				count = count + 1
+				active[cell] = true
+				local icon = self.icons[cell]
+				if not icon or icon:GetAttribute("Kind") ~= b.kind then
+					if icon then icon:Destroy() end
+					icon = make("Frame", self.layer, {
+						Name = "WorldBuildingIcon", AnchorPoint = Vector2.new(0.5, 0.5),
+						BorderSizePixel = 0, BackgroundColor3 = INK,
+						BackgroundTransparency = 0.24, ZIndex = 4,
+					})
+					make("UICorner", icon, { CornerRadius = UDim.new(0, 4) })
+					local graphic = make("Frame", icon, {
+						Name = "Silhouette", BackgroundTransparency = 1,
+						Position = UDim2.fromScale(0.12, 0.12),
+						Size = UDim2.fromScale(0.76, 0.76), ZIndex = 5,
+					})
+					MilitaryIcons.attach(graphic, b.kind)
+					icon:SetAttribute("Kind", b.kind)
+					self.icons[cell] = icon
+				end
+				icon.Position = self:pos(cell)
+				icon.Size = UDim2.fromOffset(size, size)
+				icon.BackgroundColor3 = b.off and Color3.fromRGB(64, 68, 74)
+					or rgb(state.Palette.shade(state:nationColor(b.owner), 0.55))
+				local badge = icon:FindFirstChild("Level")
+				if b.level and b.level > 1 then
+					if not badge then
+						badge = make("TextLabel", icon, {
+							Name = "Level", AnchorPoint = Vector2.new(1, 1),
+							Position = UDim2.new(1, 3, 1, 3), Size = UDim2.fromOffset(12, 12),
+							BackgroundColor3 = INK, BorderSizePixel = 0,
+							TextColor3 = Color3.fromRGB(245, 199, 92),
+							Font = FONT, TextSize = 10, ZIndex = 7,
+						})
+					end
+					badge.Text = tostring(b.level)
+					badge.Visible = true
+				elseif badge then
+					badge.Visible = false
+				end
+			end
 		end
 	end
 	for cell, icon in pairs(self.icons) do
-		if not state.buildings[cell] then
+		if not active[cell] then
 			icon:Destroy()
 			self.icons[cell] = nil
 		end
@@ -343,29 +364,16 @@ function OverlayRenderer:updateOrders()
 			local incoming = not mine
 			local item = pool(self.orderItems, id, function()
 				return {
-					line = make("Frame", self.layer, { BorderSizePixel = 0, ZIndex = 3, BackgroundTransparency = 0.25 }),
-					ring = make("Frame", self.layer, { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 3 }),
-					label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0), TextStrokeTransparency = 0, Font = FONT, ZIndex = 7, AutomaticSize = Enum.AutomaticSize.X }),
+					label = make("TextLabel", self.layer, {
+						AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1,
+						TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0),
+						TextStrokeTransparency = 0, Font = FONT, ZIndex = 7,
+						AutomaticSize = Enum.AutomaticSize.X,
+					}),
 				}
 			end)
-			if not item.ring:FindFirstChild("Stroke") then
-				make("UICorner", item.ring, { CornerRadius = UDim.new(1, 0) })
-				make("UIStroke", item.ring, { Name = "Stroke", Thickness = 2, Color = WHITE })
-			end
-			-- Blue for our attack, red for troops attacking us or our allies.
+			-- Combat indicators have only numbers; no attack arrows or target rings.
 			local color = incoming and defenseRed or attackBlue
-			local showArrow = mine and origin and origin > 0
-			item.line.Visible = showArrow
-			item.ring.Visible = mine
-			if showArrow then
-				local ax, ay = self:center(origin)
-				local bx, by = self:center(anchor)
-				self:line(item.line, ax, ay, bx, by, 2)
-				item.line.BackgroundColor3 = color
-			end
-			item.ring.Position = self:pos(anchor)
-			item.ring.Size = UDim2.fromOffset(14, 14)
-			item.ring.Stroke.Color = color
 			-- An ally under attack must be visible even for fewer than 5K troops.
 			local showLabel = front and front > 0
 			item.label.Visible = showLabel
@@ -400,10 +408,12 @@ function OverlayRenderer:updateOrders()
 		local mine = nation == state.you
 		local item = pool(self.shipItems, id, function()
 			local it = {
-				icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "🚢", TextScaled = true, Font = FONT, ZIndex = 6 }),
+				icon = make("Frame", self.layer, { Name = "DefenseVessel", AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0, BackgroundColor3 = Color3.fromRGB(185, 210, 221), ZIndex = 6 }),
 				bar = make("Frame", self.layer, { AnchorPoint = Vector2.new(0.5, 0), BorderSizePixel = 0, BackgroundColor3 = INK, ZIndex = 6 }),
 				ring = make("Frame", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, ZIndex = 3 }),
 			}
+			make("UICorner", it.icon, { CornerRadius = UDim.new(0, 3) })
+			make("UIStroke", it.icon, { Color = INK, Thickness = 1.5 })
 			make("Frame", it.bar, { Name = "Fill", BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(110, 200, 130), ZIndex = 7 })
 			make("UICorner", it.ring, { CornerRadius = UDim.new(1, 0) })
 			make("UIStroke", it.ring, { Name = "Stroke", Thickness = 1, Transparency = 0.4 })
@@ -412,12 +422,16 @@ function OverlayRenderer:updateOrders()
 		local s = math.clamp(cam.scale * 1.8, 14, 26)
 		local visible = lod >= 1 or mine
 		-- glide between the 0.4 s server updates
-		if item.x ~= x or item.y ~= y then
-			item.x, item.y = x, y
+		if item.x == nil then
+			-- First update must not tween from the top-left of the screen.
+			item.icon.Position = self:posXY(x, y)
+			item.bar.Position = self:posXY(x, y + 0.9)
+		elseif item.x ~= x or item.y ~= y then
 			local info = TweenInfo.new(self.Config.Tick.PublicOrders, Enum.EasingStyle.Linear)
 			TweenService:Create(item.icon, info, { Position = self:posXY(x, y) }):Play()
 			TweenService:Create(item.bar, info, { Position = self:posXY(x, y + 0.9) }):Play()
 		end
+		item.x, item.y = x, y
 		item.icon.Size = UDim2.fromOffset(s, s)
 		item.icon.Visible = visible
 		item.bar.Size = UDim2.fromOffset(s, 3)
@@ -455,15 +469,23 @@ function OverlayRenderer:updateOrders()
 	for _, c in ipairs(state.cargos or {}) do
 		local id, nation, cell = c[1], c[2], c[3]
 		local item = pool(self.cargoItems, id, function()
-			return { icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "🚤", TextScaled = true, Font = FONT, ZIndex = 5 }) }
+			local icon = make("Frame", self.layer, {
+				Name = "TradeVessel", AnchorPoint = Vector2.new(0.5, 0.5),
+				BorderSizePixel = 0, BackgroundColor3 = Color3.fromRGB(170, 205, 229),
+				ZIndex = 5,
+			})
+			make("UICorner", icon, { CornerRadius = UDim.new(0, 3) })
+			return { icon = icon }
 		end)
 		local size = math.clamp(cam.scale * 1.3, 10, 18)
 		item.icon.Size = UDim2.fromOffset(size, size)
 		item.icon.Visible = lod >= 1 or nation == state.you
-		if item.cell ~= cell then
-			item.cell = cell
+		if item.cell == nil then
+			item.icon.Position = self:pos(cell)
+		elseif item.cell ~= cell then
 			TweenService:Create(item.icon, TweenInfo.new(self.Config.Tick.PublicOrders, Enum.EasingStyle.Linear), { Position = self:pos(cell) }):Play()
 		end
+		item.cell = cell
 	end
 	release(self.cargoItems)
 end
@@ -559,7 +581,7 @@ function OverlayRenderer:animate(dt)
 					item.icon.TextStrokeTransparency = 1
 					item.icon.TextColor3 = WHITE
 					item.icon.Position = self:posXY(px, py)
-					item.icon.Text = " 🪂 " .. self.Protocol.formatK(f.troops) .. " "
+					item.icon.Text = "AIR " .. self.Protocol.formatK(f.troops)
 					item.route.Visible = own or self.camera:lod() >= 1
 				else
 					local color = own and Color3.fromRGB(90, 185, 255)
@@ -602,7 +624,7 @@ function OverlayRenderer:animate(dt)
 	for id, m in pairs(state.missiles) do
 		local item = pool(self.missileItems, id, function()
 			local it = {
-				icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = (self.Config.Weapons[m.kind] or { icon = "✈" }).icon, TextColor3 = Color3.fromRGB(255, 230, 120), TextStrokeTransparency = 0, Font = FONT, TextSize = 20, ZIndex = 9 }),
+				icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "M", TextColor3 = Color3.fromRGB(255, 230, 120), TextStrokeTransparency = 0, Font = FONT, TextSize = 20, ZIndex = 9 }),
 				target = make("Frame", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, ZIndex = 8 }),
 			}
 			make("UICorner", it.target, { CornerRadius = UDim.new(1, 0) })
@@ -638,24 +660,35 @@ end
 -- A temporary structure marker is separate from replicated, completed buildings.
 -- Show it even for structures without a defensive radius (city, factory, etc.).
 function OverlayRenderer:setBuildingPreview(cell, kind)
-	if not cell or not kind or not self.Config.Buildings[kind] then
+	if not cell or not kind or not MilitaryIcons.Items[kind] then
 		if self.buildingPreview then self.buildingPreview.Visible = false end
 		return
 	end
 	if not self.buildingPreview then
-		local icon = make("TextLabel", self.layer, { Name = "BuildingPlacementPreview", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(23, 32, 42), BackgroundTransparency = 0.18, TextColor3 = Color3.fromRGB(255, 226, 142), Font = FONT, TextScaled = true, ZIndex = 12 })
-		make("UICorner", icon, { CornerRadius = UDim.new(0.25, 0) })
-		make("UIStroke", icon, { Color = Color3.fromRGB(255, 209, 97), Thickness = 2, Transparency = 0.1 })
+		local icon = make("Frame", self.layer, {
+			Name = "BuildingPlacementPreview", AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(23, 32, 42), BackgroundTransparency = 0.18,
+			BorderSizePixel = 0, ZIndex = 12,
+		})
+		make("UICorner", icon, { CornerRadius = UDim.new(0, 5) })
+		make("UIStroke", icon, { Color = Color3.fromRGB(255, 209, 97), Thickness = 2 })
 		self.buildingPreview = icon
 	end
-	local icon = self.buildingPreview
-	icon.Text = kind == "city" and "" or self.Config.Buildings[kind].icon
-	if self.previewCityArt then self.previewCityArt.Visible = kind == "city" end
-	if kind == "city" and not self.previewCityArt then self.previewCityArt = cityArt(icon, 13) end
-	icon.Position = self:pos(cell)
+	if self.previewKind ~= kind then
+		if self.previewGraphic then self.previewGraphic:Destroy() end
+		local graphic = make("Frame", self.buildingPreview, {
+			Name = "PreviewSilhouette", BackgroundTransparency = 1,
+			Position = UDim2.fromScale(0.12, 0.12),
+			Size = UDim2.fromScale(0.76, 0.76), ZIndex = 13,
+		})
+		MilitaryIcons.attach(graphic, kind):setColor(Color3.fromRGB(255, 226, 142))
+		self.previewGraphic = graphic
+		self.previewKind = kind
+	end
+	self.buildingPreview.Position = self:pos(cell)
 	local size = math.clamp(self.camera.scale * 0.65, 24, 46)
-	icon.Size = UDim2.fromOffset(size, size)
-	icon.Visible = true
+	self.buildingPreview.Size = UDim2.fromOffset(size, size)
+	self.buildingPreview.Visible = true
 end
 
 -- Reach circles: { { cell, radius, color } } (build preview, selected building, own defences).
@@ -678,36 +711,30 @@ function OverlayRenderer:setRanges(list)
 	for k = #list + 1, #self.rangeItems do self.rangeItems[k].Visible = false end
 end
 
--- Aim preview for the two-click order: arrow from our nearest border to the target.
+-- Clicking/confirming still uses the exact same client command flow.
+-- Only the preview text remains; the old arrow/circle have been removed.
 function OverlayRenderer:setAim(fromCell, toCell, text, color)
 	if not self.aim then
 		self.aim = {
-			line = make("Frame", self.layer, { BorderSizePixel = 0, ZIndex = 8, BackgroundTransparency = 0.1 }),
-			ring = make("Frame", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, ZIndex = 8, Size = UDim2.fromOffset(18, 18) }),
-			label = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 1), BackgroundColor3 = INK, BackgroundTransparency = 0.1, TextColor3 = WHITE, Font = FONT, TextSize = 13, ZIndex = 9, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 22) }),
+			label = make("TextLabel", self.layer, {
+				AnchorPoint = Vector2.new(0.5, 1), BackgroundColor3 = INK,
+				BackgroundTransparency = 0.1, TextColor3 = WHITE,
+				Font = FONT, TextSize = 13, ZIndex = 9,
+				AutomaticSize = Enum.AutomaticSize.X,
+				Size = UDim2.fromOffset(0, 22),
+			}),
 		}
-		make("UICorner", self.aim.ring, { CornerRadius = UDim.new(1, 0) })
-		make("UIStroke", self.aim.ring, { Name = "Stroke", Thickness = 2.5, Color = WHITE })
 		make("UICorner", self.aim.label, { CornerRadius = UDim.new(0, 5) })
-		make("UIPadding", self.aim.label, { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
+		make("UIPadding", self.aim.label, {
+			PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6),
+		})
 	end
-	local aim = self.aim
-	if not toCell then
-		aim.line.Visible, aim.ring.Visible, aim.label.Visible = false, false, false
-		return
-	end
-	aim.ring.Visible, aim.label.Visible = true, true
-	aim.ring.Position = self:pos(toCell)
-	aim.ring.Stroke.Color = color or WHITE
-	aim.line.Visible = fromCell ~= nil
-	if fromCell then
-		local ax, ay = self:center(fromCell)
-		local bx, by = self:center(toCell)
-		self:line(aim.line, ax, ay, bx, by, 3)
-		aim.line.BackgroundColor3 = color or WHITE
-	end
-	aim.label.Text = text
-	aim.label.Position = self:pos(toCell, 0, -1.2)
+	local label = self.aim.label
+	label.Visible = toCell ~= nil
+	if not toCell then return end
+	label.Text = text or ""
+	label.TextColor3 = color or WHITE
+	label.Position = self:pos(toCell, 0, -1.2)
 end
 
 return OverlayRenderer

@@ -36,9 +36,16 @@ function ExpansionService.ordersOf(nid)
 	return out
 end
 
-local function findOrder(nid, target)
+-- Reinforce only the same local front; other islands and distant sections
+-- of a large landmass require their own military order.
+local function findOrder(nid, target, cell)
+	local mass = ctx.Landmass[cell]
+	if not mass then return nil end
 	for _, o in ipairs(orders) do
-		if o.nation == nid and o.target == target then return o end
+		if not o.done and o.nation == nid and o.target == target and o.mass == mass
+			and Map:distance(o.anchor, cell) <= Config.Expansion.MergeRadius then
+			return o
+		end
 	end
 	return nil
 end
@@ -116,6 +123,8 @@ end
 -- this makes the front a growing arc instead of a permanent narrow strip.
 -- Do not recruit distant national borders: they would teleport the attack.
 local function candidateDepth(o, cell)
+	-- The wave is geographically tied to the landmass it was sent to.
+	if ctx.Landmass[cell] ~= o.mass then return nil end
 	local best = nil
 	local E = Config.Expansion
 	local sideGain = E.WaveSideGrowth
@@ -184,8 +193,11 @@ function ExpansionService.validate(nid, cell, percent)
 end
 
 -- Starts or reinforces an order with troops that already left the reserve.
-function ExpansionService.start(nid, target, cell, troops)
-	local existing = findOrder(nid, target)
+function ExpansionService.start(nid, target, cell, troops, options)
+	options = options or {}
+	-- Each naval landing becomes an independent army, never a reinforcement
+	-- of another continent's existing offensive.
+	local existing = not options.fromLanding and findOrder(nid, target, cell)
 	if existing then
 		existing.troops = existing.troops + troops
 		existing.sent = existing.sent + troops
@@ -199,8 +211,9 @@ function ExpansionService.start(nid, target, cell, troops)
 	end
 	local o = {
 		id = nextOrderId, nation = nid, target = target, troops = troops, sent = troops,
-		anchor = cell, origin = nearestOwnBorder(nid, cell, target), front = nil, carry = 0,
-		started = ctx.now(),
+		mass = ctx.Landmass[cell], anchor = cell,
+		origin = options.fromLanding and cell or nearestOwnBorder(nid, cell, target),
+		front = nil, carry = 0, started = ctx.now(),
 	}
 	nextOrderId = nextOrderId + 1
 	o.originCell = o.origin or cell
@@ -216,7 +229,7 @@ function ExpansionService.issue(nid, cell, percent)
 	if not ok then return false, targetOrWhy, hint end
 	local target = targetOrWhy
 	local n = ctx.Nations.get(nid)
-	local existing = findOrder(nid, target)
+	local existing = findOrder(nid, target, cell)
 	if not existing then
 		local count = 0
 		for _, o in ipairs(orders) do
@@ -279,9 +292,12 @@ local function advance(o, dt)
 	-- Broad, connected wave. Candidates must touch territory captured by THIS
 	-- order, or one of its original seed cells. Do not jump to remote borders.
 	local sq = math.sqrt(math.max(0, o.troops))
-	local reach = Map:distance(o.originCell, o.anchor) + E.FrontSearchMargin + sq / 4
+	local reach = math.max(Map:distance(o.originCell, o.anchor),
+		Map:distance(o.originCell, o.front or o.anchor))
+		+ E.FrontSearchMargin + sq / 4 + o.waveMaxDepth
+	-- No global frontier fallback: when this local island/front is exhausted,
+	-- the attack ends and the surviving troops return to reserve.
 	local _, count = Territory.frontierNear(o.nation, o.target, o.originCell, reach, candidates)
-	if count == 0 then _, count = Territory.frontier(o.nation, o.target, candidates) end
 	if count == 0 then finish(o, true) return end
 
 	local W = Map.W
@@ -323,10 +339,6 @@ local function advance(o, dt)
 		return valid, sumX / valid, sumY / valid
 	end
 	local m, centerX, centerY = scoreCandidates(count)
-	if m == 0 then
-		_, count = Territory.frontier(o.nation, o.target, candidates)
-		m, centerX, centerY = scoreCandidates(count)
-	end
 	if m == 0 then finish(o, true) return end
 
 	-- Visual position is independent of the last claimed cell (o.front).

@@ -57,13 +57,30 @@ local eventRemote = remotes:WaitForChild(Protocol.EventRemote)
 local Map = MapGrid.new(require(Shared.MapData))
 local state = ClientState.new(Map, Protocol, Config, Palette, BuildingStats)
 
--- Screen layout: the ocean-coloured viewport is the whole screen; the world frame moves inside it.
+-- TWO independent screen surfaces: the map reaches every physical pixel,
+-- including the iPhone notch edges; touchable HUD stays inside device insets.
+-- IgnoreGuiInset alone only selects DeviceSafeInsets on modern Roblox.
+local playerGui = player:WaitForChild("PlayerGui")
 local gui = Instance.new("ScreenGui")
-gui.Name = "MundialWar"
+gui.Name = "MundialWarMap"
 gui.IgnoreGuiInset = true
+gui.ScreenInsets = Enum.ScreenInsets.None
+gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None
+gui.ClipToDeviceSafeArea = false
 gui.ResetOnSpawn = false
+gui.DisplayOrder = 1
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
+
+local hudGui = Instance.new("ScreenGui")
+hudGui.Name = "MundialWarHUD"
+hudGui.IgnoreGuiInset = true
+hudGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+hudGui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None
+hudGui.ResetOnSpawn = false
+hudGui.DisplayOrder = 2
+hudGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+hudGui.Parent = playerGui
 
 local viewport = Instance.new("Frame")
 viewport.Name = "Viewport"
@@ -394,7 +411,7 @@ local helpText = table.concat({
 	"<b>Atalhos:</b> 1–4 percentual, B construir, Esc cancelar, botão direito numa nação para diplomacia.",
 }, "\n")
 
-hud = HUD.new(state, gui, {
+hud = HUD.new(state, hudGui, {
 	onPercent = function(p)
 		state.percent = p
 		hud:setPercent(p)
@@ -550,7 +567,7 @@ eventRemote.OnClientEvent:Connect(function(data)
 		if firstInit then
 			firstInit = false
 			camera:fit()
-			if data.debug and not debugOverlay then debugOverlay = DebugOverlay.new(state, camera, gui, world) end
+			if data.debug and not debugOverlay then debugOverlay = DebugOverlay.new(state, camera, hudGui, world) end
 		end
 		hud:refreshRanking()
 		hud:refreshMe()

@@ -58,11 +58,70 @@ function MilitaryIcons.source(kind)
     return nil, nil
 end
 
+-- When no published atlas ID exists, create a SINGLE shared 320x320 texture
+-- from the exact 25 silhouettes already used by the Construir catalog.
+-- This avoids dozens of individual GUI Frames for every icon on supported
+-- clients. The existing frame-run fallback remains for devices/API restrictions.
+local atlasAttempted, atlasContent = false, nil
+local function ensureRuntimeAtlas()
+    if atlasAttempted then return atlasContent end
+    atlasAttempted = true
+    local ok, result = pcall(function()
+        local size, tile, pixelScale = 320, 64, 4
+        local editable = game:GetService("AssetService"):CreateEditableImage({
+            Size = Vector2.new(size, size),
+        })
+        if not editable then return nil end
+        local pixels = buffer.create(size * size * 4) -- transparent by default
+        for _, item in pairs(MilitaryIcons.Items) do
+            local ox = (item.atlasIndex % 5) * tile
+            local oy = math.floor(item.atlasIndex / 5) * tile
+            for y = 1, 16 do
+                local mask = tonumber(item.bitmap[y], 16) or 0
+                for x = 1, 16 do
+                    if bit32.band(bit32.rshift(mask, 16 - x), 1) ~= 0 then
+                        for sy = 0, pixelScale - 1 do
+                            for sx = 0, pixelScale - 1 do
+                                local xx = ox + (x - 1) * pixelScale + sx
+                                local yy = oy + (y - 1) * pixelScale + sy
+                                local idx = (yy * size + xx) * 4
+                                buffer.writeu8(pixels, idx, 255)
+                                buffer.writeu8(pixels, idx + 1, 255)
+                                buffer.writeu8(pixels, idx + 2, 255)
+                                buffer.writeu8(pixels, idx + 3, 255)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        editable:WritePixelsBuffer(Vector2.zero, Vector2.new(size, size), pixels)
+        return Content.fromObject(editable)
+    end)
+    if ok then atlasContent = result end
+    return atlasContent
+end
+
+-- Texture-ready icons use one GUI per silhouette. Unsupported clients
+-- keep the identical Frame-run drawings, but show fewer at once on the map.
+function MilitaryIcons.mapTextureReady()
+    return validId(MilitaryIcons.ATLAS_ASSET_ID) ~= nil
+        or ensureRuntimeAtlas() ~= nil
+end
+
 -- Attach a real ImageLabel. Until asset moderation/upload is complete, draw
 -- the exact same silhouette from a tiny local bitmap using frame runs.
 -- This explicit fallback does not rely on emojis, external URLs or Image APIs.
 function MilitaryIcons.attach(parent, kind)
     local source, offset = MilitaryIcons.source(kind)
+    local runtimeContent = nil
+    if not source then
+        runtimeContent = ensureRuntimeAtlas()
+        if runtimeContent and MilitaryIcons.Items[kind] then
+            local index = MilitaryIcons.Items[kind].atlasIndex
+            offset = Vector2.new((index % 5) * 64, math.floor(index / 5) * 64)
+        end
+    end
     local image = Instance.new("ImageLabel")
     image.Name = "MonochromeIcon"
     image.BackgroundTransparency = 1
@@ -70,18 +129,21 @@ function MilitaryIcons.attach(parent, kind)
     image.ImageColor3 = MilitaryIcons.DEFAULT_COLOR
     image.ScaleType = Enum.ScaleType.Fit
     image.ZIndex = parent.ZIndex + 1
-    image.Visible = source ~= nil
-    if source then
-        image.Image = source
-        if offset then
-            image.ImageRectOffset = offset
-            image.ImageRectSize = Vector2.new(64, 64)
-        end
+    local hasTexture = source ~= nil or runtimeContent ~= nil
+    image.Visible = hasTexture
+    if source then image.Image = source end
+    if runtimeContent and not source then
+        -- Runtime atlas is shared across ALL ImageLabels; one texture in memory.
+        image.ImageContent = runtimeContent
+    end
+    if hasTexture and offset then
+        image.ImageRectOffset = offset
+        image.ImageRectSize = Vector2.new(64, 64)
     end
     image.Parent = parent
 
     local runs = {}
-    if not source then
+    if not hasTexture then
         local fallback = Instance.new("Frame")
         fallback.Name = "PendingAtlasFallback"
         fallback.Size = UDim2.fromScale(1, 1)
@@ -119,6 +181,7 @@ function MilitaryIcons.attach(parent, kind)
         for _, run in ipairs(runs) do run.BackgroundColor3 = color end
     end
     function handle:isPublished() return source ~= nil end
+    function handle:usesTexture() return hasTexture end
     return handle
 end
 

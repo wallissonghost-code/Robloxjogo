@@ -7,7 +7,6 @@ local ctx, Map
 local owner = {}
 local ownedBy, border = {}, {}
 local changes, changeCount = {}, 0
-local recentClaims = {}       -- nid -> list of recently claimed cells (enclave detection seeds)
 local seen, stamp = {}, 0     -- reusable visit marks
 local compMark, compStamp = {}, 0 -- component id per owned cell (0 = not analysed yet)
 local nb, nbOuter = {}, {}
@@ -30,20 +29,19 @@ function TerritoryService.reset()
 		seen[i] = 0
 	end
 	stamp, compStamp = 0, 0
-	ownedBy, border, recentClaims, borderChunks, dirty = {}, {}, {}, {}, {}
+	ownedBy, border, borderChunks, dirty = {}, {}, {}, {}
 	changes, changeCount = {}, 0
 end
 
 function TerritoryService.register(nid)
 	ownedBy[nid] = {}
 	border[nid] = {}
-	recentClaims[nid] = {}
 	borderChunks[nid] = {}
 	dirty[nid] = true
 end
 
 function TerritoryService.unregister(nid)
-	ownedBy[nid], border[nid], recentClaims[nid], borderChunks[nid], dirty[nid] = nil, nil, nil, nil, nil
+	ownedBy[nid], border[nid], borderChunks[nid], dirty[nid] = nil, nil, nil, nil
 end
 
 local function chunkOf(i)
@@ -128,8 +126,6 @@ function TerritoryService.setOwner(i, nid)
 			n.claimed = (n.claimed or 0) + 1
 			if old > 0 then n.captured = (n.captured or 0) + 1 end
 		end
-		local recent = recentClaims[nid]
-		if #recent < 512 then recent[#recent + 1] = i end
 	end
 	compMark[i] = 0
 	changes[i] = nid
@@ -268,58 +264,8 @@ function TerritoryService.ownNeighborCount(i, nid)
 	return c
 end
 
--- Annexes neutral pockets fully enclosed by a single nation (and water). Keeps territory
--- solid: expansion never leaves holes behind.
-function TerritoryService.fillEnclaves(nid)
-	local recent = recentClaims[nid]
-	if not recent or #recent == 0 then return 0 end
-	recentClaims[nid] = {}
-	local limit = ctx.Config.Expansion.EnclaveMaxCells
-	local annexed = 0
-	local nb2 = {}
-	for _, c in ipairs(recent) do
-		local n = Map:neighbors(c, nb2)
-		local seeds = { nb2[1], nb2[2], nb2[3], nb2[4] }
-		for k = 1, n do
-			local s = seeds[k]
-			if owner[s] == 0 then
-				stamp = stamp + 1
-				local region, queue, head, enclosed = {}, { s }, 1, true
-				seen[s] = stamp
-				while head <= #queue do
-					local i = queue[head]
-					head = head + 1
-					region[#region + 1] = i
-					if #region > limit then enclosed = false break end
-					local m = Map:neighbors(i, nb)
-					if m < 4 then enclosed = false break end   -- map edge: not enclosed
-					for q = 1, m do
-						local j = nb[q]
-						local o = owner[j]
-						if o == 0 then
-							if seen[j] ~= stamp then
-								seen[j] = stamp
-								queue[#queue + 1] = j
-							end
-						elseif o ~= nid and o ~= -1 then
-							enclosed = false
-							break
-						end
-					end
-					if not enclosed then break end
-				end
-				if enclosed then
-					for _, i in ipairs(region) do
-						TerritoryService.setOwner(i, nid)
-						annexed = annexed + 1
-					end
-				end
-			end
-		end
-	end
-	recentClaims[nid] = {}
-	return annexed
-end
+-- Territorial scars and neutral pockets never change owner automatically.
+-- Expansion, spawn and combat are the only systems authorized to claim land.
 
 -- Connected components of one nation: label anchor (centroid of the largest block),
 -- block size, and which block holds the capital (anything else is an exclave).

@@ -91,7 +91,8 @@ function CommandService.handle(userId, displayName, action, a, b, clock, c)
 	elseif action == A.Cancel then
 		if a ~= nil and not isInt(a) then return false, nil end
 		ctx.Expansion.cancel(nid, a)
-		return true, "Avanço cancelado; sobreviventes voltaram."
+		if a == nil then ctx.Naval.cancelTransports(nid) end
+		return true, "Avanço cancelado; transportes interrompidos e sobreviventes voltaram."
 	elseif action == A.Build then
 		if not isInt(a) or not Map:valid(a) then return false, "Célula inválida." end
 		if type(b) ~= "string" or not Config.Buildings[b] then return false, "Construção inválida." end
