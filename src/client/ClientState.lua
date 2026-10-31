@@ -11,7 +11,7 @@ function ClientState.new(Map, Protocol, Config, Palette, Stats)
 	self.buildings = {}        -- cell -> { kind, owner }
 	self.relations = {}        -- "a:b" -> kind
 	self.orders = {}           -- list { id, nation, target, troops, front, anchor, origin, visualX, visualY }
-	self.fleets = {}           -- id -> { id, nation, troops, path, speed, target, progress, t0 }
+	self.fleets = {}           -- id -> { id, nation, troops, path, speed, target, progress, port, t0 }
 	self.boats = {}           -- list { id, nation, x, y, health, patrolCell, level }
 	self.missiles = {}         -- id -> { id, kind, nation, from, to, speed, progress, t0 }
 	self.fires = {}            -- list { id, centerCell, radius }
@@ -82,7 +82,7 @@ function ClientState:applyInit(data)
 	self.fleets = {}
 	local now = os.clock()
 	for _, f in ipairs(data.fleets or {}) do
-		self.fleets[f[1]] = { id = f[1], nation = f[2], troops = f[3], path = f[4], speed = f[5], target = f[6], progress = f[7], air = f[8] == true, t0 = now }
+		self.fleets[f[1]] = { id = f[1], nation = f[2], troops = f[3], path = f[4], speed = f[5], target = f[6], progress = f[7], air = f[8] == true, port = f[9], t0 = now }
 	end
 	self.boats = data.boats or {}
 	self.fires = data.fires or {}
@@ -153,7 +153,7 @@ function ClientState:applyOrders(data)
 	local now = os.clock()
 	if data.fleet then
 		local f = data.fleet
-		self.fleets[f[1]] = { id = f[1], nation = f[2], troops = f[3], path = f[4], speed = f[5], target = f[6], progress = 1, air = f[7] == true, t0 = now }
+		self.fleets[f[1]] = { id = f[1], nation = f[2], troops = f[3], path = f[4], speed = f[5], target = f[6], progress = 1, air = f[7] == true, port = f[8], t0 = now }
 	end
 	if data.fleetEnd then self.fleets[data.fleetEnd] = nil end
 	if data.orders then self.orders = data.orders end

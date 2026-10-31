@@ -17,6 +17,7 @@ local function rgb(c)
 end
 
 local CityModel = require(script.Parent.CityModel)
+local TransportTrail = require(script.Parent.TransportTrail)
 local function cityArt(parent, z)
 	return CityModel.attach(parent, z)
 end
@@ -475,36 +476,97 @@ function OverlayRenderer:animate(dt)
 		end
 	end
 	for id, f in pairs(state.fleets) do
-		local item = pool(self.fleetItems, id, function()
-			local it = {
-				icon = make("TextLabel", self.layer, { AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = INK, BackgroundTransparency = 0.2, TextColor3 = WHITE, Font = FONT, TextSize = 12, ZIndex = 8, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18) }),
-				route = make("Frame", self.layer, { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3 }),
-			}
-			make("UICorner", it.icon, { CornerRadius = UDim.new(0, 4) })
-			-- simplified route polyline (one segment every 6 water cells)
-			local color = rgb(state:nationColor(f.nation))
-			local path = f.path
-			local step = 6
-			local prev = path[1]
-			for k = 1 + step, #path + step - 1, step do
-				local cell = path[math.min(k, #path)]
-				local seg = make("Frame", it.route, { BorderSizePixel = 0, BackgroundColor3 = color, BackgroundTransparency = 0.35, ZIndex = 3 })
-				local ax, ay = self:center(prev)
-				local bx, by = self:center(cell)
-				self:line(seg, ax, ay, bx, by, 2)
-				prev = cell
+		local own = f.nation == state.you
+		local targetOwner = state.owner[f.target] or 0
+		-- Unrelated seaborne wars do not create GUI instances on the client.
+		if f.air or state:shouldShowOrder(f.nation, targetOwner) then
+			local item = pool(self.fleetItems, id, function()
+				local it = {
+					icon = make("TextLabel", self.layer, {
+						AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1,
+						TextColor3 = WHITE, TextStrokeColor3 = Color3.new(0, 0, 0),
+						TextStrokeTransparency = 0, Font = FONT, TextSize = 12,
+						ZIndex = 9, AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.fromOffset(0, 18),
+					}),
+					route = make("Frame", self.layer, {
+						BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 3,
+					}),
+					segments = {},
+				}
+				if f.air then
+					-- Airlift visuals are unchanged; only troop boats get the new wake.
+					make("UICorner", it.icon, { CornerRadius = UDim.new(0, 4) })
+					local path = f.path
+					local prev = path[1]
+					for k = 7, #path + 5, 6 do
+						local cell = path[math.min(k, #path)]
+						local seg = make("Frame", it.route, {
+							BorderSizePixel = 0, BackgroundColor3 = rgb(state:nationColor(f.nation)),
+							BackgroundTransparency = 0.35, ZIndex = 4,
+						})
+						local ax, ay = self:center(prev)
+						local bx, by = self:center(cell)
+						self:line(seg, ax, ay, bx, by, 2)
+						prev = cell
+					end
+				else
+					it.dot = make("Frame", self.layer, {
+						Name = "TroopTransportDot", AnchorPoint = Vector2.new(0.5, 0.5),
+						BackgroundColor3 = Color3.fromRGB(90, 185, 255),
+						BorderSizePixel = 0, Size = UDim2.fromOffset(9, 9), ZIndex = 8,
+					})
+					make("UICorner", it.dot, { CornerRadius = UDim.new(1, 0) })
+					make("UIStroke", it.dot, {
+						Color = Color3.fromRGB(7, 16, 28), Thickness = 1.5,
+					})
+					for _, section in ipairs(TransportTrail.sections(Map, f.path, f.port)) do
+						local frame = make("Frame", it.route, {
+							Name = "TravelledWake", BorderSizePixel = 0,
+							BackgroundTransparency = 0.12,
+							BackgroundColor3 = Color3.fromRGB(90, 185, 255),
+							Visible = false, ZIndex = 4,
+						})
+						it.segments[#it.segments + 1] = { line = frame, data = section }
+					end
+				end
+				return it
+			end)
+			local progress = math.min(#f.path, f.progress + math.max(0, now - f.t0) * f.speed)
+			local px, py = TransportTrail.position(Map, f.path, progress)
+			if px then
+				if f.air then
+					item.icon.AnchorPoint = Vector2.new(0.5, 0.5)
+					item.icon.BackgroundTransparency = 0.2
+					item.icon.BackgroundColor3 = INK
+					item.icon.TextStrokeTransparency = 1
+					item.icon.TextColor3 = WHITE
+					item.icon.Position = self:posXY(px, py)
+					item.icon.Text = " 🪂 " .. self.Protocol.formatK(f.troops) .. " "
+					item.route.Visible = own or self.camera:lod() >= 1
+				else
+					local color = own and Color3.fromRGB(90, 185, 255)
+						or Color3.fromRGB(255, 100, 111)
+					item.route.Visible = true
+					item.dot.Position = self:posXY(px, py)
+					item.dot.BackgroundColor3 = color
+					item.icon.Position = self:posXY(px, py - 0.48)
+					item.icon.Text = self.Protocol.formatK(f.troops)
+					item.icon.TextColor3 = color
+					-- The trail grows strictly behind the head. A completed straight
+					-- section is drawn once; only the current tip changes every frame.
+					for _, seg in ipairs(item.segments) do
+						local x, y, complete = TransportTrail.traversedEnd(seg.data, progress)
+						seg.line.Visible = x ~= nil
+						if x and (not complete or not seg.complete) then
+							self:line(seg.line, seg.data.ax, seg.data.ay, x, y, 2)
+							seg.complete = complete
+						end
+						seg.line.BackgroundColor3 = color
+					end
+				end
 			end
-			return it
-		end)
-		local progress = math.min(#f.path, f.progress + (now - f.t0) * f.speed)
-		local k = math.max(1, math.floor(progress))
-		local a, b = f.path[k], f.path[math.min(#f.path, k + 1)]
-		local ax, ay = self:center(a)
-		local bx, by = self:center(b)
-		local t = progress - k
-		item.icon.Position = self:posXY(ax + (bx - ax) * t, ay + (by - ay) * t)
-		item.icon.Text = (f.air and " 🪂 " or " ⛵ ") .. self.Protocol.formatK(f.troops) .. " "
-		item.route.Visible = f.nation == state.you or self.camera:lod() >= 1
+		end
 	end
 	release(self.fleetItems)
 	for id, m in pairs(state.missiles) do

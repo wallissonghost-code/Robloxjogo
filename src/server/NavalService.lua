@@ -75,7 +75,7 @@ function NavalService.route(nid, targetCell, limit)
 	for _, p in ipairs(ports) do
 		local n = Map:neighbors(p.cell, nb)
 		for k = 1, n do
-			if not Map.land[nb[k]] then goal[nb[k]] = true end
+			if not Map.land[nb[k]] then goal[nb[k]] = p.cell end
 		end
 	end
 	local queue, head = {}, 1
@@ -94,12 +94,13 @@ function NavalService.route(nid, targetCell, limit)
 		local i = queue[head]
 		head = head + 1
 		if goal[i] then
+			local port = goal[i]
 			local path = {}
 			while i ~= 0 do
 				path[#path + 1] = i
 				i = prev[i]
 			end
-			return path
+			return path, port
 		end
 		local m = Map:neighbors(i, scratch)
 		for k = 1, m do
@@ -135,15 +136,20 @@ function NavalService.launch(nid, cell, percent, searchLimit)
 	local troops = math.floor(n.troops * percent)
 	if troops < N.MinTroops then return false, "A frota precisa de pelo menos " .. N.MinTroops .. " tropas." end
 	if n.gold < N.TransportGold then return false, "Transporte custa " .. N.TransportGold .. " de ouro." end
-	local path, why = NavalService.route(nid, cell, searchLimit)
-	if not path then return false, why end
+	local path, portOrReason = NavalService.route(nid, cell, searchLimit)
+	if not path then return false, portOrReason end
+	-- Extend the water route with its adjacent destination coast. The same dot
+	-- that crosses the sea now reaches the land cell when the landing resolves.
+	path[#path + 1] = cell
 	n.gold = n.gold - N.TransportGold
 	n.troops = n.troops - troops
 	if owner > 0 then ctx.Diplomacy.ensureWar(nid, owner) end
-	local fleet = { id = nextId, nation = nid, troops = troops, path = path, progress = 1, target = cell }
+	local fleet = { id = nextId, nation = nid, troops = troops, path = path, progress = 1, target = cell,
+		port = portOrReason }
 	nextId = nextId + 1
 	fleets[#fleets + 1] = fleet
-	ctx.emit(nil, { k = ctx.Protocol.Events.Orders, fleet = { fleet.id, nid, troops, path, N.Speed, cell } })
+	-- Slot 7 keeps the existing air flag; the departure port is slot 8.
+	ctx.emit(nil, { k = ctx.Protocol.Events.Orders, fleet = { fleet.id, nid, troops, path, N.Speed, cell, false, portOrReason } })
 	return true, "Frota a caminho com " .. troops .. " tropas."
 end
 
@@ -613,7 +619,7 @@ end
 function NavalService.snapshot()
 	local fl, ws = {}, {}
 	for _, f in ipairs(fleets) do
-		fl[#fl + 1] = { f.id, f.nation, math.floor(f.troops), f.path, f.speed or Config.Naval.Speed, f.target, f.progress, f.air == true }
+		fl[#fl + 1] = { f.id, f.nation, math.floor(f.troops), f.path, f.speed or Config.Naval.Speed, f.target, f.progress, f.air == true, f.port or 0 }
 	end
 	return fl, NavalService.boatView()
 end
