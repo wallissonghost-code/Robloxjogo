@@ -65,11 +65,11 @@ function H.newWorld(opts)
 		Config.Match = match
 	end
 	local services = {}
-	for _, name in ipairs({ "Territory", "Nations", "Economy", "Combat", "Buildings", "Expansion", "Naval",
+	for _, name in ipairs({ "Territory", "Nations", "Economy", "Combat", "Buildings", "Expansion", "Frontline", "Naval",
 		"Strategic", "Diplomacy", "Bots", "Match", "Commands" }) do
 		local file = ({ Territory = "TerritoryService", Nations = "NationService", Economy = "EconomyService",
 			Combat = "CombatService", Buildings = "BuildingService", Expansion = "ExpansionService",
-			Naval = "NavalService", Strategic = "StrategicService", Diplomacy = "DiplomacyService",
+			Frontline = "FrontlineService", Naval = "NavalService", Strategic = "StrategicService", Diplomacy = "DiplomacyService",
 			Bots = "BotService", Match = "MatchService", Commands = "CommandService" })[name]
 		services[name] = load("src/server/" .. file .. ".lua")
 	end

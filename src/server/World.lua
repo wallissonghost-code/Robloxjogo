@@ -4,7 +4,7 @@ local World = {}
 World.__index = World
 
 local SERVICE_ORDER = {
-	"Territory", "Nations", "Economy", "Combat", "Buildings", "Expansion", "Naval",
+	"Territory", "Nations", "Economy", "Combat", "Buildings", "Expansion", "Frontline", "Naval",
 	"Strategic", "Diplomacy", "Bots", "Match", "Commands",
 }
 
@@ -36,6 +36,7 @@ function World.new(deps)
 	ctx.Combat = deps.Services.Combat
 	ctx.Buildings = deps.Services.Buildings
 	ctx.Expansion = deps.Services.Expansion
+	ctx.Frontline = deps.Services.Frontline
 	ctx.Naval = deps.Services.Naval
 	ctx.Strategic = deps.Services.Strategic
 	ctx.Diplomacy = deps.Services.Diplomacy
@@ -45,7 +46,7 @@ function World.new(deps)
 	for _, name in ipairs(SERVICE_ORDER) do
 		ctx[name].init(ctx)
 	end
-	for _, name in ipairs({ "Nations", "Buildings", "Expansion", "Naval", "Strategic", "Diplomacy", "Combat", "Bots" }) do
+	for _, name in ipairs({ "Nations", "Buildings", "Expansion", "Frontline", "Naval", "Strategic", "Diplomacy", "Combat", "Bots" }) do
 		ctx[name].reset()
 	end
 	self.ctx = ctx
@@ -70,6 +71,8 @@ function World:step(dt, humanCount, clock)
 	local started = clock and clock()
 	while t.sim >= T.Simulation do
 		t.sim = t.sim - T.Simulation
+		-- Resolve reciprocal invasion forces before either army may capture land.
+		ctx.Frontline.tick(T.Simulation)
 		ctx.Expansion.tick(T.Simulation)
 		ctx.Combat.tick(T.Simulation)
 		ctx.Naval.tick(T.Simulation)

@@ -1,16 +1,16 @@
--- Mundial War · expansion orders: the "click → front advances → territory grows" loop.
---
--- An order holds troops taken from the reserve once. Every simulation tick it captures a
--- few cells of its target owner (0 = neutral) that touch the nation, chosen to form an
--- organic front: a fan that grows from the border point nearest the click, inside a cone
--- aimed at the click (wider with more troops), preferring cells already hugged by our
--- territory so no holes are left behind.
+-- Mundial War · connected wavefront expansion; combat between opposing orders happens
+-- before this service's tick in FrontlineService.
+-- Each order keeps a multi-source wave depth over cells it actually controls.
+-- Lowest depth goes first: width is established at launch, and click direction
+-- only breaks ties inside the same wave layer. No conquest through water or
+-- disconnected target territory.
 local ExpansionService = {}
 
 local ctx, Config, Map, Territory
 local orders = {}          -- list of active orders
 local nextOrderId = 1
-local candidates, scores = {}, {}
+local candidates, scores, depths = {}, {}, {}
+local scratch = {}
 
 function ExpansionService.init(context)
 	ctx = context
@@ -64,12 +64,60 @@ local function sweep()
 	for i = k, #orders do orders[i] = nil end
 end
 
--- Nearest border cell of the nation to `cell` (where the arrow starts on the client).
-local function nearestOwnBorder(nid, cell)
+-- Choose a border actually facing the intended owner (not some closer neutral shore).
+local function adjacentToTarget(cell, target)
+	local n = Map:neighbors(cell, scratch)
+	for k = 1, n do
+		if Territory.ownerOf(scratch[k]) == target then return true end
+	end
+	return false
+end
+
+local function nearestOwnBorder(nid, cell, target)
 	local best, bestD = nil, math.huge
 	for i in pairs(Territory.borderCells(nid) or {}) do
-		local d = Map:distance(i, cell)
-		if d < bestD then best, bestD = i, d end
+		if adjacentToTarget(i, target) then
+			local d = Map:distance(i, cell)
+			if d < bestD then best, bestD = i, d end
+		end
+	end
+	return best
+end
+
+-- Seed several adjacent source cells, giving large orders a wider initial front.
+-- The depth map is local to the order: remote national borders cannot teleport
+-- an offensive wave to another side of the same target.
+local function seedWave(o)
+	local E = Config.Expansion
+	local radius = math.min(E.WaveStartRadiusMax,
+		E.WaveStartRadiusBase + math.sqrt(math.max(0, o.sent)) / E.WaveStartTroopDivisor)
+	o.waveDepth = {}
+	local seeded = false
+	for i in pairs(Territory.borderCells(o.nation) or {}) do
+		if Map:distance(i, o.originCell) <= radius and adjacentToTarget(i, o.target) then
+			o.waveDepth[i] = 0
+			seeded = true
+		end
+	end
+	if not seeded and Territory.ownerOf(o.originCell) == o.nation then
+		o.waveDepth[o.originCell] = 0
+	end
+	o.waveCone = math.rad(math.min(E.FrontConeMax,
+		E.FrontConeBase + math.sqrt(math.max(0, o.sent)) / E.FrontConeTroopDivisor))
+end
+
+-- BFS depth in the expanding, connected ownership graph; only the immediate
+-- four neighbours are inspected, never a full-map flood fill in the tick loop.
+local function candidateDepth(o, cell)
+	local best = nil
+	local n = Map:neighbors(cell, scratch)
+	for k = 1, n do
+		local neighbor = scratch[k]
+		local depth = o.waveDepth[neighbor]
+		if depth and Territory.ownerOf(neighbor) == o.nation then
+			local nextDepth = depth + 1
+			if not best or nextDepth < best then best = nextDepth end
+		end
 	end
 	return best
 end
@@ -121,19 +169,24 @@ function ExpansionService.start(nid, target, cell, troops)
 	local existing = findOrder(nid, target)
 	if existing then
 		existing.troops = existing.troops + troops
+		existing.sent = existing.sent + troops
 		existing.anchor = cell
-		existing.origin = nearestOwnBorder(nid, cell) or existing.origin
+		existing.origin = nearestOwnBorder(nid, cell, target) or existing.origin
 		existing.originCell = existing.origin or existing.originCell
+		-- Reinforcement may redirect the attack. Re-seed at the newly selected
+		-- border rather than dragging stale depth data across the whole country.
+		seedWave(existing)
 		return existing
 	end
 	local o = {
 		id = nextOrderId, nation = nid, target = target, troops = troops, sent = troops,
-		anchor = cell, origin = nearestOwnBorder(nid, cell), front = nil, carry = 0,
+		anchor = cell, origin = nearestOwnBorder(nid, cell, target), front = nil, carry = 0,
 		started = ctx.now(),
 	}
 	nextOrderId = nextOrderId + 1
 	o.originCell = o.origin or cell
 	o.front = o.origin
+	seedWave(o)
 	orders[#orders + 1] = o
 	if target > 0 then ctx.Diplomacy.ensureWar(nid, target) end
 	return o
@@ -200,39 +253,54 @@ local function advance(o, dt)
 	end
 	if o.troops < E.MinTroopsToSend * 0.5 then finish(o, true) return end
 
-	-- look only near the fan first; fall back to the whole border when that area is used up
-	local sqTroops = math.sqrt(math.max(0, o.troops))
-	local reach = Map:distance(o.originCell, o.anchor) + E.FrontSearchMargin + sqTroops / 4
+	-- Broad, connected wave. Candidates must touch territory captured by THIS
+	-- order, or one of its original seed cells. Do not jump to remote borders.
+	local sq = math.sqrt(math.max(0, o.troops))
+	local reach = Map:distance(o.originCell, o.anchor) + E.FrontSearchMargin + sq / 4
 	local _, count = Territory.frontierNear(o.nation, o.target, o.originCell, reach, candidates)
-	if count == 0 then
-		_, count = Territory.frontier(o.nation, o.target, candidates)
-	end
+	if count == 0 then _, count = Territory.frontier(o.nation, o.target, candidates) end
 	if count == 0 then finish(o, true) return end
 
-	-- Fan-shaped front: grow outward from where the order left our border (origin), inside a
-	-- cone aimed at the clicked point. Distance from the origin keeps the front even (no spear),
-	-- the cone keeps it pointed at the target, own-neighbour bonus closes notches (no holes).
-	local sq = math.sqrt(math.max(0, o.troops))
-	local cone = math.rad(math.min(E.FrontConeMax, E.FrontConeBase + sq / E.FrontConeTroopDivisor))
 	local W = Map.W
-	local ox, oy = (o.originCell - 1) % W, ((o.originCell - 1) - (o.originCell - 1) % W) / W
-	local tx, ty = (o.anchor - 1) % W - ox, ((o.anchor - 1) - (o.anchor - 1) % W) / W - oy
+	local ox, oy = Map:xy(o.originCell)
+	local ax, ay = Map:xy(o.anchor)
+	local tx, ty = ax - ox, ay - oy
 	local L = math.sqrt(tx * tx + ty * ty)
-	local m = count
-	for k = 1, count do
-		local c = candidates[k]
-		local vx, vy = (c - 1) % W - ox, ((c - 1) - (c - 1) % W) / W - oy
-		local r = math.sqrt(vx * vx + vy * vy)
-		local penalty = 0
-		if L >= 1 and r >= 2 then
-			local cosang = (vx * tx + vy * ty) / (r * L)
-			if cosang < -1 then cosang = -1 elseif cosang > 1 then cosang = 1 end
-			local excess = math.acos(cosang) - cone
-			if excess > 0 then penalty = excess * r * E.ConePenalty end
+	local function scoreCandidates(count)
+		local valid = 0
+		for k = 1, count do
+			local c = candidates[k]
+			local depth = candidateDepth(o, c)
+			if depth then
+				valid = valid + 1
+				local cx, cy = Map:xy(c)
+				local vx, vy = cx - ox, cy - oy
+				local radius = math.sqrt(vx * vx + vy * vy)
+				local penalty = 0
+				if L >= 1 and radius >= 2 then
+					local cosang = math.clamp and math.clamp((vx * tx + vy * ty) / (radius * L), -1, 1)
+						or math.max(-1, math.min(1, (vx * tx + vy * ty) / (radius * L)))
+					local excess = math.acos(cosang) - o.waveCone
+					if excess > 0 then
+						penalty = math.min(E.WaveDirectionPenalty, excess * radius * E.ConePenalty)
+					end
+				end
+				candidates[valid] = c
+				depths[valid] = depth
+				scores[valid] = depth * E.WaveDepthWeight + penalty
+					- E.OwnNeighborWeight * Territory.ownNeighborCount(c, o.nation)
+					+ ctx.random() * E.Jitter
+			end
 		end
-		scores[k] = r + penalty - E.OwnNeighborWeight * Territory.ownNeighborCount(c, o.nation)
-			+ ctx.random() * E.Jitter
+		for k = valid + 1, count do candidates[k] = nil end
+		return valid
 	end
+	local m = scoreCandidates(count)
+	if m == 0 then
+		_, count = Territory.frontier(o.nation, o.target, candidates)
+		m = scoreCandidates(count)
+	end
+	if m == 0 then finish(o, true) return end
 
 	local rate = math.min(E.CellsPerTickMax, E.CellsPerTickBase + sq / E.CellsPerTickTroopDivisor)
 	if o.target > 0 then rate = rate * E.EnemyRateFactor end
@@ -250,6 +318,7 @@ local function advance(o, dt)
 		end
 		candidates[t], candidates[best] = candidates[best], candidates[t]
 		scores[t], scores[best] = scores[best], scores[t]
+		depths[t], depths[best] = depths[best], depths[t]
 		local cell = candidates[t]
 		if Territory.ownerOf(cell) == o.target then
 			local cost, loss = ctx.Combat.cellCost(o.nation, cell, o.troops, o.front)
@@ -263,6 +332,7 @@ local function advance(o, dt)
 				d.troops = math.max(0, d.troops - loss)
 			end
 			Territory.setOwner(cell, o.nation)
+			o.waveDepth[cell] = depths[t]
 			o.front = cell
 			taken = taken + 1
 		end

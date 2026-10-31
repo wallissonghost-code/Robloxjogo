@@ -56,7 +56,7 @@ function jsEngine() {
 
 const BOOT = `
 local S = {}
-for _, n in ipairs({"TerritoryService","NationService","EconomyService","CombatService","BuildingService","ExpansionService","NavalService","StrategicService","DiplomacyService","BotService","MatchService","CommandService"}) do S[n] = _G["chunk_" .. n]() end
+for _, n in ipairs({"TerritoryService","NationService","EconomyService","CombatService","BuildingService","ExpansionService","FrontlineService","NavalService","StrategicService","DiplomacyService","BotService","MatchService","CommandService"}) do S[n] = _G["chunk_" .. n]() end
 local World = chunk_World()
 local Config, Palette = chunk_GameConfig(), chunk_Palette()
 local Stats = chunk_BuildingStats()
@@ -65,7 +65,7 @@ Config.Match.VoteSeconds = 1e9
 math.randomseed(os.time())
 world = World.new({ Config = Config, Palette = Palette, Protocol = chunk_Protocol(), MapGrid = chunk_MapGrid(), MapData = chunk_MapData(), BuildingStats = Stats, random = math.random,
   Services = { Territory = S.TerritoryService, Nations = S.NationService, Economy = S.EconomyService, Combat = S.CombatService,
-    Buildings = S.BuildingService, Expansion = S.ExpansionService, Naval = S.NavalService, Strategic = S.StrategicService,
+    Buildings = S.BuildingService, Expansion = S.ExpansionService, Frontline = S.FrontlineService, Naval = S.NavalService, Strategic = S.StrategicService,
     Diplomacy = S.DiplomacyService, Bots = S.BotService, Match = S.MatchService, Commands = S.CommandService } })
 ctx = world.ctx
 local USER = 1

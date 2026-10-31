@@ -16,7 +16,7 @@ MODULES = HERE / "node_modules"
 lua = {}
 for name in ["GameConfig", "Palette", "Protocol", "MapGrid", "MapData", "BuildingStats"]:
     lua[name] = (ROOT / "src/shared" / f"{name}.lua").read_text(encoding="utf-8")
-for name in ["TerritoryService", "NationService", "EconomyService", "CombatService", "BuildingService", "ExpansionService",
+for name in ["TerritoryService", "NationService", "EconomyService", "CombatService", "BuildingService", "ExpansionService", "FrontlineService",
              "NavalService", "StrategicService", "DiplomacyService", "BotService", "MatchService", "CommandService", "World"]:
     lua[name] = (ROOT / "src/server" / f"{name}.lua").read_text(encoding="utf-8")
 

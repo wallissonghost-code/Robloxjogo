@@ -108,7 +108,12 @@ GameConfig.Expansion = {
 	Jitter = 1.4,                      -- organic, non-grid edges
 	EnclaveMaxCells = 80,              -- enclosed neutral pockets up to this size are annexed for free
 	ReachSearchLimit = 40000,          -- cells searched to prove a land route from the click to our border
-	FrontSearchMargin = 30,            -- cells around the fan scanned each tick (performance)
+	FrontSearchMargin = 30,            -- cells around the active wave scanned each tick
+	WaveStartRadiusBase = 2,            -- initial half-width along our border
+	WaveStartTroopDivisor = 30,         -- bigger launched armies start wider
+	WaveStartRadiusMax = 14,
+	WaveDepthWeight = 12,               -- one complete wave layer before the next
+	WaveDirectionPenalty = 3,          -- click direction orders cells WITHIN a layer
 }
 
 GameConfig.Combat = {

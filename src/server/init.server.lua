@@ -42,6 +42,7 @@ local world = World.new({
 		Combat = require(script.CombatService),
 		Buildings = require(script.BuildingService),
 		Expansion = require(script.ExpansionService),
+		Frontline = require(script.FrontlineService),
 		Naval = require(script.NavalService),
 		Strategic = require(script.StrategicService),
 		Diplomacy = require(script.DiplomacyService),

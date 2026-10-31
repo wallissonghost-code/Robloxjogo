@@ -53,6 +53,38 @@ function CombatService.cellCost(attackerId, cell, orderTroops, front)
 	return cost, defenderLoss
 end
 
+-- Front-to-front collisions exchange troops already committed to the field.
+-- No reserve troops are spent twice. The existing territorial costs and
+-- building bonuses still govern the surviving army's subsequent captures.
+local function frontlinePower(order)
+	local buildings = ctx.Buildings
+	local factor = 1
+	local attack = buildings.totals(order.nation).attack or 0
+	if attack > 0 then
+		factor = factor / math.max(Config.Buildings.tankfactory.attackFloor, 1 - attack)
+	end
+
+	-- Defensive structures only help when the army's actual foothold is owned
+	-- by its nation. Clicking a distant enemy province grants no local bonus.
+	local cell = order.front or order.origin
+	if cell and ctx.Territory.ownerOf(cell) == order.nation then
+		factor = factor * (buildings.covered(cell, "bunker", order.nation, "defense") or 1)
+		factor = factor * (buildings.covered(cell, "wall", order.nation, "defense") or 1)
+		local shelter = buildings.covered(cell, "trench", order.nation, "shelter", true)
+		if shelter and shelter > 0 then factor = factor / shelter end
+	end
+	return math.max(0.01, factor)
+end
+
+function CombatService.frontlineClash(a, b)
+	local powerA, powerB = frontlinePower(a), frontlinePower(b)
+	local spentPower = math.min(a.troops * powerA, b.troops * powerB)
+	-- Simultaneous 1:1 attrition without bonuses. A 20K counter against a
+	-- 10K invasion leaves 10K in the field, independent of where A clicked.
+	return math.min(a.troops, spentPower / powerA),
+		math.min(b.troops, spentPower / powerB)
+end
+
 -- Sniper towers wear fronts down every second; artillery shells them periodically.
 function CombatService.tick(dt)
 	pulseClock = pulseClock + dt
