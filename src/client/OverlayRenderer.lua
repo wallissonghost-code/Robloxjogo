@@ -101,6 +101,14 @@ function OverlayRenderer:rebuildAll()
 		item.label:Destroy()
 	end
 	self.orderItems = {}
+	-- Fleet IDs also restart each round. Destroy their old GUI/wake immediately
+	-- instead of reusing a previous voyage under the same ID.
+	for _, item in pairs(self.fleetItems) do
+		item.icon:Destroy()
+		item.route:Destroy()
+		if item.dot then item.dot:Destroy() end
+	end
+	self.fleetItems = {}
 	self.labels, self.capitals, self.icons = {}, {}, {}
 	self:updateLabels()
 	self:updateBuildings()
@@ -532,7 +540,16 @@ function OverlayRenderer:animate(dt)
 				end
 				return it
 			end)
-			local progress = math.min(#f.path, f.progress + math.max(0, now - f.t0) * f.speed)
+			-- Limit extrapolation when the server is quiet, then reconcile its
+			-- next snapshot without backwards jumps or long forward teleports.
+			local elapsed = math.min(math.max(0, now - f.t0), self.Config.Tick.PublicOrders + 0.2)
+			local predicted = math.min(#f.path, f.progress + elapsed * f.speed)
+			local progress = predicted
+			if not f.air then
+				progress = TransportTrail.advanceProgress(
+					item.displayProgress, predicted, f.speed, dt, #f.path)
+				item.displayProgress = progress
+			end
 			local px, py = TransportTrail.position(Map, f.path, progress)
 			if px then
 				if f.air then
@@ -565,6 +582,19 @@ function OverlayRenderer:animate(dt)
 						seg.line.BackgroundColor3 = color
 					end
 				end
+			end
+		end
+		-- The landing is already resolved on the server. Hold the marker only
+		-- until it visually reaches the coastline (plus a brief readable beat).
+		-- A timeout also cleans up a fleet that stops being relevant to us.
+		if f.finishing then
+			local item = self.fleetItems[id]
+			if item and item.displayProgress and item.displayProgress >= #f.path - 0.001 then
+				item.atCoastAt = item.atCoastAt or now
+			end
+			if (item and item.atCoastAt and now - item.atCoastAt >= 0.15)
+				or now - f.finishedAt >= 3 then
+				state.fleets[id] = nil
 			end
 		end
 	end

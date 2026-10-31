@@ -38,4 +38,16 @@ local straight = {}
 for x = 2, 151 do straight[#straight + 1] = cell(x, 1) end
 ok(#Trail.sections(map, straight, port) == 2,
 	"150 straight cells use only two GUI segments including the port")
-print("PASS troop transport trail geometry and performance")
+-- Repeated server snapshots must not pull the ship backwards or teleport it.
+ok(Trail.advanceProgress(nil, 17.5, 5, 0.05, 200) == 17.5,
+	"late join starts at authoritative position")
+ok(Trail.advanceProgress(17.5, 16.4, 5, 0.05, 200) == 17.5,
+	"late server snapshot cannot rewind the dot")
+local step = Trail.advanceProgress(17.5, 45, 5, 0.05, 200)
+ok(step > 17.5 and step <= 17.5 + 5 * 0.05 * 1.15 + 0.0001,
+	"large correction is rate-limited, not a teleport")
+ok(Trail.advanceProgress(199.9, 250, 5, 1, 200) == 200,
+	"never travels past the landing cell")
+ok(Trail.advanceProgress(4, 4, 5, 0.1, 200) == 4,
+	"dot waits when the server has no newer position")
+print("PASS troop transport trail geometry, interpolation and performance")

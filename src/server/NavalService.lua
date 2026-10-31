@@ -65,6 +65,23 @@ local function waterNeighbor(cell)
 	return nil
 end
 
+-- Assert that the shortest-path search produced a contiguous, water-only
+-- voyage from our port to the requested coast; reject any malformed route
+-- before spending troops or gold rather than jumping across land.
+local function validSeaRoute(path, port, coast)
+	if not port or not Map:valid(port) or not Map:valid(coast)
+		or not path or #path == 0 then return false end
+	if not Map.land[port] or not Map.land[coast] then return false end
+	local last = port
+	for _, cell in ipairs(path) do
+		if not Map:valid(cell) or Map.land[cell] or Map:distance(last, cell) ~= 1 then
+			return false
+		end
+		last = cell
+	end
+	return Map:distance(last, coast) == 1
+end
+
 -- Breadth-first search over water from the target shore back to any of the nation's ports.
 -- Returns the water path ordered port -> target, or nil.
 function NavalService.route(nid, targetCell, limit)
@@ -138,6 +155,9 @@ function NavalService.launch(nid, cell, percent, searchLimit)
 	if n.gold < N.TransportGold then return false, "Transporte custa " .. N.TransportGold .. " de ouro." end
 	local path, portOrReason = NavalService.route(nid, cell, searchLimit)
 	if not path then return false, portOrReason end
+	if not validSeaRoute(path, portOrReason, cell) then
+		return false, "Rota marítima inválida. Escolha outro litoral."
+	end
 	-- Extend the water route with its adjacent destination coast. The same dot
 	-- that crosses the sea now reaches the land cell when the landing resolves.
 	path[#path + 1] = cell
@@ -570,6 +590,7 @@ function NavalService.tick(dt)
 		local f = fleets[i]
 		local n = ctx.Nations.get(f.nation)
 		local keep = n ~= nil and n.alive
+		local reachedDestination = false
 		if keep then
 			f.progress = f.progress + (f.speed or N.Speed) * dt
 			if f.troops < 1 then
@@ -582,13 +603,17 @@ function NavalService.tick(dt)
 				end
 				land(f)
 				keep = false
+				reachedDestination = not f.air
 			end
 		end
 		if keep then
 			fleets[k] = f
 			k = k + 1
 		else
-			ctx.emit(nil, { k = ctx.Protocol.Events.Orders, fleetEnd = f.id })
+			-- Only a real arrival gets a short visual coast approach; sunk or
+			-- cancelled fleets disappear immediately.
+			ctx.emit(nil, { k = ctx.Protocol.Events.Orders,
+				fleetEnd = f.id, fleetReachedShore = reachedDestination })
 		end
 	end
 	for i = k, #fleets do fleets[i] = nil end

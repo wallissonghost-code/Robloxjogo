@@ -155,12 +155,26 @@ function ClientState:applyOrders(data)
 		local f = data.fleet
 		self.fleets[f[1]] = { id = f[1], nation = f[2], troops = f[3], path = f[4], speed = f[5], target = f[6], progress = 1, air = f[7] == true, port = f[8], t0 = now }
 	end
-	if data.fleetEnd then self.fleets[data.fleetEnd] = nil end
+	if data.fleetEnd then
+		local f = self.fleets[data.fleetEnd]
+		if f and data.fleetReachedShore and not f.air then
+			-- Keep the dot just long enough to reach the coast visually, even if
+			-- the final server packet arrives ahead of the client's interpolation.
+			f.finishing = true
+			f.finishedAt = now
+			f.progress = #f.path
+			f.t0 = now
+		else
+			self.fleets[data.fleetEnd] = nil
+		end
+	end
 	if data.orders then self.orders = data.orders end
 	if data.fleets then
 		for _, row in ipairs(data.fleets) do
 			local f = self.fleets[row[1]]
-			if f then f.troops, f.progress, f.t0 = row[3], row[4], now end
+			if f and not f.finishing then
+				f.troops, f.progress, f.t0 = row[3], row[4], now
+			end
 		end
 	end
 	if data.boats then self.boats = data.boats end

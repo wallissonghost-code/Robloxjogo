@@ -196,7 +196,7 @@ GameConfig.Naval = {
 	TransportGold = 300,
 	MinTroops = 100,
 	MaxFleetsPerNation = 3,
-	Speed = 6,                         -- troop transports: slower sea crossings (was 14 cells/s)
+	Speed = 5,                         -- troop transports: 5 water cells/s (originally 14)
 	-- Defence boat: bought at a port, patrols around a point you choose on the water
 	BoatGold = 1500,
 	BoatHealth = 100,

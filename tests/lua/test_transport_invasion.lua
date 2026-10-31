@@ -39,7 +39,7 @@ local fleet = ctx.Naval.fleets()[1]
 ok(fleet ~= nil and fleet.path[#fleet.path] == coast, "last navigation cell is the coast")
 ok(fleet.path[1] == waterPath[1] and fleet.port == port,
 	"fleet preserves water path and starting port")
-ok(ctx.Config.Naval.Speed == 6 and ctx.Config.Naval.BoatSpeed == 9,
+ok(ctx.Config.Naval.Speed == 5 and ctx.Config.Naval.BoatSpeed == 9,
 	"only troop transport speed changed")
 local event
 for _, entry in ipairs(ctx.outbox) do
@@ -47,6 +47,18 @@ for _, entry in ipairs(ctx.outbox) do
 end
 ok(event and event[7] == false and event[8] == port,
 	"live order is serialized with port and contiguous fields")
+-- A corrupted/disconnected path must never teleport through land or
+-- spend the army/gold. The server validates its route before charging.
+local originalRoute = ctx.Naval.route
+local troopsBefore, goldBefore = a.troops, a.gold
+ctx.Naval.route = function() return { cell(21, 5), cell(27, 5) }, port end
+local invalid, invalidMessage = ctx.Naval.launch(a.id, coast, 0.25)
+ok(not invalid and invalidMessage:find("inválida"),
+	"teleporting naval route is rejected")
+ok(a.troops == troopsBefore and a.gold == goldBefore,
+	"invalid route charges no army or gold")
+ctx.Naval.route = originalRoute
+
 local snapshot = ctx.Naval.snapshot()
 ok(snapshot[1][1][9] == port, "late joining players receive port origin")
 local travel = (#fleet.path - 1) / ctx.Config.Naval.Speed
@@ -54,4 +66,11 @@ H.run(world, math.max(0, travel - 0.4), 1)
 ok(ctx.Territory.ownerOf(coast) == b.id, "landing cannot resolve early")
 H.run(world, travel + 1, 1)
 ok(ctx.Territory.ownerOf(coast) == a.id, "coast conquered when transport reaches it")
+local arrived
+for _, entry in ipairs(ctx.outbox) do
+	if entry.payload.fleetEnd == fleet.id then
+		arrived = entry.payload.fleetReachedShore
+	end
+end
+ok(arrived == true, "arrival packet lets client finish the coast approach")
 print("PASS port-linked naval transport, slower speed and coastal landing")

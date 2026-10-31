@@ -63,4 +63,18 @@ function TransportTrail.traversedEnd(section, progress)
 		section.ay + (section.by - section.ay) * t, false
 end
 
+-- Server packets arrive every ~0.4 s and can be delayed by latency. Never let
+-- a fresh snapshot pull the dot backwards, and never jump forward several
+-- cells in a single rendered frame. Larger corrections are caught up gradually.
+-- A new/late-joining transport starts at the current position immediately.
+function TransportTrail.advanceProgress(previous, target, speed, dt, pathLength)
+	if not pathLength or pathLength < 1 then return nil end
+	local goal = math.max(1, math.min(target or 1, pathLength))
+	if previous == nil then return goal end
+	local current = math.max(1, math.min(previous, pathLength))
+	local elapsed = math.max(0, math.min(dt or 0, 0.5))
+	local maxAdvance = math.max(0, speed or 0) * elapsed * 1.15
+	return math.min(pathLength, math.max(current, math.min(goal, current + maxAdvance)))
+end
+
 return TransportTrail
