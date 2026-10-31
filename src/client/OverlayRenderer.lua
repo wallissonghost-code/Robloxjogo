@@ -384,11 +384,11 @@ function OverlayRenderer:updateOrders()
 					item.visualX, item.visualY = x, y
 				end
 				item.label.Position = self:posXY(item.visualX, item.visualY - 0.6)
-				item.label.TextSize = mine and 13 or 11
+				item.label.TextSize = 15
 				-- Numbers only, colored by combat role, outlined in black, no background.
 				item.label.Text = self.Protocol.formatK(troops)
 				item.label.TextColor3 = color
-				item.label.Size = UDim2.fromOffset(0, mine and 18 or 15)
+				item.label.Size = UDim2.fromOffset(0, 21)
 				item.label.BackgroundTransparency = 1
 			end
 		end
