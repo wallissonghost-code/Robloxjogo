@@ -128,10 +128,15 @@ local mode = nil          -- nil | "build" | "weapon" | "patrol"
 local buildKind = nil     -- building kind (build mode) or weapon kind (weapon mode)
 local patrolBoat = nil    -- boat id while choosing where it patrols
 local selectedCell = nil  -- own building whose reach is being shown
-local pending = nil       -- { cell, at, kind }
+local pending = nil       -- { cell, at, kind, access? }
+local popupGeneration = 0 -- invalidate pending timers and late server responses
+local pendingInspection = nil
+local nextInspectionId = 0
 local hud
 local myVote = nil
 local function clearAim()
+	popupGeneration = popupGeneration + 1
+	pendingInspection = nil
 	pending = nil
 	overlay:setAim(nil, nil)
 end
@@ -200,31 +205,54 @@ local function relationText(rel)
 	return ({ ally = "🤝 Aliado", war = "⚔ Em guerra", neutral = "Neutro" })[rel] or rel
 end
 
-local function nationPopover(screenPos, id)
+-- A country card is only allowed to offer attacks that the authoritative
+-- server inspected. Unknown access never becomes a clickable attack button.
+local function nationPopover(screenPos, id, access, reason, order)
 	local n = state.nations[id]
 	if not n or id == state.you then return end
 	local rel = state:relation(state.you, id)
 	local sent = troopsToSend()
-	local body = string.format("👥 %s tropas  ·  %.1f%% do mundo\n%s", Protocol.formatK(n.troops), n.land / Map.landCount * 100, relationText(rel))
-	if rel ~= "ally" and state.me then
+	local body = string.format("👥 %s tropas  ·  %.1f%% do mundo\n%s",
+		Protocol.formatK(n.troops), n.land / Map.landCount * 100, relationText(rel))
+	local canAttack = state.you and state.match.phase == "playing"
+		and rel ~= "ally" and (access == "land" or access == "naval")
+	if canAttack and state.me then
 		local pct = math.floor(state.percent * 100 + 0.5)
-		local comparison = sent > n.troops and "Seu ataque superaria as tropas inimigas." or (sent == n.troops and "Forças equivalentes: ataque arriscado." or "O inimigo superaria as tropas enviadas!")
+		local comparison = sent > n.troops and "Sua força é maior, mas defesas também influenciam."
+			or (sent == n.troops and "Forças equivalentes: ataque arriscado."
+			or "O inimigo tem mais tropas do que as enviadas!")
 		local color = sent > n.troops and "#70D79A" or "#FFAD71"
-		body = body .. string.format("\n<font color=\"%s\"><b>%s</b></font>\nVocê enviaria %s (%d%%) contra %s tropas.", color, comparison, Protocol.formatK(sent), pct, Protocol.formatK(n.troops))
+		body = body .. string.format("\n<font color=\"%s\"><b>%s</b></font>\nVocê enviaria %s (%d%%) contra %s tropas.",
+			color, comparison, Protocol.formatK(sent), pct, Protocol.formatK(n.troops))
+		if access == "naval" then
+			body = body .. "\n<font color=\"#81C9FF\">Rota marítima disponível. O envio usa um porto e tem custo de transporte.</font>"
+		end
+	elseif state.you and rel ~= "ally" then
+		body = body .. "\n<font color=\"#FFAD71\"><b>Sem acesso ao território.</b> "
+			.. (reason or "Aguarde o início da partida ou escolha uma frente válida.") .. "</font>"
 	end
 	local buttons = {}
 	if state.you then
 		if rel == "ally" then
-			buttons[#buttons + 1] = { "🤝 Desfazer aliança", function() send(Actions.BreakAlliance, id) end, true }
+			buttons[#buttons + 1] = { "🤝 Desfazer aliança",
+				function() send(Actions.BreakAlliance, id) end, true }
 		else
-			buttons[#buttons + 1] = { "⚔ ATACAR · " .. Protocol.formatK(troopsToSend()), function()
-				local order = pending
-				if order and order.kind == "order" and state.owner[order.cell] == id then
-					clearAim()
-					send(Actions.Target, order.cell, state.percent)
-				end
-			end, false, "attack" }
-			buttons[#buttons + 1] = { "🤝 Formar aliança", function() send(Actions.Ally, id) end }
+			if canAttack then
+				local label = access == "naval" and "⛵ INVADIR POR MAR · " or "⚔ ATACAR · "
+				buttons[#buttons + 1] = { label .. Protocol.formatK(sent), function()
+					-- A changed owner or another selection invalidates this stale card.
+					if pending == order and state.owner[order.cell] == id
+						and state.you and state.match.phase == "playing" then
+						local target = order.cell
+						clearAim()
+						send(Actions.Target, target, state.percent)
+					end
+				end, false, "attack" }
+			else
+				buttons[#buttons + 1] = { "SEM ACESSO", function() end, false, "disabled" }
+			end
+			buttons[#buttons + 1] = { "🤝 Formar aliança",
+				function() send(Actions.Ally, id) end }
 		end
 	end
 	hud:showPopover(screenPos, n.name, body, buttons)
@@ -233,7 +261,6 @@ end
 local function aimOrder(cell)
 	local o = state.owner[cell]
 	local rel = o > 0 and state:relation(state.you, o) or "neutral"
-	local origin = state:nearestBorder(state.you, cell)
 	local color = Color3.fromRGB(255, 255, 255)
 	local text
 	if rel == "ally" then
@@ -245,12 +272,38 @@ local function aimOrder(cell)
 		text = "Clique de novo: atacar " .. nationName(o) .. " com " .. Protocol.formatK(troopsToSend())
 		color = Color3.fromRGB(255, 140, 110)
 	end
-	overlay:setAim(origin, cell, text, color)
+	-- The old aim arrow was removed: do not scan ~200K cells for its origin
+	-- on every tap. Only a short text hint remains over the destination.
+	overlay:setAim(nil, cell, text, color)
 end
+
+-- Called immediately by right-click, or 500 ms after a lone left tap.
+-- No costly path query is sent for a fast double-tap attack.
+local function inspectNationForPopover(screenPos, order, owner)
+	if not state.you or not order or pending ~= order or mode
+		or state.match.phase ~= "playing" or state.owner[order.cell] ~= owner then return end
+	if state:relation(state.you, owner) == "ally" then
+		order.access, order.reason = "blocked", "Nação aliada."
+		nationPopover(screenPos, owner, "blocked", order.reason, order)
+		return
+	end
+	nextInspectionId = nextInspectionId % 100000000 + 1
+	pendingInspection = {
+		id = nextInspectionId, cell = order.cell, owner = owner,
+		order = order, screenPos = screenPos,
+		nation = state.you, generation = popupGeneration,
+	}
+	send(Actions.InspectTarget, order.cell, nextInspectionId)
+end
+
 
 local function handleClick(p, button)
 	-- Results are final. Never allow attacks or builds after the round ends.
 	if state.match.phase == "ended" then return end
+	-- Any subsequent tap (even water or a different nation) cancels a delayed
+	-- popover, without clearing the two-click attack selection itself.
+	popupGeneration = popupGeneration + 1
+	pendingInspection = nil
 	hud:hidePopover()
 	if not mode and selectedCell then
 		selectedCell = nil
@@ -262,7 +315,15 @@ local function handleClick(p, button)
 	local phase = state.match.phase
 
 	if button == 2 then
-		if owner > 0 then nationPopover(p, owner) end
+		if owner > 0 and owner ~= state.you then
+			if not state.you or phase ~= "playing" then
+				nationPopover(p, owner, "blocked", "Ataques disponíveis durante a partida.", nil)
+			else
+				local order = { cell = cell, at = os.clock(), kind = "order" }
+				pending = order
+				inspectNationForPopover(p, order, owner)
+			end
+		end
 		return
 	end
 	if phase == "spawn" then
@@ -357,13 +418,26 @@ local function handleClick(p, button)
 		and pending.cell == cell and now - pending.at <= Config.View.ConfirmTimeout
 	if owner > 0 and owner ~= state.you then
 		if sameTarget then
+			-- Once the server has ruled out this route, a later second tap must
+			-- not fire another pointless attack command.
+			local blocked = pending.access == "blocked"
+			local why = pending.reason
 			clearAim()
-			send(Actions.Target, cell, state.percent)
+			if blocked then hud:toast(why or "Sem acesso ao território.", "bad")
+			else send(Actions.Target, cell, state.percent) end
 			return
 		end
-		pending = { cell = cell, at = now, kind = "order" }
+		local order = { cell = cell, at = now, kind = "order" }
+		pending = order
 		aimOrder(cell)
-		nationPopover(p, owner)
+		local generation = popupGeneration
+		local currentNation = state.you
+		task.delay(Config.View.NationPopoverDelay or 0.5, function()
+			if popupGeneration ~= generation or pending ~= order or mode
+				or state.match.phase ~= "playing" or state.you ~= currentNation
+				or state.owner[cell] ~= owner then return end
+			inspectNationForPopover(p, order, owner)
+		end)
 		return
 	end
 	if not Config.View.TwoClickConfirm or (pending and pending.kind == "order"
@@ -579,6 +653,19 @@ eventRemote.OnClientEvent:Connect(function(data)
 		hud:refreshRanking()
 	elseif k == Events.Orders then
 		state:applyOrders(data)
+	elseif k == Events.TargetAccess then
+		local request = pendingInspection
+		if request and request.id == data.requestId
+			and request.cell == data.cell and request.owner == data.owner
+			and request.generation == popupGeneration
+			and pending == request.order and not mode
+			and state.you == request.nation and state.match.phase == "playing"
+			and state.owner[request.cell] == request.owner then
+			pendingInspection = nil
+			request.order.access = data.access
+			request.order.reason = data.reason
+			nationPopover(request.screenPos, request.owner, data.access, data.reason, request.order)
+		end
 	elseif k == Events.Notice then
 		hud:toast(data.text, data.kind)
 	elseif k == Events.Diplomacy then

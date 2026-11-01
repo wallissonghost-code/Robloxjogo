@@ -53,6 +53,31 @@ function NavalService.fleets()
 	return fleets
 end
 
+-- Cheap read-only sea access check for diplomacy/attack UI. Uses the
+-- connected water bodies computed at init, rather than running a BFS each
+-- time a player opens a country card. An actual launch still validates route.
+function NavalService.canReachCoast(nid, targetCell)
+	if not Map:valid(targetCell) or not Map.coast[targetCell] then
+		return false, "A invasão naval precisa de uma costa."
+	end
+	local ports = ctx.Buildings.ofKind(nid, "port")
+	if #ports == 0 then return false, "Construa um porto para invadir pelo mar." end
+	local targetWater = {}
+	local count = Map:neighbors(targetCell, nb)
+	for k = 1, count do
+		local j = nb[k]
+		if not Map.land[j] then targetWater[waterBody[j]] = true end
+	end
+	for _, port in ipairs(ports) do
+		local size = Map:neighbors(port.cell, nb)
+		for k = 1, size do
+			local j = nb[k]
+			if not Map.land[j] and targetWater[waterBody[j]] then return true end
+		end
+	end
+	return false, "Seus portos não têm rota marítima para essa costa."
+end
+
 -- Recalling an army stops all of its troop transports (including airlifts).
 -- Warships and commercial cargo are deliberately unaffected.
 function NavalService.cancelTransports(nid)

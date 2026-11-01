@@ -4,6 +4,7 @@ local CommandService = {}
 
 local ctx, Config
 local buckets = {}   -- userId -> { tokens, at }
+local inspectAt = {} -- userId -> last route-inspection time (protects server CPU)
 
 function CommandService.init(context)
 	ctx = context
@@ -12,6 +13,7 @@ end
 
 function CommandService.forget(userId)
 	buckets[userId] = nil
+	inspectAt[userId] = nil
 end
 
 -- Token bucket: CommandsPerSecond sustained, CommandBurst peak.
@@ -76,7 +78,32 @@ function CommandService.handle(userId, displayName, action, a, b, clock, c)
 	if not nid then return false, "Escolha um ponto no mapa para fundar sua nação." end
 	if ctx.Match.phase() == "spawn" then return false, "Aguarde o fim do posicionamento para começar a guerra." end
 
-	if action == A.Target then
+	-- The country card requests this only when it is about to open (not on
+	-- every first tap). No troop, gold, diplomacy or map changes are performed.
+	if action == A.InspectTarget then
+		if not isInt(a) or not Map:valid(a) or not isInt(b) or b < 1 or b > 100000000 then
+			return false, nil
+		end
+		local owner = ctx.Territory.ownerOf(a)
+		if owner <= 0 or owner == nid then return false, nil end
+		local t = clock or ctx.now()
+		if inspectAt[userId] and t - inspectAt[userId] < 0.3 then return false, nil end
+		inspectAt[userId] = t
+		local land, reason, hint = ctx.Expansion.validate(nid, a, 0.25)
+		local access = "blocked"
+		if land then
+			access, reason = "land", nil
+		elseif hint == "naval" then
+			local bySea, why = ctx.Naval.canReachCoast(nid, a)
+			if bySea then access, reason = "naval", nil
+			else reason = why end
+		end
+		ctx.emit(nid, {
+			k = ctx.Protocol.Events.TargetAccess,
+			cell = a, requestId = b, owner = owner, access = access, reason = reason,
+		})
+		return true, nil
+	elseif action == A.Target then
 		if not isInt(a) or not Map:valid(a) then return false, "Célula inválida." end
 		if not isPercent(b) then return false, "Percentual inválido." end
 		local ok, msg, hint = ctx.Expansion.issue(nid, a, b)

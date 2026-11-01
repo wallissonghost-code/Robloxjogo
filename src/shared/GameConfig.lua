@@ -294,6 +294,7 @@ GameConfig.View = {
 	TwoClickConfirm = false,           -- true: first click aims, second click confirms (weapons always confirm)
 	ConfirmRadius = 3,                 -- cells
 	ConfirmTimeout = 5,
+	NationPopoverDelay = 0.5,            -- allow fast double-tap attacks before diplomacy card opens
 	LOD = { Regional = 1.6, Local = 4.0 }, -- zoom (multiples of the fit-to-screen zoom)
 	-- "frames" works in every experience. "image" is sharper and lighter but needs
 	-- "Enable Mesh / Image APIs" turned on (otherwise Roblox draws a pink/blue checkerboard).

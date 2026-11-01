@@ -889,12 +889,25 @@ function HUD:showPopover(screenPos, title, body, buttons)
 	end
 	for index, b in ipairs(buttons or {}) do
 		local attack = b[4] == "attack"
-		local btn = button(self.popButtons, b[1], { LayoutOrder = index, TextSize = 13, TextWrapped = true, ZIndex = 42, BackgroundColor3 = attack and Color3.fromRGB(246, 174, 60) or (b[3] and Color3.fromRGB(160, 67, 65) or Color3.fromRGB(87, 68, 136)) })
+		local disabled = b[4] == "disabled"
+		local background = disabled and Color3.fromRGB(55, 63, 75)
+			or (attack and Color3.fromRGB(246, 174, 60)
+			or (b[3] and Color3.fromRGB(160, 67, 65) or Color3.fromRGB(87, 68, 136)))
+		local btn = button(self.popButtons, b[1], {
+			LayoutOrder = index, TextSize = 13, TextWrapped = true,
+			ZIndex = 42, BackgroundColor3 = background,
+		})
 		if attack then btn.TextColor3 = Color3.fromRGB(30, 26, 20) end
-		btn.Activated:Connect(function()
-			self:hidePopover()
-			b[2]()
-		end)
+		if disabled then
+			btn.TextColor3 = Color3.fromRGB(166, 176, 190)
+			btn.AutoButtonColor = false
+			btn.Active = false
+		else
+			btn.Activated:Connect(function()
+				self:hidePopover()
+				b[2]()
+			end)
+		end
 	end
 	local size = self.gui.AbsoluteSize
 	local width = math.min(310, math.max(220, size.X - 16))

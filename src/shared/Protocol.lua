@@ -9,6 +9,7 @@ Protocol.Actions = {
 	ReturnLobby = "returnLobby", -- teleport from reserved match to a public lobby
 	Spawn = "spawn",           -- (cell)
 	Target = "target",         -- (cell, percent) land expansion/attack, or naval when no land route
+	InspectTarget = "inspectTarget", -- (cell, requestId) read-only, authoritative route inspection
 	Cancel = "cancel",         -- (orderId or nil = all)
 	Build = "build",           -- (cell, kind)
 	Warship = "warship",       -- (portCell) buy a defence boat
@@ -30,6 +31,7 @@ Protocol.Events = {
 	Nations = "nations",
 	Orders = "orders",
 	Notice = "notice",
+	TargetAccess = "targetAccess", -- { cell, requestId, owner, access, reason } to requesting player
 	Diplomacy = "diplomacy",
 	Match = "match",
 	Impact = "impact",
