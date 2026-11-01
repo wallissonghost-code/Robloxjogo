@@ -270,7 +270,7 @@ function OverlayRenderer:updateBuildings()
 	local halfH = viewport.Y / math.max(0.01, 2 * cam.scale)
 	local minX, maxX = cam.cx - halfW - 2, cam.cx + halfW + 2
 	local minY, maxY = cam.cy - halfH - 2, cam.cy + halfH + 2
-	local size = math.floor(math.clamp(cam.scale * 1.6, 13, 25))
+	local size = math.floor(math.clamp(cam.scale * 2.2, 20, 38))
 	if lod >= 1 then
 		for cell, b in pairs(state.buildings) do
 			local x, y = Map:xy(cell)
@@ -289,8 +289,8 @@ function OverlayRenderer:updateBuildings()
 					make("UICorner", icon, { CornerRadius = UDim.new(0, 4) })
 					local graphic = make("Frame", icon, {
 						Name = "Silhouette", BackgroundTransparency = 1,
-						Position = UDim2.fromScale(0.12, 0.12),
-						Size = UDim2.fromScale(0.76, 0.76), ZIndex = 5,
+						Position = UDim2.fromScale(0.07, 0.07),
+						Size = UDim2.fromScale(0.86, 0.86), ZIndex = 5,
 					})
 					MilitaryIcons.attach(graphic, b.kind)
 					icon:SetAttribute("Kind", b.kind)
@@ -678,8 +678,8 @@ function OverlayRenderer:setBuildingPreview(cell, kind)
 		if self.previewGraphic then self.previewGraphic:Destroy() end
 		local graphic = make("Frame", self.buildingPreview, {
 			Name = "PreviewSilhouette", BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.12, 0.12),
-			Size = UDim2.fromScale(0.76, 0.76), ZIndex = 13,
+			Position = UDim2.fromScale(0.07, 0.07),
+			Size = UDim2.fromScale(0.86, 0.86), ZIndex = 13,
 		})
 		MilitaryIcons.attach(graphic, kind):setColor(Color3.fromRGB(255, 226, 142))
 		self.previewGraphic = graphic
