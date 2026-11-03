@@ -447,6 +447,7 @@ function M.env(scriptInstance)
 		game = M.game, workspace = M.workspace, script = scriptInstance,
 		Instance = Instance, Enum = Enum, Vector2 = Vector2, Vector3 = Vector3, UDim = UDim, UDim2 = UDim2,
 		Color3 = Color3, CFrame = CFrame, TweenInfo = TweenInfo, Content = Content, buffer = buffer, task = task,
+		bit32 = { band = function(x, y) return x & y end, rshift = function(x, n) return x >> n end },
 		warn = function(...) M.warnings = (M.warnings or 0) + 1 if M.warnings <= 3 then print("  warn:", ...) end end,
 		typeof = function(v)
 			if type(v) == "table" and getmetatable(v) == InstanceMT then return "Instance" end

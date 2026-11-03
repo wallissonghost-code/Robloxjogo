@@ -100,7 +100,7 @@ function MapRenderer.new(state, parent, opts)
 		end
 	end
 	if self.editable then
-		-- Real-world look: satellite colours, relief and sea depth. Frames mode keeps
+		-- Real-world look: satellite colours and relief (flat sea). Frames mode keeps
 		-- flat colours because every colour change there costs another Frame.
 		self.terrain, self.terrainData = loadTerrain(self.Map)
 	end
@@ -175,7 +175,7 @@ function MapRenderer:recolor()
 	if self.terrain then
 		local T = self.terrainData
 		self.terrainColors, self.terrainLines = {}, {}
-		for k = 0, 4 do self.terrainColors[k] = T.Water[k + 1] end
+		self.terrainColors[0] = T.Water[1] -- the sea is one flat colour
 		for t = 0, #T.Tones - 1 do
 			for sh = 0, 2 do
 				local code = 5 + t * 3 + sh

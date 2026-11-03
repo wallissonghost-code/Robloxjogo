@@ -265,11 +265,11 @@ function HUD.new(state, gui, handlers)
 				local holder = make("Frame", b, {
 					Name = "Icon", AnchorPoint = Vector2.new(0.5, 0),
 					Position = UDim2.new(0.5, 0, 0, 2),
-					Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, ZIndex = 34,
+					Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 34,
 				})
 				self.cardIcons[group][kind] = MilitaryIcons.attach(holder, kind)
 				make("TextLabel", b, {
-					Name = "Title", Position = UDim2.fromOffset(3, 28), Size = UDim2.new(1, -6, 0, 24),
+					Name = "Title", Position = UDim2.fromOffset(3, 31), Size = UDim2.new(1, -6, 0, 22),
 					BackgroundTransparency = 1, Text = CARD_NAMES[kind] or def.name, TextColor3 = TEXT, Font = BOLD,
 					TextSize = 10, TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
 					TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 34,

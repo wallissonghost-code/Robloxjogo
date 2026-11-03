@@ -1,5 +1,5 @@
 -- The real-terrain world map: MapRenderer in image mode paints satellite colours,
--- relief and sea depth from MapTerrain; nations tint the terrain; frames mode stays flat.
+-- and relief from MapTerrain (the sea is one flat colour); nations tint the terrain; frames mode stays flat.
 -- MW_PREVIEW=path.ppm writes the painted map for a visual check.
 local M = dofile("tests/lua/roblox_mock.lua")
 local ok = function(c, msg) if not c then error("ASSERT: " .. msg, 2) end end
@@ -60,7 +60,7 @@ local T = r.terrainData
 local deep = Map:index(80, 220)         -- mid South Pacific (lon -135)
 local pd, isSea = pixel(deep), false
 for _, w in ipairs(T.Water) do isSea = isSea or same(pd, w) end
-ok(not Map.land[deep] and isSea, "open ocean uses a sea-depth colour")
+ok(not Map.land[deep] and isSea, "open ocean uses the sea colour")
 local distinctWater = {}
 for i = 1, Map.N do
 	if not Map.land[i] then
@@ -70,7 +70,7 @@ for i = 1, Map.N do
 end
 local nWater = 0
 for _ in pairs(distinctWater) do nWater = nWater + 1 end
-ok(nWater == 5, "sea has 5 depth shades (got " .. nWater .. ")")
+ok(nWater == 1, "sea is one flat colour (got " .. nWater .. ")")
 
 -- the Sahara reads as desert (warm, red > blue), the Congo basin as greener than it
 local sahara = Map:index(math.floor((10 + 180) / 360 * Map.W), 0)

@@ -301,7 +301,7 @@ GameConfig.View = {
 	-- Players can switch at any time with the 🗺 button.
 	MapRenderer = "frames",
 	-- When the server confirms the image APIs work, start in "image" mode, which paints
-	-- the real terrain (satellite colours, relief, sea depth) from MapTerrain.
+	-- the real terrain (satellite colours and relief; the sea stays one colour) from MapTerrain.
 	TerrainWhenAvailable = true,
 }
 
