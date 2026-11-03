@@ -254,6 +254,9 @@ function M.reset()
 	M.queue = {}             -- task.delay / spawn queue: { at, co or fn, args }
 	M.clock = 0
 	local game = Instance.new("DataModel")
+	-- a reserved match server (no lobby), the setup the client tests drive
+	game.PrivateServerId = "mock-match"
+	game.PrivateServerOwnerId = 0
 	M.game = game
 	local services = {}
 	local function svc(name)

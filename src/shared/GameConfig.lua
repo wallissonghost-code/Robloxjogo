@@ -300,6 +300,9 @@ GameConfig.View = {
 	-- "Enable Mesh / Image APIs" turned on (otherwise Roblox draws a pink/blue checkerboard).
 	-- Players can switch at any time with the 🗺 button.
 	MapRenderer = "frames",
+	-- When the server confirms the image APIs work, start in "image" mode, which paints
+	-- the real terrain (satellite colours, relief, sea depth) from MapTerrain.
+	TerrainWhenAvailable = true,
 }
 
 return GameConfig

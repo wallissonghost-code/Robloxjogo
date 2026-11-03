@@ -99,11 +99,16 @@ local camera = CameraController.new(viewport, world, Map, Config)
 -- Map drawing mode: GameConfig.View.MapRenderer, never "image" when the server found the
 -- image APIs disabled; the 🗺 button switches for this session.
 local function preferredMapMode()
-	if ReplicatedStorage:GetAttribute("MW_ImageApis") == false then return "frames" end
+	local imageApis = ReplicatedStorage:GetAttribute("MW_ImageApis")
+	if imageApis == false then return "frames" end
+	-- the server proved the image APIs work: show the real-terrain world map
+	if imageApis == true and Config.View.TerrainWhenAvailable then return "image" end
 	return Config.View.MapRenderer
 end
 local renderer = MapRenderer.new(state, world, { frames = preferredMapMode() ~= "image" })
+local playerPickedMapMode = false
 local function switchMapMode()
+	playerPickedMapMode = true
 	local wantImage = renderer:mode() ~= "image"
 	if wantImage and ReplicatedStorage:GetAttribute("MW_ImageApis") == false then
 		return false, "O modo imagem precisa de 'Enable Mesh / Image APIs' ativado nas configurações do jogo."
@@ -115,6 +120,20 @@ local function switchMapMode()
 		return false, "O modo imagem não está disponível aqui; mantendo o mapa compatível."
 	end
 	return true, wantImage and "Mapa em modo imagem (mais leve). Se aparecer xadrez rosa e azul, toque em 🗺 de novo." or "Mapa em modo compatível."
+end
+-- The server's image-API probe can land after this script starts: switch to the
+-- terrain map once, unless the player already picked a mode with 🗺.
+if ReplicatedStorage:GetAttribute("MW_ImageApis") == nil and Config.View.TerrainWhenAvailable then
+	local probeConn
+	probeConn = ReplicatedStorage:GetAttributeChangedSignal("MW_ImageApis"):Connect(function()
+		probeConn:Disconnect()
+		if not playerPickedMapMode and ReplicatedStorage:GetAttribute("MW_ImageApis") == true
+			and renderer:mode() ~= "image" then
+			renderer:dispose()
+			renderer = MapRenderer.new(state, world, { frames = false })
+			renderer.fullDirty = true
+		end
+	end)
 end
 local overlay = OverlayRenderer.new(state, camera, world)
 local debugOverlay = nil

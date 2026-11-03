@@ -84,11 +84,12 @@ Todos os números estão em `src/shared/GameConfig.lua`; as contas de nível fic
 - Grade de 640 × 320 células (66.822 de terra), projeção Miller, gerada de **Natural Earth 1:50m** (domínio público): 231 países com tamanhos proporcionais, ilhas e arquipélagos. Cada célula conhece seu país.
 - Os 36 maiores países viram nações de IA nascendo na própria capital real; 20 tribos fracas ocupam outros países. A IA expande dentro do próprio país, fecha bolsões, ataca vizinhos mais fracos, defende, recua, constrói e usa portos.
 - Regerar: `python tools/generate_map.py` (lê `data/naturalearth/`, escreve `src/shared/MapData.lua` e `data/world-map.json`).
+- **Terreno real (modo imagem):** a terra livre mostra as cores reais do planeta (florestas, desertos, gelo da Groenlândia, Himalaia), com sombreado de relevo e o mar em 5 tons de profundidade. O território de cada nação é pintado por cima do terreno com transparência, e a fronteira fica sólida. Fonte: imagens de satélite e elevação da NASA Visible Earth (domínio público), em `data/nasa/`. O cliente entra nesse modo sozinho quando o servidor confirma que "Enable Mesh / Image APIs" está ativo (`GameConfig.View.TerrainWhenAvailable`); o modo compatível (Frames) continua com cores lisas. Regerar: `python tools/generate_terrain.py` (escreve `src/shared/MapTerrain.lua` e `data/terrain-preview.png`).
 
 ## Arquitetura
 
 ```
-src/shared/   GameConfig, BuildingStats, MapData (gerado), MapGrid, Palette, Protocol
+src/shared/   GameConfig, BuildingStats, MapData (gerado), MapTerrain (gerado), MapGrid, Palette, Protocol
 src/server/   init.server (bootstrap) · World (agenda) · NetworkService (Roblox)
               TerritoryService · NationService · EconomyService · ExpansionService
               CombatService · BuildingService · NavalService · StrategicService

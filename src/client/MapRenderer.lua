@@ -12,11 +12,53 @@ MapRenderer.__index = MapRenderer
 
 local BORDER_SHADE = 0.58
 local COUNTRY_SHADE = 0.9
+-- Terrain look (image mode only): how much of the real satellite/relief colour
+-- shows through a nation's fill, and how dark country lines are on free land.
+local TERRAIN_SHOW_THROUGH = 0.36
+local TERRAIN_LINE_SHADE = 0.8
 -- Each 64x64 region is an independent repaint unit. The logical map remains
 -- 640x320; chunks affect rendering only, not simulation or territory rules.
 local DEFAULT_CHUNK_SIZE = 64
 local FRAME_CHUNKS_PER_FRAME = 1
 local IMAGE_CHUNKS_PER_FRAME = 8
+
+-- Decodes the client-only terrain layer (src/shared/MapTerrain.lua) once per Map.
+-- Returns nil when the module is missing or does not match the grid; the map then
+-- falls back to the flat colours.
+local B62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+local function loadTerrain(Map)
+	if Map.terrainCodes ~= nil then
+		return Map.terrainCodes or nil, Map.terrainData
+	end
+	local ok, data = pcall(function()
+		local shared = game:GetService("ReplicatedStorage"):FindFirstChild("MundialWarShared")
+		local mod = shared and shared:FindFirstChild("MapTerrain")
+		return mod and require(mod)
+	end)
+	if not ok or type(data) ~= "table" or data.W ~= Map.W or data.H ~= Map.H then
+		Map.terrainCodes = false
+		return nil
+	end
+	local lookup = {}
+	for k = 1, #B62 do lookup[string.byte(B62, k)] = k - 1 end
+	local codes, W = {}, Map.W
+	for y = 0, Map.H - 1 do
+		local row, x = data.Rows[y + 1], 0
+		for k = 1, #row, 3 do
+			local b1, b2, b3 = string.byte(row, k, k + 2)
+			local v = lookup[b1]
+			local len = lookup[b2] * 62 + lookup[b3]
+			for c = x, x + len - 1 do codes[y * W + c + 1] = v end
+			x = x + len
+		end
+		if x ~= W then
+			Map.terrainCodes = false
+			return nil
+		end
+	end
+	Map.terrainCodes, Map.terrainData = codes, data
+	return codes, data
+end
 
 function MapRenderer.new(state, parent, opts)
 	opts = opts or {}
@@ -56,6 +98,11 @@ function MapRenderer.new(state, parent, opts)
 			self.editable = editable
 			self.buffer = buffer.create(W * H * 4)
 		end
+	end
+	if self.editable then
+		-- Real-world look: satellite colours, relief and sea depth. Frames mode keeps
+		-- flat colours because every colour change there costs another Frame.
+		self.terrain, self.terrainData = loadTerrain(self.Map)
 	end
 	if not self.editable then
 		if not opts.frames then
@@ -125,6 +172,21 @@ function MapRenderer:recolor()
 		fill = P.Neutral, line = P.CountryLine,
 		water = P.Water, waterCoast = P.WaterCoast,
 	}
+	if self.terrain then
+		local T = self.terrainData
+		self.terrainColors, self.terrainLines = {}, {}
+		for k = 0, 4 do self.terrainColors[k] = T.Water[k + 1] end
+		for t = 0, #T.Tones - 1 do
+			for sh = 0, 2 do
+				local code = 5 + t * 3 + sh
+				local c = P.shade(T.Tones[t + 1], T.Shade[sh + 1])
+				self.terrainColors[code] = c
+				self.terrainLines[code] = P.shade(c, TERRAIN_LINE_SHADE)
+			end
+		end
+		-- per nation: fill/line mixed with each terrain colour, built on first use
+		for _, nc in pairs(self.colors) do nc.terrain = {} end
+	end
 	-- free land fades smoothly toward snow at high latitudes (no hard line at the polar circle)
 	self.rowNeutral = {}
 	for y = 0, self.Map.H - 1 do
@@ -191,7 +253,9 @@ function MapRenderer:cellColor(i)
 	local o = owner[i]
 	local x = (i - 1) % W
 	local c = self.neutralColors
+	local terrain = not self.plain and self.terrain
 	if o == -1 then
+		if terrain then return self.terrainColors[terrain[i]] or c.water end
 		return Map.landNear and Map.landNear[i] and c.waterCoast or c.water
 	end
 	local country = Map.country[i]
@@ -211,6 +275,26 @@ function MapRenderer:cellColor(i)
 		end
 	end
 	if self.plain then otherCountry = false end
+	if terrain then
+		local code = terrain[i]
+		local base = self.terrainColors[code]
+		if base and code >= 5 then
+			if o == 0 then
+				return otherCountry and self.terrainLines[code] or base
+			end
+			local nc = self.colors[o]
+			if not nc then return base end
+			if otherOwner then return nc.border end
+			-- the nation's colour over the real terrain, like a tinted overlay
+			local key = otherCountry and -code or code
+			local mixed = nc.terrain[key]
+			if not mixed then
+				mixed = self.Palette.mix(otherCountry and nc.line or nc.fill, base, TERRAIN_SHOW_THROUGH)
+				nc.terrain[key] = mixed
+			end
+			return mixed
+		end
+	end
 	if o == 0 then
 		if otherCountry then return c.line end
 		return self.rowNeutral[(i - 1 - x) / W]
