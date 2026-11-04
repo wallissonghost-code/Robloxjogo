@@ -103,6 +103,12 @@ local function preferredMapMode()
 	return Config.View.MapRenderer
 end
 local renderer = MapRenderer.new(state, world, { frames = preferredMapMode() ~= "image" })
+-- This only updates which Frame chunk groups are visible. No repaint on pan.
+local function refreshFrameVisibility()
+	renderer:setView(camera.cx, camera.cy, camera.scale, camera.viewport.AbsoluteSize)
+end
+camera:onChanged(refreshFrameVisibility)
+refreshFrameVisibility()
 local function switchMapMode()
 	local wantImage = renderer:mode() ~= "image"
 	if wantImage and ReplicatedStorage:GetAttribute("MW_ImageApis") == false then
@@ -111,6 +117,7 @@ local function switchMapMode()
 	renderer:dispose()
 	renderer = MapRenderer.new(state, world, { frames = not wantImage })
 	renderer.fullDirty = true
+	refreshFrameVisibility()
 	if wantImage and renderer:mode() ~= "image" then
 		return false, "O modo imagem não está disponível aqui; mantendo o mapa compatível."
 	end

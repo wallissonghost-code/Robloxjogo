@@ -90,8 +90,8 @@ do
 	local all = texts(gui)
 	ok(all:find("fundar sua nação"), "spawn banner shown")
 	run(1)
-	local rowFrames = #find(gui, function(c) return c.ClassName == "Frame" and c.Parent and c.Parent.Name == "TerritoryRows" end)
-	ok(rowFrames > 500, "compatible map drawn with frames by default (" .. rowFrames .. ")")
+	local rowFrames = #find(gui, function(c) return c.Name == "TerritoryRect" end)
+	ok(rowFrames > 0, "compatible map drew pooled merged rectangles (" .. rowFrames .. ")")
 	-- switch to the image map
 	for _, b in ipairs(find(gui, function(c) return c.ClassName == "TextButton" and rawget(c, "_props").Text == "🗺" end)) do b.Activated:Fire() end
 	run(0.5)
@@ -207,11 +207,11 @@ do
 	for _, b in ipairs(find(M.localPlayer.PlayerGui, function(c) return c.ClassName == "TextButton" and rawget(c, "_props").Text == "🗺" end)) do b.Activated:Fire() end
 	run(0.5)
 	ok(texts(M.localPlayer.PlayerGui):find("Mesh / Image APIs"), "explains why the image map is unavailable")
-	local rows = #find(M.localPlayer.PlayerGui, function(c) return c.ClassName == "Frame" and c.Parent and c.Parent.Name == "TerritoryRows" end)
+	local rows = #find(M.localPlayer.PlayerGui, function(c) return c.Name == "TerritoryRect" end)
 	run(2)
-	rows = #find(M.localPlayer.PlayerGui, function(c) return c.ClassName == "Frame" and c.Parent and c.Parent.Name == "TerritoryRows" end)
-	ok(rows > 1000, "fallback renderer draws rows (" .. rows .. " frames)")
-	print(string.format("PASS compatible map without image APIs (%d frames)", rows))
+	rows = #find(M.localPlayer.PlayerGui, function(c) return c.Name == "TerritoryRect" end)
+	ok(rows > 0, "fallback renderer draws merged rectangles (" .. rows .. " frames)")
+	print(string.format("PASS compatible map without image APIs (%d merged Frames)", rows))
 end
 
 do

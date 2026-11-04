@@ -2,8 +2,8 @@
 -- "image" mode: one pixel per cell in a single EditableImage (one draw call). Needs
 --   "Enable Mesh / Image APIs" in the experience settings; without it Roblox shows a
 --   pink/blue checkerboard instead of the picture.
--- "frames" mode: pooled Frames, one per run of equal colour in a row, water left to the
---   ocean-coloured background. Works everywhere.
+-- "frames" mode: pooled rectangular runs merged across short row bands, grouped
+--   by chunk for camera culling; water uses the ocean backdrop. Works everywhere.
 local AssetService = game:GetService("AssetService")
 local RunService = game:GetService("RunService")
 
@@ -17,6 +17,9 @@ local COUNTRY_SHADE = 0.9
 local DEFAULT_CHUNK_SIZE = 64
 local FRAME_CHUNKS_PER_FRAME = 1
 local IMAGE_CHUNKS_PER_FRAME = 8
+-- Merge horizontally identical runs across eight rows, but only rebuild
+-- affected bands when cells change.
+local FRAME_BAND_HEIGHT = 8
 
 function MapRenderer.new(state, parent, opts)
 	opts = opts or {}
@@ -68,7 +71,8 @@ function MapRenderer.new(state, parent, opts)
 		self.rowsFrame.Size = UDim2.fromScale(1, 1)
 		self.rowsFrame.ZIndex = 1
 		self.rowsFrame.Parent = parent
-		self.rowPools = {} -- row -> chunk-column -> reusable UI runs
+		self.frameChunks = {} -- chunk -> pooled rectangles grouped by band
+		self.frameColors = {} -- packed RGB -> cached Color3
 	end
 	self:recolor()
 
@@ -103,7 +107,7 @@ function MapRenderer:dispose()
 	if self.image then self.image:Destroy() end
 	if self.rowsFrame then self.rowsFrame:Destroy() end
 	if self.editable then pcall(function() self.editable:Destroy() end) end
-	self.editable, self.rowPools, self.dirtyChunks = nil, nil, nil
+	self.editable, self.frameChunks, self.frameColors, self.dirtyChunks = nil, nil, nil
 	self.chunkQueue = nil
 end
 
@@ -275,64 +279,137 @@ function MapRenderer:paintImageChunk(entry)
 	self.editable:WritePixelsBuffer(Vector2.new(x0, y0), Vector2.new(w, h), rect)
 end
 
--- Compatible fallback: each chunk owns reusable run-length Frames for its
--- rows. Capturing one cell redraws only its own (and adjacent border) rows,
--- rather than rebuilding an entire 640-cell strip across the world.
-function MapRenderer:paintRowChunk(y, cx)
-	local Map = self.Map
-	local W, H = Map.W, Map.H
-	local pool = self.rowPools[y]
-	if not pool then pool = {} self.rowPools[y] = pool end
-	local segments = pool[cx]
-	if not segments then segments = {} pool[cx] = segments end
+-- Culling only groups Frames; camera changes never repaint territory.
+function MapRenderer:chunkOnscreen(chunk)
+	if not self.viewMinX then return true end
+	return chunk.x1 >= self.viewMinX and chunk.x0 <= self.viewMaxX
+		and chunk.y1 >= self.viewMinY and chunk.y0 <= self.viewMaxY
+end
+
+-- Camera reports map-space bounds when pan, zoom, or viewport size changes.
+-- One extra cell protects against rounding seams near the viewport edge.
+function MapRenderer:setView(cx, cy, scale, viewportSize)
+	if self.disposed or not self.frameChunks then return end
+	if not scale or scale <= 0 or not viewportSize
+		or viewportSize.X <= 0 or viewportSize.Y <= 0 then return end
+	local dx = viewportSize.X / (2 * scale) + 1
+	local dy = viewportSize.Y / (2 * scale) + 1
+	self.viewMinX, self.viewMaxX = cx - dx, cx + dx
+	self.viewMinY, self.viewMaxY = cy - dy, cy + dy
+	for _, chunk in pairs(self.frameChunks) do
+		local visible = self:chunkOnscreen(chunk)
+		if chunk.root.Visible ~= visible then chunk.root.Visible = visible end
+	end
+end
+
+local function packedColor(color)
+	return color[1] * 65536 + color[2] * 256 + color[3]
+end
+
+-- Draw one horizontal band as maximal vertical rectangles where each row
+-- has identical pixel runs. This reduces GUI count without reducing map detail.
+-- Bands are small so one captured cell never repaints an entire 64x64 chunk.
+function MapRenderer:paintFrameBand(chunk, band)
+	local W = self.Map.W
+	local x0, xEnd = chunk.x0, chunk.x1 + 1
+	local y0 = chunk.y0 + band * FRAME_BAND_HEIGHT
+	local yEnd = math.min(chunk.y1 + 1, y0 + FRAME_BAND_HEIGHT)
 	local owner = self.state.owner
-	local x = cx * self.chunkSize
-	local xEnd = math.min(W, x + self.chunkSize)
-	local used = 0
-	self.plain = true -- avoid extra country-line frames at low settings
-	while x < xEnd do
-		local i = y * W + x + 1
-		local stop = x + 1
-		if owner[i] == -1 then
-			while stop < xEnd and owner[y * W + stop + 1] == -1 do stop = stop + 1 end
-		else
-			local c = self:cellColor(i)
-			while stop < xEnd do
-				local j = y * W + stop + 1
-				if owner[j] == -1 then break end
-				local d = self:cellColor(j)
-				if d[1] ~= c[1] or d[2] ~= c[2] or d[3] ~= c[3] then break end
-				stop = stop + 1
+	local rectangles, above = {}, {}
+	self.plain = true -- same low-graphics colours as the old row renderer
+	for y = y0, yEnd - 1 do
+		local nextRow = {}
+		local x = x0
+		while x < xEnd do
+			local idx = y * W + x + 1
+			local stop = x + 1
+			if owner[idx] == -1 then
+				-- The ocean backdrop already paints the water.
+				while stop < xEnd and owner[y * W + stop + 1] == -1 do stop = stop + 1 end
+			else
+				local color = self:cellColor(idx)
+				local rgb = packedColor(color)
+				while stop < xEnd do
+					local j = y * W + stop + 1
+					if owner[j] == -1 then break end
+					if packedColor(self:cellColor(j)) ~= rgb then break end
+					stop = stop + 1
+				end
+				local rect = above[x]
+				if rect and rect.stop == stop and rect.rgb == rgb then
+					rect.height = rect.height + 1
+				else
+					rect = { x = x, y = y, stop = stop, height = 1, color = color, rgb = rgb }
+					rectangles[#rectangles + 1] = rect
+				end
+				nextRow[x] = rect
 			end
-			used = used + 1
-			local frame = segments[used]
-			if not frame then
-				frame = Instance.new("Frame")
-				frame.BorderSizePixel = 0
-				frame.ZIndex = 1
-				frame.Parent = self.rowsFrame
-				segments[used] = frame
-			end
-			frame.Position = UDim2.fromScale(x / W, y / H)
-			-- Do not bleed a pixel into another chunk's territory.
-			frame.Size = UDim2.new((stop - x) / W, stop < xEnd and 1 or 0, 1 / H, 1)
-			frame.BackgroundColor3 = Color3.fromRGB(c[1], c[2], c[3])
-			frame.Visible = true
+			x = stop
 		end
-		x = stop
+		above = nextRow
 	end
 	self.plain = false
-	for k = used + 1, #segments do segments[k].Visible = false end
+
+	local pool = chunk.bands[band]
+	if not pool then pool = {} chunk.bands[band] = pool end
+	local width, height = chunk.x1 - chunk.x0 + 1, chunk.y1 - chunk.y0 + 1
+	for n, rect in ipairs(rectangles) do
+		local frame = pool[n]
+		if not frame then
+			frame = Instance.new("Frame")
+			frame.Name = "TerritoryRect"
+			frame.BorderSizePixel = 0
+			frame.ZIndex = 1
+			frame.Parent = chunk.root
+			pool[n] = frame
+		end
+		frame.Position = UDim2.fromScale((rect.x - chunk.x0) / width, (rect.y - chunk.y0) / height)
+		-- Original 1-pixel overhang prevents hairline gaps at fractional scales.
+		frame.Size = UDim2.new((rect.stop - rect.x) / width,
+			rect.stop < xEnd and 1 or 0, rect.height / height, 1)
+		local tint = self.frameColors[rect.rgb]
+		if not tint then
+			tint = Color3.fromRGB(rect.color[1], rect.color[2], rect.color[3])
+			self.frameColors[rect.rgb] = tint
+		end
+		frame.BackgroundColor3 = tint
+		if not frame.Visible then frame.Visible = true end
+	end
+	for n = #rectangles + 1, #pool do
+		if pool[n].Visible then pool[n].Visible = false end
+	end
 end
 
 function MapRenderer:paintFrameChunk(entry)
-	local y0 = entry.cy * self.chunkSize
-	local y1 = math.min(self.Map.H - 1, y0 + self.chunkSize - 1)
-	for y = y0, y1 do
-		if entry.full or entry.rows[y] then
-			self:paintRowChunk(y, entry.cx)
+	local key = entry.cy * self.chunksX + entry.cx + 1
+	local chunk = self.frameChunks[key]
+	if not chunk then
+		local x0, y0 = entry.cx * self.chunkSize, entry.cy * self.chunkSize
+		local x1 = math.min(self.Map.W - 1, x0 + self.chunkSize - 1)
+		local y1 = math.min(self.Map.H - 1, y0 + self.chunkSize - 1)
+		local root = Instance.new("Frame")
+		root.Name = "TerritoryChunk"
+		root.BackgroundTransparency = 1
+		root.BorderSizePixel = 0
+		root.ZIndex = 1
+		root.Position = UDim2.fromScale(x0 / self.Map.W, y0 / self.Map.H)
+		root.Size = UDim2.fromScale((x1 - x0 + 1) / self.Map.W, (y1 - y0 + 1) / self.Map.H)
+		root.Parent = self.rowsFrame
+		chunk = { root = root, bands = {}, x0 = x0, x1 = x1, y0 = y0, y1 = y1 }
+		self.frameChunks[key] = chunk
+		root.Visible = self:chunkOnscreen(chunk)
+	end
+	local dirtyBands = {}
+	if entry.full then
+		for band = 0, math.floor((chunk.y1 - chunk.y0) / FRAME_BAND_HEIGHT) do
+			dirtyBands[band] = true
+		end
+	else
+		for row in pairs(entry.rows or {}) do
+			dirtyBands[math.floor((row - chunk.y0) / FRAME_BAND_HEIGHT)] = true
 		end
 	end
+	for band in pairs(dirtyBands) do self:paintFrameBand(chunk, band) end
 end
 
 function MapRenderer:flush()
