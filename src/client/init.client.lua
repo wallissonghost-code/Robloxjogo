@@ -411,23 +411,27 @@ local function handleClick(p, button)
 	end
 
 	local now = os.clock()
-	-- Enemy nations: first tap opens diplomacy/attack options; second tap on
-	-- the same cell within the confirmation window attacks immediately.
-	-- Neutral expansion keeps the existing two-click confirmation behavior.
+	-- Two touches on ANY cells owned by the same enemy confirm the attack.
+	-- The second cell sets the target/direction; the server checks reachability.
+	-- Different nations always start a new selection.
 	local sameTarget = pending and pending.kind == "order"
-		and pending.cell == cell and now - pending.at <= Config.View.ConfirmTimeout
+		and pending.owner == owner and owner > 0
+		and now - pending.at <= Config.View.ConfirmTimeout
 	if owner > 0 and owner ~= state.you then
 		if sameTarget then
 			-- Once the server has ruled out this route, a later second tap must
 			-- not fire another pointless attack command.
-			local blocked = pending.access == "blocked"
+			-- An inspection applies to the first selected cell. Another cell
+			-- of the SAME nation may have a valid route, so let the server
+			-- validate the new target instead of reusing the old blocked result.
+			local blocked = pending.access == "blocked" and pending.cell == cell
 			local why = pending.reason
 			clearAim()
 			if blocked then hud:toast(why or "Sem acesso ao território.", "bad")
 			else send(Actions.Target, cell, state.percent) end
 			return
 		end
-		local order = { cell = cell, at = now, kind = "order" }
+		local order = { cell = cell, owner = owner, at = now, kind = "order" }
 		pending = order
 		aimOrder(cell)
 		local generation = popupGeneration
@@ -440,14 +444,17 @@ local function handleClick(p, button)
 		end)
 		return
 	end
+	-- Clicking neutral land after selecting an enemy must expand into the
+	-- CURRENT neutral cell, never send troops to the stale enemy target.
 	if not Config.View.TwoClickConfirm or (pending and pending.kind == "order"
-		and Map:distance(pending.cell, cell) <= Config.View.ConfirmRadius and now - pending.at <= Config.View.ConfirmTimeout) then
-		local target = pending and pending.cell or cell
+		and pending.owner == 0
+		and Map:distance(pending.cell, cell) <= Config.View.ConfirmRadius
+		and now - pending.at <= Config.View.ConfirmTimeout) then
 		clearAim()
-		send(Actions.Target, target, state.percent)
+		send(Actions.Target, cell, state.percent)
 		return
 	end
-	pending = { cell = cell, at = now, kind = "order" }
+	pending = { cell = cell, owner = 0, at = now, kind = "order" }
 	aimOrder(cell)
 end
 
